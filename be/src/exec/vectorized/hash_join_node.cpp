@@ -568,6 +568,7 @@ static inline bool check_chunk_zero_and_create_new(ChunkPtr* chunk) {
 
 Status HashJoinNode::_probe(RuntimeState* state, ScopedTimer<MonotonicStopWatch>& probe_timer, ChunkPtr* chunk,
                             bool& eos) {
+    ChunkPtr t_chunk;
     while (true) {
         if (!_ht_has_remain) {
             while (true) {
@@ -652,30 +653,29 @@ Status HashJoinNode::_probe(RuntimeState* state, ScopedTimer<MonotonicStopWatch>
             }
         }
 
-        RETURN_IF_ERROR(_ht.probe(state, _key_columns, &_probing_chunk, chunk, &_ht_has_remain));
-        if (!_ht_has_remain) {
-            _probing_chunk = nullptr;
-        }
+        t_chunk = std::make_shared<Chunk>();
 
-        eval_join_runtime_filters(chunk);
+        RETURN_IF_ERROR(_ht.probe(state, _key_columns, &_probing_chunk, &t_chunk, &_ht_has_remain));
 
-        if (check_chunk_zero_and_create_new(chunk)) {
+        eval_join_runtime_filters(&t_chunk);
+
+        if (check_chunk_zero_and_create_new(&t_chunk)) {
             continue;
         }
 
         if (!_other_join_conjunct_ctxs.empty()) {
             SCOPED_TIMER(_other_join_conjunct_evaluate_timer);
-            _process_other_conjunct(chunk);
-            if (check_chunk_zero_and_create_new(chunk)) {
+            _process_other_conjunct(&t_chunk);
+            if (check_chunk_zero_and_create_new(&t_chunk)) {
                 continue;
             }
         }
 
         if (!_conjunct_ctxs.empty()) {
             SCOPED_TIMER(_where_conjunct_evaluate_timer);
-            eval_conjuncts(_conjunct_ctxs, (*chunk).get());
+            eval_conjuncts(_conjunct_ctxs, (t_chunk).get());
 
-            if (check_chunk_zero_and_create_new(chunk)) {
+            if (check_chunk_zero_and_create_new(&t_chunk)) {
                 continue;
             }
         }
@@ -683,6 +683,10 @@ Status HashJoinNode::_probe(RuntimeState* state, ScopedTimer<MonotonicStopWatch>
         break;
     }
 
+    RETURN_IF_ERROR(_ht.output(&_probing_chunk, &t_chunk, chunk));
+    if (!_ht_has_remain) {
+        _probing_chunk = nullptr;
+    }
     return Status::OK();
 }
 
