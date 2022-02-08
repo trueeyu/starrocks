@@ -72,6 +72,7 @@ struct JoinKeyDesc {
 struct HashTableSlotDescriptor {
     SlotDescriptor* slot;
     bool need_output;
+    bool is_materialize;
 };
 
 struct JoinHashTableItems {
@@ -118,8 +119,10 @@ struct HashTableProbeState {
     //TODO: memory release
     Buffer<uint8_t> is_nulls;
     Buffer<uint32_t> buckets;
-    Buffer<uint32_t> build_index;
-    Buffer<uint32_t> probe_index;
+    std::shared_ptr<FixedLengthColumn<uint32_t>> probe_index_column;
+    std::shared_ptr<FixedLengthColumn<uint32_t>> build_index_column;
+    Buffer<uint32_t>& probe_index;
+    Buffer<uint32_t>& build_index;
     Buffer<uint32_t> next;
     Buffer<Slice> probe_slice;
     Buffer<uint8_t>* null_array = nullptr;
@@ -145,6 +148,12 @@ struct HashTableProbeState {
     // cur_probe_index records the position of the last probe
     uint32_t cur_probe_index = 0;
     uint32_t cur_row_match_count = 0;
+
+    HashTableProbeState()
+            : probe_index_column(std::make_shared<FixedLengthColumn<uint32_t>>()),
+              build_index_column(std::make_shared<FixedLengthColumn<uint32_t>>()),
+              probe_index(probe_index_column->get_data()),
+              build_index(build_index_column->get_data()) {}
 };
 
 struct HashTableParam {
@@ -397,20 +406,89 @@ public:
                  bool* has_remain);
     Status probe_remain(RuntimeState* state, ChunkPtr* chunk, bool* has_remain);
 
+    Status output(ChunkPtr* probe_chunk, ChunkPtr* tmp_chunk, ChunkPtr* chunk) {
+        size_t index = 0;
+        size_t count = (*tmp_chunk)->num_rows();
+        _probe_state->match_flag = JoinMatchFlag::NORMAL;
+
+        {
+            SCOPED_TIMER(_table_items->output_probe_column_timer);
+            auto& probe_slots = _table_items->probe_slots;
+            for (size_t i = 0; i < probe_slots.size(); i++) {
+                if (probe_slots[i].is_materialize) {
+                    (*chunk)->append_column((*tmp_chunk)->get_column_by_index(index), probe_slots[i].slot->id());
+                    index++;
+                } else {
+                    probe_output(probe_slots[i], *probe_chunk, chunk, count);
+                }
+            }
+        }
+
+        {
+            SCOPED_TIMER(_table_items->output_build_column_timer);
+            auto& build_slots = _table_items->build_slots;
+            for (size_t i = 0; i < build_slots.size(); i++) {
+                if (build_slots[i].is_materialize) {
+                    (*chunk)->append_column((*tmp_chunk)->get_column_by_index(index), build_slots[i].slot->id());
+                    index++;
+                } else {
+                    build_output(build_slots[i], chunk, count);
+                }
+            }
+        }
+        return Status::OK();
+    }
+
+    Status probe_output(const HashTableSlotDescriptor& slot, ChunkPtr& probe_chunk, ChunkPtr* chunk, size_t count) {
+        auto& column = probe_chunk->get_column_by_slot_id(slot.slot->id());
+
+        if (slot.need_output) {
+            if (!column->is_nullable()) {
+                _copy_probe_column(&column, chunk, slot.slot, _table_items->left_to_nullable, count);
+            } else {
+                _copy_probe_nullable_column(&column, chunk, slot.slot, count);
+            }
+        } else {
+            ColumnPtr default_column = ColumnHelper::create_column(
+                    slot.slot->type(), column->is_nullable() || _table_items->left_to_nullable);
+            default_column->append_default(count);
+            (*chunk)->append_column(std::move(default_column), slot.slot->id());
+        }
+        return Status::OK();
+    }
+
+    Status build_output(const HashTableSlotDescriptor& slot, ChunkPtr* chunk, size_t count) {
+        auto& column = _table_items->build_chunk->get_column_by_slot_id(slot.slot->id());
+
+        if (slot.need_output) {
+            if (!column->is_nullable()) {
+                _copy_build_column(column, chunk, slot.slot, _table_items->right_to_nullable, count);
+            } else {
+                _copy_build_nullable_column(column, chunk, slot.slot, count);
+            }
+        } else {
+            ColumnPtr default_column = ColumnHelper::create_column(
+                    slot.slot->type(), column->is_nullable() || _table_items->right_to_nullable);
+            default_column->append_default(_probe_state->count);
+            (*chunk)->append_column(std::move(default_column), slot.slot->id());
+        }
+        return Status::OK();
+    }
+
 private:
-    Status _probe_output(ChunkPtr* probe_chunk, ChunkPtr* chunk);
+    Status _probe_output(ChunkPtr* probe_chunk, ChunkPtr* chunk, size_t count);
     Status _probe_null_output(ChunkPtr* chunk, size_t count);
 
-    Status _build_output(ChunkPtr* chunk);
+    Status _build_output(ChunkPtr* chunk, size_t count);
     Status _build_default_output(ChunkPtr* chunk, size_t count);
 
-    void _copy_probe_column(ColumnPtr* src_column, ChunkPtr* chunk, const SlotDescriptor* slot, bool to_nullable);
+    void _copy_probe_column(ColumnPtr* src_column, ChunkPtr* chunk, const SlotDescriptor* slot, bool to_nullable, size_t count);
 
-    void _copy_probe_nullable_column(ColumnPtr* src_column, ChunkPtr* chunk, const SlotDescriptor* slot);
+    void _copy_probe_nullable_column(ColumnPtr* src_column, ChunkPtr* chunk, const SlotDescriptor* slot, size_t count);
 
-    void _copy_build_column(const ColumnPtr& src_column, ChunkPtr* chunk, const SlotDescriptor* slot, bool to_nullable);
+    void _copy_build_column(const ColumnPtr& src_column, ChunkPtr* chunk, const SlotDescriptor* slot, bool to_nullable, size_t count);
 
-    void _copy_build_nullable_column(const ColumnPtr& src_column, ChunkPtr* chunk, const SlotDescriptor* slot);
+    void _copy_build_nullable_column(const ColumnPtr& src_column, ChunkPtr* chunk, const SlotDescriptor* slot, size_t count);
 
     Status _search_ht(RuntimeState* state, ChunkPtr* probe_chunk);
     void _search_ht_remain(RuntimeState* state);
@@ -512,6 +590,22 @@ public:
     Status probe_remain(RuntimeState* state, ChunkPtr* chunk, bool* eos);
 
     Status append_chunk(RuntimeState* state, const ChunkPtr& chunk);
+
+    Status output(ChunkPtr* probe_chunk, ChunkPtr* tmp_chunk, ChunkPtr* chunk) {
+        switch (_hash_map_type) {
+        case JoinHashMapType::empty:
+            break;
+#define M(NAME)                                                          \
+    case JoinHashMapType::NAME:                                          \
+        RETURN_IF_ERROR(_##NAME->output(probe_chunk, tmp_chunk, chunk)); \
+        break;
+            APPLY_FOR_JOIN_VARIANTS(M)
+#undef M
+        default:
+            return Status::InternalError("not supported");
+        }
+        return Status::OK();
+    }
 
     const ChunkPtr& get_build_chunk() const { return _table_items->build_chunk; }
     Columns& get_key_columns() { return _table_items->key_columns; }
