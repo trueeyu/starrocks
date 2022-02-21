@@ -328,11 +328,12 @@ Status JoinHashMap<PT, BuildFunc, ProbeFunc>::probe(RuntimeState* state, const C
             SCOPED_TIMER(_table_items->output_build_column_timer);
             RETURN_IF_ERROR(_build_output(chunk));
         }
-        _probe_state->probe_index_column->resize(_probe_state->count);
-        _probe_state->build_index_column->resize(_probe_state->count);
-        (*chunk)->columns().emplace_back(_probe_state->probe_index_column);
-        (*chunk)->columns().emplace_back(_probe_state->build_index_column);
     }
+
+    _probe_state->probe_index_column->resize(_probe_state->count);
+    _probe_state->build_index_column->resize(_probe_state->count);
+    (*chunk)->columns().emplace_back(_probe_state->probe_index_column);
+    (*chunk)->columns().emplace_back(_probe_state->build_index_column);
 
     return Status::OK();
 }
