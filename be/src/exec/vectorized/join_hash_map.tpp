@@ -435,15 +435,6 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_copy_probe_column(ColumnPtr* src_co
         } else {
             (*chunk)->append_column(*src_column, slot->id());
         }
-    } else if (_probe_state->match_flag == JoinMatchFlag::MOST_MATCH_ONE) {
-        if (to_nullable) {
-            (*src_column)->filter(_probe_state->probe_match_filter, _probe_state->probe_row_count);
-            ColumnPtr dest_column = NullableColumn::create(*src_column, NullColumn::create((*src_column)->size()));
-            (*chunk)->append_column(std::move(dest_column), slot->id());
-        } else {
-            (*src_column)->filter(_probe_state->probe_match_filter, _probe_state->probe_row_count);
-            (*chunk)->append_column(*src_column, slot->id());
-        }
     } else {
         ColumnPtr dest_column = ColumnHelper::create_column(slot->type(), to_nullable);
         dest_column->append_selective(**src_column, _probe_state->probe_index.data(), 0, _probe_state->count);
@@ -455,9 +446,6 @@ template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 void JoinHashMap<PT, BuildFunc, ProbeFunc>::_copy_probe_nullable_column(ColumnPtr* src_column, ChunkPtr* chunk,
                                                                         const SlotDescriptor* slot) {
     if (_probe_state->match_flag == JoinMatchFlag::ALL_MATCH_ONE) {
-        (*chunk)->append_column(*src_column, slot->id());
-    } else if (_probe_state->match_flag == JoinMatchFlag::MOST_MATCH_ONE) {
-        (*src_column)->filter(_probe_state->probe_match_filter, _probe_state->probe_row_count);
         (*chunk)->append_column(*src_column, slot->id());
     } else {
         ColumnPtr dest_column = ColumnHelper::create_column(slot->type(), true);
@@ -631,14 +619,9 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_search_ht_impl(RuntimeState* state,
     }
 }
 
-#define CHECK_MATCH()                                                                                          \
-    if (match_count > 0 && !one_to_many) {                                                                     \
-        size_t zero_count = SIMD::count_zero(_probe_state->probe_match_filter, _probe_state->probe_row_count); \
-        if (zero_count == 0) {                                                                                 \
-            _probe_state->match_flag = JoinMatchFlag::ALL_MATCH_ONE;                                           \
-        } else if (zero_count < _probe_state->probe_row_count - zero_count) {                                  \
-            _probe_state->match_flag = JoinMatchFlag::MOST_MATCH_ONE;                                          \
-        }                                                                                                      \
+#define CHECK_MATCH()                                                   \
+    if (match_count == _probe_state->probe_row_count && !one_to_many) { \
+        _probe_state->match_flag = JoinMatchFlag::ALL_MATCH_ONE;        \
     }
 
 #define CHECK_ALL_MATCH()                                        \
@@ -696,9 +679,6 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
 
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
-        if constexpr (first_probe) {
-            _probe_state->probe_match_filter[i] = 0;
-        }
         size_t build_index = _probe_state->next[i];
         if (build_index != 0) {
             do {
@@ -709,7 +689,6 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
 
                     if constexpr (first_probe) {
                         _probe_state->cur_row_match_count++;
-                        _probe_state->probe_match_filter[i] = 1;
                     }
                     RETURN_IF_CHUNK_FULL()
                 }

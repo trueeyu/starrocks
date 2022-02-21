@@ -62,7 +62,7 @@ enum class JoinHashMapType {
     fixed128 // 16 bytes
 };
 
-enum class JoinMatchFlag { NORMAL, ALL_NOT_MATCH, ALL_MATCH_ONE, MOST_MATCH_ONE };
+enum class JoinMatchFlag { NORMAL, ALL_MATCH_ONE, MOST_MATCH_ONE };
 
 struct JoinKeyDesc {
     PrimitiveType type;
@@ -132,7 +132,6 @@ struct HashTableProbeState {
     // 0: not matched, 1: matched
     Buffer<uint8_t> build_match_index;
     Buffer<uint32_t> probe_match_index;
-    Buffer<uint8_t> probe_match_filter;
     uint32_t count = 0; // current return values count
     // the rows of src probe chunk
     size_t probe_row_count = 0;
@@ -242,7 +241,6 @@ public:
         probe_state->probe_index.resize(chunk_size + 8);
         probe_state->next.resize(chunk_size);
         probe_state->probe_match_index.resize(chunk_size);
-        probe_state->probe_match_filter.resize(chunk_size);
         probe_state->buckets.resize(chunk_size);
     }
 
