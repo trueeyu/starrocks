@@ -76,11 +76,10 @@ Status HashJoiner::prepare(RuntimeState* state) {
     _search_ht_timer = ADD_CHILD_TIMER(_runtime_profile, "2-SearchHashTableTimer", "ProbeTime");
     _output_build_column_timer = ADD_CHILD_TIMER(_runtime_profile, "3-OutputBuildColumnTimer", "ProbeTime");
     _output_probe_column_timer = ADD_CHILD_TIMER(_runtime_profile, "4-OutputProbeColumnTimer", "ProbeTime");
-    _output_tuple_column_timer = ADD_CHILD_TIMER(_runtime_profile, "5-OutputTupleColumnTimer", "ProbeTime");
-    _probe_conjunct_evaluate_timer = ADD_CHILD_TIMER(_runtime_profile, "6-ProbeConjunctEvaluateTime", "ProbeTime");
+    _probe_conjunct_evaluate_timer = ADD_CHILD_TIMER(_runtime_profile, "5-ProbeConjunctEvaluateTime", "ProbeTime");
     _other_join_conjunct_evaluate_timer =
-            ADD_CHILD_TIMER(_runtime_profile, "7-OtherJoinConjunctEvaluateTime", "ProbeTime");
-    _where_conjunct_evaluate_timer = ADD_CHILD_TIMER(_runtime_profile, "8-WhereConjunctEvaluateTime", "ProbeTime");
+            ADD_CHILD_TIMER(_runtime_profile, "6-OtherJoinConjunctEvaluateTime", "ProbeTime");
+    _where_conjunct_evaluate_timer = ADD_CHILD_TIMER(_runtime_profile, "7-WhereConjunctEvaluateTime", "ProbeTime");
 
     _probe_rows_counter = ADD_COUNTER(_runtime_profile, "ProbeRows", TUnit::UNIT);
     _build_rows_counter = ADD_COUNTER(_runtime_profile, "BuildRows", TUnit::UNIT);
@@ -101,8 +100,6 @@ Status HashJoiner::prepare(RuntimeState* state) {
 }
 
 void HashJoiner::_init_hash_table_param(HashTableParam* param) {
-    // Pipeline query engine always needn't create tuple columns
-    param->need_create_tuple_columns = false;
     param->with_other_conjunct = !_other_join_conjunct_ctxs.empty();
     param->join_type = _join_type;
     param->row_desc = &_row_descriptor;
@@ -111,7 +108,6 @@ void HashJoiner::_init_hash_table_param(HashTableParam* param) {
     param->search_ht_timer = _search_ht_timer;
     param->output_build_column_timer = _output_build_column_timer;
     param->output_probe_column_timer = _output_probe_column_timer;
-    param->output_tuple_column_timer = _output_tuple_column_timer;
 
     param->output_slots = _output_slots;
     std::set<SlotId> predicate_slots;

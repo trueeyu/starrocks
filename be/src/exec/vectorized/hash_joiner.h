@@ -30,9 +30,7 @@ class RuntimeFilterBuildDescriptor;
 //   indicates that building ht should be finalized.
 // 2.PROBE: building ht is done, and probe operations can be conducted as chunks is pulled one by one from left child.
 //   EOS from left child indicates that PROBE phase is done.
-// 3.POST_PROBE: for RIGHT ANTI-JOIN, RIGHT SEMI-JOIN, FULL OUTER-JOIN, probe-missing/probe-hitting tuples should be
-//   processed.
-// 4.DONE: all input streams have been processed.
+// 3.DONE: all input streams have been processed.
 //
 enum HashJoinPhase {
     BUILD = 0,
@@ -354,7 +352,6 @@ private:
     RuntimeProfile::Counter* _search_ht_timer = nullptr;
     RuntimeProfile::Counter* _output_build_column_timer = nullptr;
     RuntimeProfile::Counter* _output_probe_column_timer = nullptr;
-    RuntimeProfile::Counter* _output_tuple_column_timer = nullptr;
     RuntimeProfile::Counter* _build_rows_counter = nullptr;
     RuntimeProfile::Counter* _probe_rows_counter = nullptr;
     RuntimeProfile::Counter* _build_buckets_counter = nullptr;
