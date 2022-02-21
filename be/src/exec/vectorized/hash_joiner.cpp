@@ -338,11 +338,13 @@ void HashJoiner::_process_row_for_other_conjunct(ChunkPtr* chunk, size_t start_c
                                                  bool filter_all, bool hit_all, const Column::Filter& filter) {
     if (filter_all) {
         for (size_t i = start_column; i < start_column + column_count; i++) {
-            auto* null_column = ColumnHelper::as_raw_column<NullableColumn>((*chunk)->columns()[i]);
-            auto& null_data = null_column->mutable_null_column()->get_data();
-            for (size_t j = 0; j < (*chunk)->num_rows(); j++) {
-                null_data[j] = 1;
-                null_column->set_has_null(true);
+            if ((*chunk)->columns()[i]->is_nullable()) {
+                auto* null_column = ColumnHelper::as_raw_column<NullableColumn>((*chunk)->columns()[i]);
+                auto& null_data = null_column->mutable_null_column()->get_data();
+                for (size_t j = 0; j < (*chunk)->num_rows(); j++) {
+                    null_data[j] = 1;
+                    null_column->set_has_null(true);
+                }
             }
         }
     } else {
@@ -351,12 +353,14 @@ void HashJoiner::_process_row_for_other_conjunct(ChunkPtr* chunk, size_t start_c
         }
 
         for (size_t i = start_column; i < start_column + column_count; i++) {
-            auto* null_column = ColumnHelper::as_raw_column<NullableColumn>((*chunk)->columns()[i]);
-            auto& null_data = null_column->mutable_null_column()->get_data();
-            for (size_t j = 0; j < filter.size(); j++) {
-                if (filter[j] == 0) {
-                    null_data[j] = 1;
-                    null_column->set_has_null(true);
+            if ((*chunk)->columns()[i]->is_nullable()) {
+                auto* null_column = ColumnHelper::as_raw_column<NullableColumn>((*chunk)->columns()[i]);
+                auto& null_data = null_column->mutable_null_column()->get_data();
+                for (size_t j = 0; j < filter.size(); j++) {
+                    if (filter[j] == 0) {
+                        null_data[j] = 1;
+                        null_column->set_has_null(true);
+                    }
                 }
             }
         }
