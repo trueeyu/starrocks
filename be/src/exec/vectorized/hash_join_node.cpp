@@ -165,6 +165,27 @@ void HashJoinNode::_init_hash_table_param(HashTableParam* param) {
         expr_context->root()->get_slot_ids(&expr_slots);
         predicate_slots.insert(expr_slots.begin(), expr_slots.end());
     }
+    for (auto iter : _runtime_filter_collector.descriptors()) {
+        auto* expr_context = iter.second->probe_expr_ctx();
+        std::vector<SlotId> expr_slots;
+        expr_context->root()->get_slot_ids(&expr_slots);
+        predicate_slots.insert(expr_slots.begin(), expr_slots.end());
+    }
+    predicate_slots.insert(_filter_null_value_columns.begin(), _filter_null_value_columns.end());
+    /*
+    for (ExprContext* expr_context : _runtime_in_filters) {
+        std::vector<SlotId> expr_slots;
+        expr_context->root()->get_slot_ids(&expr_slots);
+        predicate_slots.insert(expr_slots.begin(), expr_slots.end());
+    }
+    */
+    /*
+    for (auto* filter : _build_runtime_filters) {
+        std::vector<SlotId> expr_slots;
+        filter->_build_expr_ctx->root()->get_slot_ids(&expr_slots);
+        predicate_slots.insert(expr_slots.begin(), expr_slots.end());
+    }
+    */
     param->predicate_slots = predicate_slots;
 
     for (auto i = 0; i < _probe_expr_ctxs.size(); i++) {
