@@ -683,12 +683,13 @@ Status HashJoinNode::_probe(RuntimeState* state, ScopedTimer<MonotonicStopWatch>
 Status HashJoinNode::_probe_remain(ChunkPtr* chunk, bool& eos) {
     ScopedTimer<MonotonicStopWatch> probe_timer(_probe_timer);
 
+    ChunkPtr t_chunk = std::make_shared<Chunk>();
     while (!_build_eos) {
-        RETURN_IF_ERROR(_ht.probe_remain(runtime_state(), chunk, &_right_table_has_remain));
+        RETURN_IF_ERROR(_ht.probe_remain(runtime_state(), &t_chunk, &_right_table_has_remain));
 
-        eval_join_runtime_filters(chunk);
+        eval_join_runtime_filters(&t_chunk);
 
-        if ((*chunk)->num_rows() <= 0) {
+        if (t_chunk->num_rows() <= 0) {
             // right table already have no remain data
             _build_eos = true;
             eos = true;
@@ -696,13 +697,15 @@ Status HashJoinNode::_probe_remain(ChunkPtr* chunk, bool& eos) {
         }
 
         if (!_conjunct_ctxs.empty()) {
-            eval_conjuncts(_conjunct_ctxs, (*chunk).get());
+            eval_conjuncts(_conjunct_ctxs, t_chunk.get());
 
-            if (check_chunk_zero_and_create_new(chunk)) {
+            if (check_chunk_zero_and_create_new(&t_chunk)) {
                 _build_eos = !_right_table_has_remain;
                 continue;
             }
         }
+
+        RETURN_IF_ERROR(_ht.output_remain(&t_chunk, chunk));
 
         eos = false;
         _build_eos = !_right_table_has_remain;

@@ -406,6 +406,45 @@ public:
                  bool* has_remain);
     Status probe_remain(RuntimeState* state, ChunkPtr* chunk, bool* has_remain);
 
+    Status output_remain(ChunkPtr* tmp_chunk, ChunkPtr* chunk) {
+        size_t index = 0;
+        size_t result_count = (*tmp_chunk)->num_rows();
+        if (result_count < _probe_state->count) {
+            _probe_state->match_flag = JoinMatchFlag::NORMAL;
+            _probe_state->count = result_count;
+        }
+
+        {
+            SCOPED_TIMER(_table_items->output_probe_column_timer);
+            auto& probe_slots = _table_items->probe_slots;
+            for (size_t i = 0; i < probe_slots.size(); i++) {
+                if (probe_slots[i].is_materialize) {
+                    (*chunk)->append_column((*tmp_chunk)->get_column_by_index(index), probe_slots[i].slot->id());
+                    index++;
+                } else {
+                    ColumnPtr column = ColumnHelper::create_column(probe_slots[i].slot->type(), true);
+                    column->append_nulls(_probe_state->count);
+                    (*chunk)->append_column(std::move(column), probe_slots[i].slot->id());
+                }
+            }
+        }
+
+        {
+            SCOPED_TIMER(_table_items->output_build_column_timer);
+            auto& build_slots = _table_items->build_slots;
+            for (size_t i = 0; i < build_slots.size(); i++) {
+                if (build_slots[i].is_materialize) {
+                    (*chunk)->append_column((*tmp_chunk)->get_column_by_index(index), build_slots[i].slot->id());
+                    index++;
+                } else {
+                    build_output(build_slots[i], chunk);
+                }
+            }
+        }
+
+        return Status::OK();
+    }
+
     Status output(ChunkPtr* probe_chunk, ChunkPtr* tmp_chunk, ChunkPtr* chunk) {
         size_t index = 0;
         size_t result_count = (*tmp_chunk)->num_rows();
@@ -601,6 +640,22 @@ public:
 #define M(NAME)                                                          \
     case JoinHashMapType::NAME:                                          \
         RETURN_IF_ERROR(_##NAME->output(probe_chunk, tmp_chunk, chunk)); \
+        break;
+            APPLY_FOR_JOIN_VARIANTS(M)
+#undef M
+        default:
+            return Status::InternalError("not supported");
+        }
+        return Status::OK();
+    }
+
+    Status output_remain(ChunkPtr* tmp_chunk, ChunkPtr* chunk) {
+        switch (_hash_map_type) {
+        case JoinHashMapType::empty:
+            break;
+#define M(NAME)                                                    \
+    case JoinHashMapType::NAME:                                    \
+        RETURN_IF_ERROR(_##NAME->output_remain(tmp_chunk, chunk)); \
         break;
             APPLY_FOR_JOIN_VARIANTS(M)
 #undef M
