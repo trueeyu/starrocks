@@ -37,7 +37,8 @@ namespace starrocks::vectorized {
     M(slice)                       \
     M(fixed32)                     \
     M(fixed64)                     \
-    M(fixed128)
+    M(fixed128) \
+    M(keyarray)
 
 enum class JoinHashMapType {
     empty,
@@ -59,7 +60,8 @@ enum class JoinHashMapType {
     slice,
     fixed32, // 4 bytes
     fixed64, // 8 bytes
-    fixed128 // 16 bytes
+    fixed128, // 16 bytes
+    keyarray
 };
 
 enum class JoinMatchFlag { NORMAL, ALL_NOT_MATCH, ALL_MATCH_ONE, MOST_MATCH_ONE };
@@ -102,6 +104,7 @@ struct JoinHashTableItems {
     bool need_create_tuple_columns = true;
     bool left_to_nullable = false;
     bool right_to_nullable = false;
+    bool is_array = false;
 
     TJoinOp::type join_type = TJoinOp::INNER_JOIN;
 
@@ -236,6 +239,19 @@ public:
     }
 
     template <typename CppType>
+    static uint32_t calc_bucket_num_opt(const CppType& value, CppType start) {
+        return value - start;
+    }
+
+    template <typename CppType>
+    static void calc_bucket_nums_opt(const Buffer<CppType>& data, uint32_t bucket_size, Buffer<uint32_t>* buckets,
+                                 uint32_t start, uint32_t count, CppType value) {
+        for (size_t i = 0; i < count; i++) {
+            (*buckets)[i] = calc_bucket_num_opt<CppType>(data[start + i], value);
+        }
+    }
+
+    template <typename CppType>
     static void calc_bucket_nums(const Buffer<CppType>& data, uint32_t bucket_size, Buffer<uint32_t>* buckets,
                                  uint32_t start, uint32_t count) {
         for (size_t i = 0; i < count; i++) {
@@ -277,6 +293,36 @@ public:
             byte_offset += offset;
         }
     }
+};
+
+template <PrimitiveType PT>
+class ArrayBuildFunc {
+public:
+    using CppType = typename RunTimeTypeTraits<PT>::CppType;
+    using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
+
+    static Status prepare([[maybe_unused]] RuntimeState* runtime, [[maybe_unused]] JoinHashTableItems* table_items,
+                          [[maybe_unused]] HashTableProbeState* probe_state) {
+        return Status::OK();
+    }
+
+    static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items);
+
+    static Status construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
+                                       HashTableProbeState* probe_state);
+};
+
+template <PrimitiveType PT>
+class ArrayProbeFunc {
+public:
+    using CppType = typename RunTimeTypeTraits<PT>::CppType;
+    using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
+
+    static void prepare(RuntimeState* state, JoinHashTableItems* table_items, HashTableProbeState* probe_state) {}
+
+    static Status lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state);
+
+    static const Buffer<CppType>& get_key_data(const HashTableProbeState& probe_state);
 };
 
 template <PrimitiveType PT>
@@ -432,6 +478,9 @@ private:
     template <bool first_probe>
     void _probe_from_ht(RuntimeState* state, const Buffer<CppType>& build_data, const Buffer<CppType>& probe_data);
 
+    template <bool first_probe>
+    void _probe_from_ht_array(RuntimeState* state, const Buffer<CppType>& build_data, const Buffer<CppType>& probe_data);
+
     // for one key left outer join
     template <bool first_probe>
     void _probe_from_ht_for_left_outer_join(RuntimeState* state, const Buffer<CppType>& build_data,
@@ -506,6 +555,7 @@ private:
     HashTableProbeState* _probe_state = nullptr;
 };
 
+#define JoinHashMapForOneKeyArray(PT) JoinHashMap<PT, ArrayBuildFunc<PT>, ArrayProbeFunc<PT>>
 #define JoinHashMapForOneKey(PT) JoinHashMap<PT, JoinBuildFunc<PT>, JoinProbeFunc<PT>>
 #define JoinHashMapForFixedSizeKey(PT) JoinHashMap<PT, FixedSizeJoinBuildFunc<PT>, FixedSizeJoinProbeFunc<PT>>
 #define JoinHashMapForSerializedKey(PT) JoinHashMap<PT, SerializedJoinBuildFunc, SerializedJoinProbeFunc>
@@ -564,6 +614,7 @@ private:
     void _remove_duplicate_index_for_right_anti_join(Column::Filter* filter);
     void _remove_duplicate_index_for_full_outer_join(Column::Filter* filter);
 
+    std::unique_ptr<JoinHashMapForOneKeyArray(TYPE_INT)> _keyarray = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_BOOLEAN)> _keyboolean = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_TINYINT)> _key8 = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_SMALLINT)> _key16 = nullptr;

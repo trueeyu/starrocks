@@ -450,7 +450,7 @@ JoinHashMapType JoinHashTable::_choose_join_hash_map() {
         case PrimitiveType::TYPE_SMALLINT:
             return JoinHashMapType::key16;
         case PrimitiveType::TYPE_INT:
-            return JoinHashMapType::key32;
+            return JoinHashMapType::keyarray;
         case PrimitiveType::TYPE_BIGINT:
             return JoinHashMapType::key64;
         case PrimitiveType::TYPE_LARGEINT:

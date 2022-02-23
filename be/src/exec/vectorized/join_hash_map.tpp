@@ -3,6 +3,47 @@
 #include "simd/simd.h"
 
 namespace starrocks::vectorized {
+
+template <PrimitiveType PT>
+const Buffer<typename ArrayBuildFunc<PT>::CppType>& ArrayBuildFunc<PT>::get_key_data(
+        const JoinHashTableItems& table_items) {
+    if (table_items.key_columns[0]->is_nullable()) {
+        auto* null_column = ColumnHelper::as_raw_column<NullableColumn>(table_items.key_columns[0]);
+        return ColumnHelper::as_raw_column<ColumnType>(null_column->data_column())->get_data();
+    }
+
+    return ColumnHelper::as_raw_column<ColumnType>(table_items.key_columns[0])->get_data();
+}
+
+template <PrimitiveType PT>
+Status ArrayBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
+                                               HashTableProbeState* probe_state) {
+    table_items->is_array = true;
+    auto& data = get_key_data(*table_items);
+    if (table_items->key_columns[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(table_items->key_columns[0]);
+        auto& null_array = nullable_column->null_column()->get_data();
+        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+            if (null_array[i] == 0) {
+                uint32_t bucket_num = JoinHashMapHelper::calc_bucket_num<CppType>(data[i], table_items->bucket_size);
+                table_items->next[i] = table_items->first[bucket_num];
+                table_items->first[bucket_num] = i;
+            }
+        }
+    } else {
+        auto start = std::min_element(data.begin()+1, data.end());
+        auto end = std::max_element(data.begin()+1, data.end());
+        table_items->bucket_size = *end - *start + 1;
+
+        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+            uint32_t bucket_num = JoinHashMapHelper::calc_bucket_num_opt<CppType>(data[i], *start);
+            table_items->next[i] = table_items->first[bucket_num];
+            table_items->first[bucket_num] = i;
+        }
+    }
+    return Status::OK();
+}
+
 template <PrimitiveType PT>
 const Buffer<typename JoinBuildFunc<PT>::CppType>& JoinBuildFunc<PT>::get_key_data(
         const JoinHashTableItems& table_items) {
@@ -131,6 +172,52 @@ void FixedSizeJoinBuildFunc<PT>::_build_nullable_columns(JoinHashTableItems* tab
             table_items->first[probe_state->buckets[i]] = start + i;
         }
     }
+}
+
+template <PrimitiveType PT>
+Status ArrayProbeFunc<PT>::lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state) {
+    size_t probe_row_count = probe_state->probe_row_count;
+    auto& data = get_key_data(*probe_state);
+    JoinHashMapHelper::calc_bucket_nums_opt<CppType>(data, table_items.bucket_size, &probe_state->buckets, 0, data.size(), 1);
+
+    if ((*probe_state->key_columns)[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state->key_columns)[0]);
+
+        if (nullable_column->has_null()) {
+            auto& null_array = nullable_column->null_column()->get_data();
+            for (size_t i = 0; i < probe_row_count; i++) {
+                if (null_array[i] == 0) {
+                    probe_state->next[i] = table_items.first[probe_state->buckets[i]];
+                } else {
+                    probe_state->next[i] = 0;
+                }
+            }
+            probe_state->null_array = &nullable_column->null_column()->get_data();
+        } else {
+            for (size_t i = 0; i < probe_row_count; i++) {
+                probe_state->next[i] = table_items.first[probe_state->buckets[i]];
+            }
+            probe_state->null_array = nullptr;
+        }
+        return Status::OK();
+    }
+
+    for (size_t i = 0; i < probe_row_count; i++) {
+        probe_state->next[i] = table_items.first[probe_state->buckets[i]];
+    }
+    probe_state->null_array = nullptr;
+    return Status::OK();
+}
+
+template <PrimitiveType PT>
+const Buffer<typename ArrayProbeFunc<PT>::CppType>& ArrayProbeFunc<PT>::get_key_data(
+        const HashTableProbeState& probe_state) {
+    if ((*probe_state.key_columns)[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state.key_columns)[0]);
+        return ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_data();
+    }
+
+    return ColumnHelper::as_raw_column<ColumnType>((*probe_state.key_columns)[0])->get_data();
 }
 
 template <PrimitiveType PT>
@@ -686,7 +773,9 @@ template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 template <bool first_probe>
 void JoinHashMap<PT, BuildFunc, ProbeFunc>::_search_ht_impl(RuntimeState* state, const Buffer<CppType>& build_data,
                                                             const Buffer<CppType>& data) {
-    if (!_table_items->with_other_conjunct) {
+    if (_table_items->is_array) {
+        _probe_from_ht_array<first_probe>(state, build_data, data);
+    } else if (!_table_items->with_other_conjunct) {
         switch (_table_items->join_type) {
         case TJoinOp::LEFT_OUTER_JOIN:
             _probe_from_ht_for_left_outer_join<first_probe>(state, build_data, data);
@@ -789,6 +878,65 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_search_ht_impl(RuntimeState* state,
     _probe_state->cur_probe_index = 0; \
     _probe_state->count = match_count; \
     _probe_state->cur_row_match_count = 0;
+
+template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
+template <bool first_probe>
+void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_array(RuntimeState* state, const Buffer<CppType>& build_data,
+                                                           const Buffer<CppType>& probe_data) {
+    _probe_state->match_flag = JoinMatchFlag::NORMAL;
+    size_t match_count = 0;
+    bool one_to_many = false;
+    size_t i = _probe_state->cur_probe_index;
+
+    if constexpr (!first_probe) {
+        _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
+        _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
+        match_count = 1;
+        if (_probe_state->next[i] == 0) {
+            i++;
+            _probe_state->cur_row_match_count = 0;
+        }
+    }
+
+    size_t probe_row_count = _probe_state->probe_row_count;
+    for (; i < probe_row_count; i++) {
+        if constexpr (first_probe) {
+            _probe_state->probe_match_filter[i] = 0;
+        }
+        size_t build_index = _probe_state->next[i];
+        if (build_index != 0) {
+            do {
+                {
+                    _probe_state->probe_index[match_count] = i;
+                    _probe_state->build_index[match_count] = build_index;
+                    match_count++;
+
+                    if constexpr (first_probe) {
+                        _probe_state->cur_row_match_count++;
+                        _probe_state->probe_match_filter[i] = 1;
+                    }
+                    RETURN_IF_CHUNK_FULL()
+                }
+                build_index = _table_items->next[build_index];
+            } while (build_index != 0);
+
+            if constexpr (first_probe) {
+                if (_probe_state->cur_row_match_count > 1) {
+                    one_to_many = true;
+                }
+            }
+        }
+
+        if constexpr (first_probe) {
+            _probe_state->cur_row_match_count = 0;
+        }
+    }
+
+    if constexpr (first_probe) {
+        CHECK_MATCH()
+    }
+    PROBE_OVER()
+}
 
 template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 template <bool first_probe>
