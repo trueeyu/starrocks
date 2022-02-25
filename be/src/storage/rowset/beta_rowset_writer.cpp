@@ -287,12 +287,12 @@ Status HorizontalBetaRowsetWriter::add_chunk_with_rssid(const vectorized::Chunk&
 Status HorizontalBetaRowsetWriter::flush_chunk(const vectorized::Chunk& chunk) {
     auto segment_writer = _create_segment_writer();
     if (!segment_writer.ok()) return segment_writer.status();
-    RETURN_IF_ERROR((*segment_writer)->append_chunk(chunk));
     {
         std::lock_guard<std::mutex> l(_lock);
         _num_rows_written += static_cast<int64_t>(chunk.num_rows());
         _total_row_size += static_cast<int64_t>(chunk.bytes_usage());
     }
+    RETURN_IF_ERROR((*segment_writer)->append_chunk(chunk));
     return _flush_segment_writer(&segment_writer.value());
 }
 

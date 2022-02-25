@@ -208,7 +208,7 @@ Status DeltaWriter::write(const Chunk& chunk, const uint32_t* indexes, uint32_t 
             st = _flush_memtable();
             _reset_mem_table();
         } else if (full) {
-            st = _flush_memtable_async();
+            st = _flush_memtable();
             _reset_mem_table();
         }
         if (!st.ok()) {

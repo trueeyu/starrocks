@@ -273,7 +273,7 @@ void MemTable::_append_to_sorted_chunk(Chunk* src, Chunk* dest) {
     for (size_t i = 0; i < src->num_rows(); ++i) {
         _selective_values.push_back(_permutations[i].index_in_chunk);
     }
-    dest->append_selective(*src, _selective_values.data(), 0, src->num_rows());
+    dest->append_selective_and_destroy(*src, _selective_values.data(), 0, src->num_rows());
 }
 
 Status MemTable::_split_upserts_deletes(ChunkPtr& src, ChunkPtr* upserts, std::unique_ptr<Column>* deletes) {

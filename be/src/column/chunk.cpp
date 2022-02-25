@@ -154,28 +154,25 @@ std::unique_ptr<Chunk> Chunk::clone_empty_with_slot(size_t size) const {
 }
 
 std::unique_ptr<Chunk> Chunk::clone_empty_with_schema() const {
-    int size = num_rows();
-    return clone_empty_with_schema(size);
+    return clone_empty_with_schema(0);
 }
 
 std::unique_ptr<Chunk> Chunk::clone_empty_with_schema(size_t size) const {
     Columns columns(_columns.size());
     for (size_t i = 0; i < _columns.size(); ++i) {
         columns[i] = _columns[i]->clone_empty();
-        columns[i]->reserve(size);
     }
     return std::make_unique<Chunk>(columns, _schema);
 }
 
 std::unique_ptr<Chunk> Chunk::clone_empty_with_tuple() const {
-    return clone_empty_with_tuple(num_rows());
+    return clone_empty_with_tuple(0);
 }
 
 std::unique_ptr<Chunk> Chunk::clone_empty_with_tuple(size_t size) const {
     Columns columns(_columns.size());
     for (size_t i = 0; i < _columns.size(); ++i) {
         columns[i] = _columns[i]->clone_empty();
-        columns[i]->reserve(size);
     }
     return std::make_unique<Chunk>(columns, _slot_id_to_index, _tuple_id_to_index);
 }
@@ -194,6 +191,14 @@ void Chunk::append_selective(const Chunk& src, const uint32_t* indexes, uint32_t
     DCHECK_EQ(_columns.size(), src.columns().size());
     for (size_t i = 0; i < _columns.size(); ++i) {
         _columns[i]->append_selective(*src.columns()[i].get(), indexes, from, size);
+    }
+}
+
+void Chunk::append_selective_and_destroy(Chunk& src, const uint32_t* indexes, uint32_t from, uint32_t size) {
+    DCHECK_EQ(_columns.size(), src.columns().size());
+    for (size_t i = 0; i < _columns.size(); ++i) {
+        _columns[i]->append_selective(*src.columns()[i].get(), indexes, from, size);
+        src.columns()[i].reset();
     }
 }
 

@@ -289,19 +289,15 @@ Status SegmentWriter::_write_raw_data(const std::vector<Slice>& slices) {
 }
 
 Status SegmentWriter::append_chunk(const vectorized::Chunk& chunk) {
-    DCHECK_EQ(_column_writers.size(), chunk.num_columns());
-    for (size_t i = 0; i < _column_writers.size(); ++i) {
-        const vectorized::Column* col = chunk.get_column_by_index(i).get();
-        RETURN_IF_ERROR(_column_writers[i]->append(*col));
-    }
+    vectorized::Chunk& tmp_chunk = const_cast<vectorized::Chunk&>(chunk);
 
-    size_t chunk_num_rows = chunk.num_rows();
+    size_t chunk_num_rows = tmp_chunk.num_rows();
     if (_has_key) {
         for (size_t i = 0; i < chunk_num_rows; i++) {
             // At the begin of one block, so add a short key index entry
             if ((_num_rows_written % _opts.num_rows_per_block) == 0) {
                 size_t keys = _tablet_schema->num_short_key_columns();
-                vectorized::SeekTuple tuple(*chunk.schema(), chunk.get(i).datums());
+                vectorized::SeekTuple tuple(*tmp_chunk.schema(), tmp_chunk.get(i).datums());
                 std::string encoded_key = tuple.short_key_encode(keys, 0);
                 RETURN_IF_ERROR(_index_builder->add_item(encoded_key));
             }
@@ -310,6 +306,14 @@ Status SegmentWriter::append_chunk(const vectorized::Chunk& chunk) {
     } else {
         _num_rows_written += chunk_num_rows;
     }
+
+    DCHECK_EQ(_column_writers.size(), tmp_chunk.num_columns());
+    for (size_t i = 0; i < _column_writers.size(); ++i) {
+        vectorized::Column* col = tmp_chunk.get_column_by_index(i).get();
+        RETURN_IF_ERROR(_column_writers[i]->append(*col));
+        tmp_chunk.columns()[i].reset();
+    }
+
     return Status::OK();
 }
 

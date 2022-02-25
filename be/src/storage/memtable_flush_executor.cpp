@@ -79,10 +79,10 @@ void FlushToken::_flush_memtable(vectorized::MemTable* memtable) {
 
     MonotonicStopWatch timer;
     timer.start();
+    _stats.flush_size_bytes += memtable->memory_usage();
     set_status(memtable->flush());
     _stats.flush_time_ns += timer.elapsed_time();
     _stats.flush_count++;
-    _stats.flush_size_bytes += memtable->memory_usage();
 }
 
 Status MemTableFlushExecutor::init(const std::vector<DataDir*>& data_dirs) {
