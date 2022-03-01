@@ -307,23 +307,12 @@ Status SegmentWriter::append_chunk(const vectorized::Chunk& chunk) {
         _num_rows_written += chunk_num_rows;
     }
 
-    // lxh: 120M
-    std::cout<<"BEFORE:"<<tls_mem_tracker->consumption()<<std::endl;
     DCHECK_EQ(_column_writers.size(), tmp_chunk.num_columns());
     for (size_t i = 0; i < _column_writers.size(); ++i) {
         vectorized::Column* col = tmp_chunk.get_column_by_index(i).get();
         RETURN_IF_ERROR(_column_writers[i]->append(*col));
-        std::cout<<"STEP_A:"<<i<<":"<<tls_mem_tracker->consumption()<<std::endl;
-        tmp_chunk.columns()[i].reset(); // 5M -> 16M
-        std::cout<<"STEP_B:"<<i<<":"<<tls_mem_tracker->consumption()<<std::endl;
+        tmp_chunk.columns()[i].reset();
     }
-    //for (size_t i =0; i < 1000000; i++) {
-    //    sleep(1);
-    //}
-    // lxh: 360M
-    std::cout<<"AFTER:"<<tls_mem_tracker->consumption()<<std::endl;
-
-    //return Status::InternalError("");
 
     return Status::OK();
 }

@@ -58,8 +58,8 @@ Status PageIO::compress_page_body(const BlockCompressionCodec* codec, double min
 
         double space_saving = 1.0 - static_cast<double>(compressed_body->size()) / uncompressed_size;
         // return compressed body only when it saves more than min_space_saving
-        compressed_body->shrink_to_fit();
         if (space_saving > 0 && space_saving >= min_space_saving) {
+            compressed_body->shrink_to_fit();
             cleanup.cancel();
             return Status::OK();
         }
