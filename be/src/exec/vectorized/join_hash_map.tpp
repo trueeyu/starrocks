@@ -7,7 +7,6 @@ template <PrimitiveType PT>
 void JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
 }
 
 template <PrimitiveType PT>
@@ -49,7 +48,6 @@ template <PrimitiveType PT>
 void FixedSizeJoinBuildFunc<PT>::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
     table_items->build_key_column = ColumnType::create(table_items->row_count + 1);
 }
 
@@ -267,6 +265,8 @@ void FixedSizeJoinProbeFunc<PT>::_probe_nullable_column(const JoinHashTableItems
 
 template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 void JoinHashMap<PT, BuildFunc, ProbeFunc>::build_prepare(RuntimeState* state) {
+    _table_items->next.resize(_table_items->row_count + 1, 0);
+
     BuildFunc().prepare(state, _table_items);
 }
 

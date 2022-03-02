@@ -15,7 +15,6 @@ namespace starrocks::vectorized {
 void SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
     table_items->build_slice.resize(table_items->row_count + 1);
 }
 
