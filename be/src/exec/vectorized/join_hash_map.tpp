@@ -4,6 +4,55 @@
 
 namespace starrocks::vectorized {
 template <PrimitiveType PT>
+void DirectMappingJoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
+    if constexpr (PT == PrimitiveType::TYPE_BOOLEAN) {
+        table_items->bucket_size = 2;
+    } else if constexpr (PT == PrimitiveType::TYPE_TINYINT) {
+        table_items->bucket_size = 64;
+    } else if constexpr (PT == PrimitiveType::TYPE_SMALLINT) {
+        table_items->bucket_size = 65536;
+    } else {
+        assert(false);
+    }
+    table_items->first.resize(table_items->bucket_size, 0);
+}
+
+template <PrimitiveType PT>
+const Buffer<typename DirectMappingJoinBuildFunc<PT>::CppType>& DirectMappingJoinBuildFunc<PT>::get_key_data(
+        const JoinHashTableItems& table_items) {
+    if (table_items.key_columns[0]->is_nullable()) {
+        auto* null_column = ColumnHelper::as_raw_column<NullableColumn>(table_items.key_columns[0]);
+        return ColumnHelper::as_raw_column<ColumnType>(null_column->data_column())->get_data();
+    }
+
+    return ColumnHelper::as_raw_column<ColumnType>(table_items.key_columns[0])->get_data();
+}
+
+template <PrimitiveType PT>
+Status DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
+                                                            HashTableProbeState* probe_state) {
+    auto& data = get_key_data(*table_items);
+    if (table_items->key_columns[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(table_items->key_columns[0]);
+        auto& null_array = nullable_column->null_column()->get_data();
+        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+            if (null_array[i] == 0) {
+                auto bucket_num = data[i];
+                table_items->next[i] = table_items->first[bucket_num];
+                table_items->first[bucket_num] = i;
+            }
+        }
+    } else {
+        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+            auto bucket_num = data[i];
+            table_items->next[i] = table_items->first[bucket_num];
+            table_items->first[bucket_num] = i;
+        }
+    }
+    return Status::OK();
+}
+
+template <PrimitiveType PT>
 void JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
@@ -133,6 +182,51 @@ void FixedSizeJoinBuildFunc<PT>::_build_nullable_columns(JoinHashTableItems* tab
             table_items->first[probe_state->buckets[i]] = start + i;
         }
     }
+}
+
+template <PrimitiveType PT>
+Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state) {
+    size_t probe_row_count = probe_state->probe_row_count;
+    auto& data = get_key_data(*probe_state);
+
+    if ((*probe_state->key_columns)[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state->key_columns)[0]);
+
+        if (nullable_column->has_null()) {
+            auto& null_array = nullable_column->null_column()->get_data();
+            for (size_t i = 0; i < probe_row_count; i++) {
+                if (null_array[i] == 0) {
+                    probe_state->next[i] = table_items.first[data[i]];
+                } else {
+                    probe_state->next[i] = 0;
+                }
+            }
+            probe_state->null_array = &nullable_column->null_column()->get_data();
+        } else {
+            for (size_t i = 0; i < probe_row_count; i++) {
+                probe_state->next[i] = table_items.first[data[i]];
+            }
+            probe_state->null_array = nullptr;
+        }
+        return Status::OK();
+    }
+
+    for (size_t i = 0; i < probe_row_count; i++) {
+        probe_state->next[i] = table_items.first[data[i]];
+    }
+    probe_state->null_array = nullptr;
+    return Status::OK();
+}
+
+template <PrimitiveType PT>
+const Buffer<typename DirectMappingJoinProbeFunc<PT>::CppType>& DirectMappingJoinProbeFunc<PT>::get_key_data(
+        const HashTableProbeState& probe_state) {
+    if ((*probe_state.key_columns)[0]->is_nullable()) {
+        auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state.key_columns)[0]);
+        return ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_data();
+    }
+
+    return ColumnHelper::as_raw_column<ColumnType>((*probe_state.key_columns)[0])->get_data();
 }
 
 template <PrimitiveType PT>
@@ -839,7 +933,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
         size_t build_index = _probe_state->next[i];
         if (build_index != 0) {
             do {
-                if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
                     match_count++;
@@ -903,7 +997,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join(R
             RETURN_IF_CHUNK_FULL()
         } else {
             while (build_index != 0) {
-                if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
                     match_count++;
@@ -951,7 +1045,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_semi_join(Ru
         }
 
         while (index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 match_count++;
                 break;
@@ -989,7 +1083,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join(Ru
 
             bool found = false;
             while (index != 0) {
-                if (JoinKeyEqual<CppType>()(build_data[index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                     found = true;
                     break;
                 }
@@ -1010,7 +1104,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join(Ru
             }
             bool found = false;
             while (index != 0) {
-                if (JoinKeyEqual<CppType>()(build_data[index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                     found = true;
                     break;
                 }
@@ -1052,7 +1146,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_outer_join(
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 _probe_state->build_match_index[build_index] = 1;
@@ -1090,7 +1184,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_semi_join(R
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 if (_probe_state->build_match_index[build_index] == 0) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
@@ -1120,7 +1214,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_anti_join(R
         }
 
         while (index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                 _probe_state->build_match_index[index] = 1;
             }
             index = _table_items->next[index];
@@ -1160,7 +1254,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join(R
             RETURN_IF_CHUNK_FULL()
         } else {
             while (build_index != 0) {
-                if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
                     _probe_state->build_match_index[build_index] = 1;
@@ -1220,7 +1314,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join_w
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 _probe_state->probe_match_index[i]++;
@@ -1274,7 +1368,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_semi_join_wi
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 match_count++;
@@ -1324,7 +1418,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join_wi
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 _probe_state->probe_match_index[i]++;
@@ -1366,7 +1460,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_outer_join_
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 match_count++;
@@ -1397,7 +1491,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_semi_join_w
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 match_count++;
@@ -1428,7 +1522,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_anti_join_w
         }
 
         while (build_index != 0) {
-            if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+            if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
                 match_count++;
@@ -1475,7 +1569,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join_w
             RETURN_IF_CHUNK_FULL()
         } else {
             while (build_index != 0) {
-                if (JoinKeyEqual<CppType>()(build_data[build_index], probe_data[i])) {
+                if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
                     _probe_state->probe_match_index[i]++;
