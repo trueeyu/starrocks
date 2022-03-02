@@ -285,11 +285,7 @@ public:
     using CppType = typename RunTimeTypeTraits<PT>::CppType;
     using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
 
-    static Status prepare([[maybe_unused]] RuntimeState* runtime, [[maybe_unused]] JoinHashTableItems* table_items,
-                          [[maybe_unused]] HashTableProbeState* probe_state) {
-        return Status::OK();
-    }
-
+    static Status prepare(RuntimeState* runtime, JoinHashTableItems* table_items, HashTableProbeState* probe_state);
     static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items);
     static Status construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
                                        HashTableProbeState* probe_state);
@@ -399,6 +395,8 @@ public:
 
     explicit JoinHashMap(JoinHashTableItems* table_items, HashTableProbeState* probe_state)
             : _table_items(table_items), _probe_state(probe_state) {}
+
+    Status build_prepare(RuntimeState* state);
 
     Status build(RuntimeState* state);
     Status probe(RuntimeState* state, const Columns& key_columns, ChunkPtr* probe_chunk, ChunkPtr* chunk,

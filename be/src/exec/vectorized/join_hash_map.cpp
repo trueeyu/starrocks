@@ -14,6 +14,10 @@ namespace starrocks::vectorized {
 
 Status SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items,
                                         HashTableProbeState* probe_state) {
+    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
+    table_items->first.resize(table_items->bucket_size, 0);
+    table_items->next.resize(table_items->row_count + 1, 0);
+
     table_items->build_slice.resize(table_items->row_count + 1);
     probe_state->buckets.resize(state->chunk_size());
     probe_state->is_nulls.resize(state->chunk_size());
@@ -297,14 +301,6 @@ void JoinHashTable::create(const HashTableParam& param) {
 
 Status JoinHashTable::build(RuntimeState* state) {
     _hash_map_type = _choose_join_hash_map();
-    _table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(_table_items->row_count + 1);
-    _table_items->first.resize(_table_items->bucket_size, 0);
-    _table_items->next.resize(_table_items->row_count + 1, 0);
-    if (_table_items->join_type == TJoinOp::RIGHT_OUTER_JOIN || _table_items->join_type == TJoinOp::FULL_OUTER_JOIN ||
-        _table_items->join_type == TJoinOp::RIGHT_SEMI_JOIN || _table_items->join_type == TJoinOp::RIGHT_ANTI_JOIN) {
-        _probe_state->build_match_index.resize(_table_items->row_count + 1, 0);
-        _probe_state->build_match_index[0] = 1;
-    }
 
     JoinHashMapHelper::prepare_map_index(_probe_state.get(), state->chunk_size());
 
@@ -314,6 +310,7 @@ Status JoinHashTable::build(RuntimeState* state) {
 #define M(NAME)                                                                                                       \
     case JoinHashMapType::NAME:                                                                                       \
         _##NAME = std::make_unique<typename decltype(_##NAME)::element_type>(_table_items.get(), _probe_state.get()); \
+        RETURN_IF_ERROR(_##NAME->build_prepare(state));                                                               \
         RETURN_IF_ERROR(_##NAME->build(state));                                                                       \
         break;
         APPLY_FOR_JOIN_VARIANTS(M)
