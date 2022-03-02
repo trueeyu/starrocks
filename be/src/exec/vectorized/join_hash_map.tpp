@@ -4,8 +4,7 @@
 
 namespace starrocks::vectorized {
 template <PrimitiveType PT>
-Status JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items,
-                                  HashTableProbeState* probe_state) {
+Status JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->next.resize(table_items->row_count + 1, 0);
@@ -48,14 +47,11 @@ Status JoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTabl
 }
 
 template <PrimitiveType PT>
-Status FixedSizeJoinBuildFunc<PT>::prepare(RuntimeState* state, JoinHashTableItems* table_items,
-                                           HashTableProbeState* probe_state) {
+Status FixedSizeJoinBuildFunc<PT>::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->next.resize(table_items->row_count + 1, 0);
     table_items->build_key_column = ColumnType::create(table_items->row_count + 1);
-    probe_state->buckets.resize(state->chunk_size());
-    probe_state->is_nulls.resize(state->chunk_size());
     return Status::OK();
 }
 
@@ -192,6 +188,8 @@ const Buffer<typename JoinProbeFunc<PT>::CppType>& JoinProbeFunc<PT>::get_key_da
 template <PrimitiveType PT>
 Status FixedSizeJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& table_items,
                                                HashTableProbeState* probe_state) {
+    probe_state->probe_pool->clear();
+
     // prepare columns
     Columns data_columns;
     NullColumns null_columns;
@@ -271,14 +269,26 @@ void FixedSizeJoinProbeFunc<PT>::_probe_nullable_column(const JoinHashTableItems
 
 template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 Status JoinHashMap<PT, BuildFunc, ProbeFunc>::build_prepare(RuntimeState* state) {
-    RETURN_IF_ERROR(BuildFunc().prepare(state, _table_items, _probe_state));
+    return BuildFunc().prepare(state, _table_items);
+}
+
+template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
+Status JoinHashMap<PT, BuildFunc, ProbeFunc>::probe_prepare(RuntimeState* state) {
+    size_t chunk_size = state->chunk_size();
+    _probe_state->build_index.resize(chunk_size + 8);
+    _probe_state->probe_index.resize(chunk_size + 8);
+    _probe_state->next.resize(chunk_size);
+    _probe_state->probe_match_index.resize(chunk_size);
+    _probe_state->probe_match_filter.resize(chunk_size);
+    _probe_state->buckets.resize(chunk_size);
 
     if (_table_items->join_type == TJoinOp::RIGHT_OUTER_JOIN || _table_items->join_type == TJoinOp::FULL_OUTER_JOIN ||
         _table_items->join_type == TJoinOp::RIGHT_SEMI_JOIN || _table_items->join_type == TJoinOp::RIGHT_ANTI_JOIN) {
         _probe_state->build_match_index.resize(_table_items->row_count + 1, 0);
         _probe_state->build_match_index[0] = 1;
     }
-    return Status::OK();
+
+    return ProbeFunc().prepare(state, _probe_state);
 }
 
 template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
@@ -648,7 +658,6 @@ template <PrimitiveType PT, class BuildFunc, class ProbeFunc>
 Status JoinHashMap<PT, BuildFunc, ProbeFunc>::_search_ht(RuntimeState* state, ChunkPtr* probe_chunk) {
     if (!_probe_state->has_remain) {
         _probe_state->probe_row_count = (*probe_chunk)->num_rows();
-        ProbeFunc().prepare(state, _table_items, _probe_state);
         RETURN_IF_ERROR(ProbeFunc().lookup_init(*_table_items, _probe_state));
 
         auto& build_data = BuildFunc().get_key_data(*_table_items);

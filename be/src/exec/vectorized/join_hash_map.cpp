@@ -12,15 +12,11 @@
 
 namespace starrocks::vectorized {
 
-Status SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items,
-                                        HashTableProbeState* probe_state) {
+Status SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->next.resize(table_items->row_count + 1, 0);
-
     table_items->build_slice.resize(table_items->row_count + 1);
-    probe_state->buckets.resize(state->chunk_size());
-    probe_state->is_nulls.resize(state->chunk_size());
     return Status::OK();
 }
 
@@ -145,7 +141,7 @@ Status SerializedJoinProbeFunc::lookup_init(const JoinHashTableItems& table_item
     for (const auto& data_column : data_columns) {
         serialize_size += serde::ColumnArraySerde::max_serialized_size(*data_column);
     }
-    uint8_t* ptr = table_items.probe_pool->allocate(serialize_size);
+    uint8_t* ptr = probe_state->probe_pool->allocate(serialize_size);
     RETURN_IF_UNLIKELY_NULL(ptr, Status::MemoryAllocFailed("alloc mem for hash join probe failed"));
 
     // serialize and init search
@@ -222,7 +218,6 @@ void JoinHashTable::create(const HashTableParam& param) {
     _table_items->need_create_tuple_columns = _need_create_tuple_columns;
     _table_items->build_chunk = std::make_shared<Chunk>();
     _table_items->build_pool = std::make_unique<MemPool>();
-    _table_items->probe_pool = std::make_unique<MemPool>();
     _table_items->with_other_conjunct = param.with_other_conjunct;
     _table_items->join_type = param.join_type;
     _table_items->row_desc = param.row_desc;
@@ -302,8 +297,6 @@ void JoinHashTable::create(const HashTableParam& param) {
 Status JoinHashTable::build(RuntimeState* state) {
     _hash_map_type = _choose_join_hash_map();
 
-    JoinHashMapHelper::prepare_map_index(_probe_state.get(), state->chunk_size());
-
     switch (_hash_map_type) {
     case JoinHashMapType::empty:
         break;
@@ -311,6 +304,7 @@ Status JoinHashTable::build(RuntimeState* state) {
     case JoinHashMapType::NAME:                                                                                       \
         _##NAME = std::make_unique<typename decltype(_##NAME)::element_type>(_table_items.get(), _probe_state.get()); \
         RETURN_IF_ERROR(_##NAME->build_prepare(state));                                                               \
+        RETURN_IF_ERROR(_##NAME->probe_prepare(state));                                                               \
         RETURN_IF_ERROR(_##NAME->build(state));                                                                       \
         break;
         APPLY_FOR_JOIN_VARIANTS(M)
