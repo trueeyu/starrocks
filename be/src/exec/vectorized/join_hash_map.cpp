@@ -12,12 +12,11 @@
 
 namespace starrocks::vectorized {
 
-Status SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
+void SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
     table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->next.resize(table_items->row_count + 1, 0);
     table_items->build_slice.resize(table_items->row_count + 1);
-    return Status::OK();
 }
 
 Status SerializedJoinBuildFunc::construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
@@ -303,8 +302,8 @@ Status JoinHashTable::build(RuntimeState* state) {
 #define M(NAME)                                                                                                       \
     case JoinHashMapType::NAME:                                                                                       \
         _##NAME = std::make_unique<typename decltype(_##NAME)::element_type>(_table_items.get(), _probe_state.get()); \
-        RETURN_IF_ERROR(_##NAME->build_prepare(state));                                                               \
-        RETURN_IF_ERROR(_##NAME->probe_prepare(state));                                                               \
+        _##NAME->build_prepare(state);                                                                                \
+        _##NAME->probe_prepare(state);                                                                                \
         RETURN_IF_ERROR(_##NAME->build(state));                                                                       \
         break;
         APPLY_FOR_JOIN_VARIANTS(M)

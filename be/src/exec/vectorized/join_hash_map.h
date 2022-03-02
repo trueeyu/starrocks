@@ -277,7 +277,7 @@ public:
     using CppType = typename RunTimeTypeTraits<PT>::CppType;
     using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
 
-    static Status prepare(RuntimeState* runtime, JoinHashTableItems* table_items);
+    static void prepare(RuntimeState* runtime, JoinHashTableItems* table_items);
     static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items);
     static Status construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
                                        HashTableProbeState* probe_state);
@@ -289,7 +289,7 @@ public:
     using CppType = typename RunTimeTypeTraits<PT>::CppType;
     using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
 
-    static Status prepare(RuntimeState* state, JoinHashTableItems* table_items);
+    static void prepare(RuntimeState* state, JoinHashTableItems* table_items);
 
     static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items) {
         return ColumnHelper::as_raw_column<const ColumnType>(table_items.build_key_column)->get_data();
@@ -308,7 +308,7 @@ private:
 
 class SerializedJoinBuildFunc {
 public:
-    static Status prepare(RuntimeState* state, JoinHashTableItems* table_items);
+    static void prepare(RuntimeState* state, JoinHashTableItems* table_items);
     static const Buffer<Slice>& get_key_data(const JoinHashTableItems& table_items) { return table_items.build_slice; }
     static Status construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
                                        HashTableProbeState* probe_state);
@@ -389,8 +389,8 @@ public:
     explicit JoinHashMap(JoinHashTableItems* table_items, HashTableProbeState* probe_state)
             : _table_items(table_items), _probe_state(probe_state) {}
 
-    Status build_prepare(RuntimeState* state);
-    Status probe_prepare(RuntimeState* state);
+    void build_prepare(RuntimeState* state);
+    void probe_prepare(RuntimeState* state);
 
     Status build(RuntimeState* state);
     Status probe(RuntimeState* state, const Columns& key_columns, ChunkPtr* probe_chunk, ChunkPtr* chunk,
