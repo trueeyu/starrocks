@@ -114,6 +114,8 @@ struct JoinHashTableItems {
     Datum start_value;
     Datum end_value;
 
+    TJoinDistributionMode::type distribution_mode = TJoinDistributionMode::NONE;
+
     RuntimeProfile::Counter* search_ht_timer = nullptr;
     RuntimeProfile::Counter* output_build_column_timer = nullptr;
     RuntimeProfile::Counter* output_probe_column_timer = nullptr;
@@ -170,6 +172,7 @@ struct HashTableParam {
     std::set<SlotId> output_slots;
     std::set<SlotId> predicate_slots;
     std::vector<JoinKeyDesc> join_keys;
+    TJoinDistributionMode::type distribution_mode = TJoinDistributionMode::NONE;
 
     RuntimeProfile::Counter* search_ht_timer = nullptr;
     RuntimeProfile::Counter* output_build_column_timer = nullptr;

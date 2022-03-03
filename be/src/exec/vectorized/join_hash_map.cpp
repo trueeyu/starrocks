@@ -218,6 +218,7 @@ void JoinHashTable::create(const HashTableParam& param) {
     _table_items->with_other_conjunct = param.with_other_conjunct;
     _table_items->join_type = param.join_type;
     _table_items->row_desc = param.row_desc;
+    _table_items->distribution_mode = param.distribution_mode;
     if (_table_items->join_type == TJoinOp::RIGHT_SEMI_JOIN || _table_items->join_type == TJoinOp::RIGHT_ANTI_JOIN ||
         _table_items->join_type == TJoinOp::RIGHT_OUTER_JOIN) {
         _table_items->left_to_nullable = true;
@@ -423,7 +424,7 @@ template <PrimitiveType PT>
 bool JoinHashTable::_can_use_direct_mapping() {
     if (_table_items->row_count <= 0) {
         return true;
-    } else {
+    } else if (_table_items->distribution_mode == TJoinDistributionMode::BROADCAST || (_table_items->row_count <= 1000000)) {
         const auto& data = ColumnHelper::get_cpp_datas<PrimitiveType::TYPE_INT>(_table_items->key_columns[0]);
         const auto min_iter = std::min_element(data.begin() + 1, data.end());
         const auto max_iter = std::max_element(data.begin() + 1, data.end());
@@ -440,6 +441,8 @@ bool JoinHashTable::_can_use_direct_mapping() {
         } else {
             return false;
         }
+    } else {
+        return false;
     }
 } // namespace starrocks::vectorized
 
