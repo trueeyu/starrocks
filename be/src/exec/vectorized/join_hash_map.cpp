@@ -13,7 +13,6 @@
 namespace starrocks::vectorized {
 
 void SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->build_slice.resize(table_items->row_count + 1);
 }
@@ -420,8 +419,33 @@ void JoinHashTable::remove_duplicate_index(Column::Filter* filter) {
     }
 }
 
+template <PrimitiveType PT>
+bool JoinHashTable::_can_use_direct_mapping() {
+    if (_table_items->row_count <= 0) {
+        return true;
+    } else {
+        const auto& data = ColumnHelper::get_cpp_datas<PrimitiveType::TYPE_INT>(_table_items->key_columns[0]);
+        const auto min_iter = std::min_element(data.begin() + 1, data.end());
+        const auto max_iter = std::max_element(data.begin() + 1, data.end());
+        if constexpr (PT == TYPE_BOOLEAN || PT == TYPE_TINYINT || PT == TYPE_SMALLINT) {
+            _table_items->bucket_size = max_iter - min_iter + 1;
+            _table_items->start_value.set(*min_iter);
+            _table_items->end_value.set(*max_iter);
+            return true;
+        } else if (max_iter - min_iter + 1 <= _table_items->bucket_size) {
+            _table_items->bucket_size = max_iter - min_iter + 1;
+            _table_items->start_value.set(*min_iter);
+            _table_items->end_value.set(*max_iter);
+            return true;
+        } else {
+            return false;
+        }
+    }
+} // namespace starrocks::vectorized
+
 JoinHashMapType JoinHashTable::_choose_join_hash_map() {
     size_t size = _table_items->join_keys.size();
+    _table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(_table_items->row_count + 1);
     DCHECK_GT(size, 0);
 
     for (size_t i = 0; i < _table_items->join_keys.size(); i++) {
@@ -433,15 +457,27 @@ JoinHashMapType JoinHashTable::_choose_join_hash_map() {
     if (size == 1 && !_table_items->join_keys[0].is_null_safe_equal) {
         switch (_table_items->join_keys[0].type) {
         case PrimitiveType::TYPE_BOOLEAN:
+            _can_use_direct_mapping<TYPE_BOOLEAN>();
             return JoinHashMapType::keyboolean;
         case PrimitiveType::TYPE_TINYINT:
+            _can_use_direct_mapping<TYPE_TINYINT>();
             return JoinHashMapType::key8;
         case PrimitiveType::TYPE_SMALLINT:
+            _can_use_direct_mapping<TYPE_SMALLINT>();
             return JoinHashMapType::key16;
-        case PrimitiveType::TYPE_INT:
-            return JoinHashMapType::key32;
+        case PrimitiveType::TYPE_INT: {
+            if (_can_use_direct_mapping<TYPE_INT>()) {
+                return JoinHashMapType::dm32;
+            } else {
+                return JoinHashMapType::key32;
+            }
+        }
         case PrimitiveType::TYPE_BIGINT:
-            return JoinHashMapType::key64;
+            if (_can_use_direct_mapping<TYPE_BIGINT>()) {
+                return JoinHashMapType::dm64;
+            } else {
+                return JoinHashMapType::key64;
+            }
         case PrimitiveType::TYPE_LARGEINT:
             return JoinHashMapType::key128;
         case PrimitiveType::TYPE_FLOAT:

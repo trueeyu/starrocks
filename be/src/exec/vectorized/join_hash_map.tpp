@@ -5,15 +5,6 @@
 namespace starrocks::vectorized {
 template <PrimitiveType PT>
 void DirectMappingJoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
-    if constexpr (PT == PrimitiveType::TYPE_BOOLEAN) {
-        table_items->bucket_size = 2;
-    } else if constexpr (PT == PrimitiveType::TYPE_TINYINT) {
-        table_items->bucket_size = 64;
-    } else if constexpr (PT == PrimitiveType::TYPE_SMALLINT) {
-        table_items->bucket_size = 65536;
-    } else {
-        assert(false);
-    }
     table_items->first.resize(table_items->bucket_size, 0);
 }
 
@@ -36,17 +27,23 @@ Status DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state,
         auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(table_items->key_columns[0]);
         auto& null_array = nullable_column->null_column()->get_data();
         for (size_t i = 1; i < table_items->row_count + 1; i++) {
+            CppType start = table_items->start_value.get<CppType>();
+            CppType end = table_items->end_value.get<CppType>();
             if (null_array[i] == 0) {
-                auto bucket_num = data[i];
-                table_items->next[i] = table_items->first[bucket_num];
-                table_items->first[bucket_num] = i;
+                if (data[i] >= start && data[i] <= end) {
+                    table_items->next[i] = table_items->first[data[i]];
+                    table_items->first[data[i]] = i;
+                }
             }
         }
     } else {
         for (size_t i = 1; i < table_items->row_count + 1; i++) {
-            auto bucket_num = data[i];
-            table_items->next[i] = table_items->first[bucket_num];
-            table_items->first[bucket_num] = i;
+            CppType start = table_items->start_value.get<CppType>();
+            CppType end = table_items->end_value.get<CppType>();
+            if (data[i] >= start && data[i] < end) {
+                table_items->next[i] = table_items->first[data[i]];
+                table_items->first[data[i]] = i;
+            }
         }
     }
     return Status::OK();
@@ -54,7 +51,6 @@ Status DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state,
 
 template <PrimitiveType PT>
 void JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
 }
 
@@ -95,7 +91,6 @@ Status JoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTabl
 
 template <PrimitiveType PT>
 void FixedSizeJoinBuildFunc<PT>::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
     table_items->first.resize(table_items->bucket_size, 0);
     table_items->build_key_column = ColumnType::create(table_items->row_count + 1);
 }
@@ -189,6 +184,9 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
     size_t probe_row_count = probe_state->probe_row_count;
     auto& data = get_key_data(*probe_state);
 
+    auto start = table_items.start_value.get<CppType>();
+    auto end = table_items.end_value.get<CppType>();
+
     if ((*probe_state->key_columns)[0]->is_nullable()) {
         auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state->key_columns)[0]);
 
@@ -196,7 +194,11 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
             auto& null_array = nullable_column->null_column()->get_data();
             for (size_t i = 0; i < probe_row_count; i++) {
                 if (null_array[i] == 0) {
-                    probe_state->next[i] = table_items.first[data[i]];
+                    if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+                        probe_state->next[i] = table_items.first[data[i]];
+                    } else {
+                        probe_state->next[i] = 0;
+                    }
                 } else {
                     probe_state->next[i] = 0;
                 }
@@ -204,7 +206,11 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
             probe_state->null_array = &nullable_column->null_column()->get_data();
         } else {
             for (size_t i = 0; i < probe_row_count; i++) {
-                probe_state->next[i] = table_items.first[data[i]];
+                if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+                    probe_state->next[i] = table_items.first[data[i]];
+                } else {
+                    probe_state->next[i] = 0;
+                }
             }
             probe_state->null_array = nullptr;
         }
@@ -212,7 +218,11 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
     }
 
     for (size_t i = 0; i < probe_row_count; i++) {
-        probe_state->next[i] = table_items.first[data[i]];
+        if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+            probe_state->next[i] = table_items.first[data[i]];
+        } else {
+            probe_state->next[i] = 0;
+        }
     }
     probe_state->null_array = nullptr;
     return Status::OK();

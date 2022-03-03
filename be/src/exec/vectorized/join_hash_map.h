@@ -37,7 +37,9 @@ namespace starrocks::vectorized {
     M(slice)                       \
     M(fixed32)                     \
     M(fixed64)                     \
-    M(fixed128)
+    M(fixed128)\
+    M(dm32) \
+    M(dm64)
 
 enum class JoinHashMapType {
     empty,
@@ -59,7 +61,9 @@ enum class JoinHashMapType {
     slice,
     fixed32, // 4 bytes
     fixed64, // 8 bytes
-    fixed128 // 16 bytes
+    fixed128, // 16 bytes
+    dm32,
+    dm64
 };
 
 enum class JoinMatchFlag { NORMAL, ALL_NOT_MATCH, ALL_MATCH_ONE, MOST_MATCH_ONE };
@@ -107,6 +111,8 @@ struct JoinHashTableItems {
 
     std::unique_ptr<MemPool> build_pool = nullptr;
     std::vector<JoinKeyDesc> join_keys;
+    Datum start_value;
+    Datum end_value;
 
     RuntimeProfile::Counter* search_ht_timer = nullptr;
     RuntimeProfile::Counter* output_build_column_timer = nullptr;
@@ -582,6 +588,8 @@ public:
     }
 
 private:
+    template <PrimitiveType PT>
+    bool _can_use_direct_mapping();
     JoinHashMapType _choose_join_hash_map();
     static size_t _get_size_of_fixed_and_contiguous_type(PrimitiveType data_type);
 
@@ -596,6 +604,8 @@ private:
     std::unique_ptr<JoinHashMapForDirectMapping(TYPE_BOOLEAN)> _keyboolean = nullptr;
     std::unique_ptr<JoinHashMapForDirectMapping(TYPE_TINYINT)> _key8 = nullptr;
     std::unique_ptr<JoinHashMapForDirectMapping(TYPE_SMALLINT)> _key16 = nullptr;
+    std::unique_ptr<JoinHashMapForDirectMapping(TYPE_INT)> _dm32 = nullptr;
+    std::unique_ptr<JoinHashMapForDirectMapping(TYPE_BIGINT)> _dm64 = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_INT)> _key32 = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_BIGINT)> _key64 = nullptr;
     std::unique_ptr<JoinHashMapForOneKey(TYPE_LARGEINT)> _key128 = nullptr;
