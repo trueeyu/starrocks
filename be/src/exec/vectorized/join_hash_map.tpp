@@ -31,8 +31,9 @@ Status DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state,
             CppType end = table_items->end_value.get<CppType>();
             if (null_array[i] == 0) {
                 if (data[i] >= start && data[i] <= end) {
-                    table_items->next[i] = table_items->first[data[i]];
-                    table_items->first[data[i]] = i;
+                    auto buckets = data[i] - start;
+                    table_items->next[i] = table_items->first[buckets];
+                    table_items->first[buckets] = i;
                 }
             }
         }
@@ -40,9 +41,10 @@ Status DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state,
         for (size_t i = 1; i < table_items->row_count + 1; i++) {
             CppType start = table_items->start_value.get<CppType>();
             CppType end = table_items->end_value.get<CppType>();
-            if (data[i] >= start && data[i] < end) {
-                table_items->next[i] = table_items->first[data[i]];
-                table_items->first[data[i]] = i;
+            if (data[i] >= start && data[i] <= end) {
+                auto buckets = data[i] - start;
+                table_items->next[i] = table_items->first[buckets];
+                table_items->first[buckets] = i;
             }
         }
     }
@@ -195,7 +197,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
             for (size_t i = 0; i < probe_row_count; i++) {
                 if (null_array[i] == 0) {
                     if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
-                        probe_state->next[i] = table_items.first[data[i]];
+                        probe_state->next[i] = table_items.first[data[i] - start];
                     } else {
                         probe_state->next[i] = 0;
                     }
@@ -207,7 +209,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
         } else {
             for (size_t i = 0; i < probe_row_count; i++) {
                 if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
-                    probe_state->next[i] = table_items.first[data[i]];
+                    probe_state->next[i] = table_items.first[data[i] - start];
                 } else {
                     probe_state->next[i] = 0;
                 }
@@ -219,7 +221,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
 
     for (size_t i = 0; i < probe_row_count; i++) {
         if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
-            probe_state->next[i] = table_items.first[data[i]];
+            probe_state->next[i] = table_items.first[data[i] - start];
         } else {
             probe_state->next[i] = 0;
         }

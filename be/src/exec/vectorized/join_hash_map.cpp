@@ -428,12 +428,12 @@ bool JoinHashTable::_can_use_direct_mapping() {
         const auto min_iter = std::min_element(data.begin() + 1, data.end());
         const auto max_iter = std::max_element(data.begin() + 1, data.end());
         if constexpr (PT == TYPE_BOOLEAN || PT == TYPE_TINYINT || PT == TYPE_SMALLINT) {
-            _table_items->bucket_size = max_iter - min_iter + 1;
+            _table_items->bucket_size = *max_iter - *min_iter + 1;
             _table_items->start_value.set(*min_iter);
             _table_items->end_value.set(*max_iter);
             return true;
         } else if (max_iter - min_iter + 1 <= _table_items->bucket_size) {
-            _table_items->bucket_size = max_iter - min_iter + 1;
+            _table_items->bucket_size = *max_iter - *min_iter + 1;
             _table_items->start_value.set(*min_iter);
             _table_items->end_value.set(*max_iter);
             return true;
