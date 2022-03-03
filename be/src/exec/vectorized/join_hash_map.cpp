@@ -115,6 +115,8 @@ void SerializedJoinBuildFunc::_build_nullable_columns(JoinHashTableItems* table_
 }
 
 Status SerializedJoinProbeFunc::lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state) {
+    probe_state->probe_pool->clear();
+
     // prepare columns
     Columns data_columns;
     NullColumns null_columns;
@@ -422,21 +424,63 @@ void JoinHashTable::remove_duplicate_index(Column::Filter* filter) {
 
 template <PrimitiveType PT>
 bool JoinHashTable::_can_use_direct_mapping() {
+    using CppType = typename RunTimeTypeTraits<PT>::CppType;
     if (_table_items->row_count <= 0) {
+        _table_items->bucket_size = 0;
         return true;
     } else if (_table_items->distribution_mode == TJoinDistributionMode::BROADCAST || (_table_items->row_count <= 1000000)) {
-        const auto& data = ColumnHelper::get_cpp_datas<PrimitiveType::TYPE_INT>(_table_items->key_columns[0]);
-        const auto min_iter = std::min_element(data.begin() + 1, data.end());
-        const auto max_iter = std::max_element(data.begin() + 1, data.end());
-        if constexpr (PT == TYPE_BOOLEAN || PT == TYPE_TINYINT || PT == TYPE_SMALLINT) {
-            _table_items->bucket_size = *max_iter - *min_iter + 1;
-            _table_items->start_value.set(*min_iter);
-            _table_items->end_value.set(*max_iter);
+        CppType min;
+        CppType max;
+        bool empty = true;
+
+        if (_table_items->key_columns[0]->is_nullable()) {
+            auto* nullable_column = down_cast<NullableColumn*>(_table_items->key_columns[0].get());
+            if (nullable_column->has_null()) {
+                const auto& data = ColumnHelper::get_cpp_datas<PT>(nullable_column->data_column());
+                for (size_t i = 1; i < _table_items->row_count + 1; i++) {
+                    if (nullable_column->is_null(i)) {
+                    } else {
+                        if (empty) {
+                            min = data[i];
+                            max = data[i];
+                            empty = false;
+                        } else {
+                            if (data[i] < min) {
+                                min = data[i];
+                            } else if (data[i] > max) {
+                                max = data[i];
+                            }
+                        }
+                    }
+                }
+            } else {
+                const auto& data = ColumnHelper::get_cpp_datas<PT>(nullable_column->data_column());
+                const auto min_iter = std::min_element(data.begin() + 1, data.end());
+                const auto max_iter = std::max_element(data.begin() + 1, data.end());
+                min = *min_iter;
+                max = *max_iter;
+                empty = false;
+            }
+        } else {
+            const auto& data = ColumnHelper::get_cpp_datas<PT>(_table_items->key_columns[0]);
+            const auto min_iter = std::min_element(data.begin() + 1, data.end());
+            const auto max_iter = std::max_element(data.begin() + 1, data.end());
+            min = *min_iter;
+            max = *max_iter;
+            empty = false;
+        }
+        if (empty) {
+            _table_items->bucket_size = 0;
             return true;
-        } else if (max_iter - min_iter + 1 <= _table_items->bucket_size) {
-            _table_items->bucket_size = *max_iter - *min_iter + 1;
-            _table_items->start_value.set(*min_iter);
-            _table_items->end_value.set(*max_iter);
+        } else if constexpr (PT == TYPE_BOOLEAN || PT == TYPE_TINYINT || PT == TYPE_SMALLINT) {
+            _table_items->bucket_size = max - min + 1;
+            _table_items->start_value.set(min);
+            _table_items->end_value.set(max);
+            return true;
+        } else if (max - min + 1 <= _table_items->bucket_size) {
+            _table_items->bucket_size = max - min + 1;
+            _table_items->start_value.set(min);
+            _table_items->end_value.set(max);
             return true;
         } else {
             return false;

@@ -196,7 +196,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
             auto& null_array = nullable_column->null_column()->get_data();
             for (size_t i = 0; i < probe_row_count; i++) {
                 if (null_array[i] == 0) {
-                    if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+                    if (table_items.bucket_size > 0 && data[i] >= start && data[i] <= end) {
                         probe_state->next[i] = table_items.first[data[i] - start];
                     } else {
                         probe_state->next[i] = 0;
@@ -208,7 +208,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
             probe_state->null_array = &nullable_column->null_column()->get_data();
         } else {
             for (size_t i = 0; i < probe_row_count; i++) {
-                if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+                if (table_items.bucket_size > 0 && data[i] >= start && data[i] <= end) {
                     probe_state->next[i] = table_items.first[data[i] - start];
                 } else {
                     probe_state->next[i] = 0;
@@ -220,7 +220,7 @@ Status DirectMappingJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& tab
     }
 
     for (size_t i = 0; i < probe_row_count; i++) {
-        if (table_items.row_count > 0 && data[i] >= start && data[i] <= end) {
+        if (table_items.bucket_size > 0 && data[i] >= start && data[i] <= end) {
             probe_state->next[i] = table_items.first[data[i] - start];
         } else {
             probe_state->next[i] = 0;
@@ -290,8 +290,6 @@ const Buffer<typename JoinProbeFunc<PT>::CppType>& JoinProbeFunc<PT>::get_key_da
 template <PrimitiveType PT>
 Status FixedSizeJoinProbeFunc<PT>::lookup_init(const JoinHashTableItems& table_items,
                                                HashTableProbeState* probe_state) {
-    probe_state->probe_pool->clear();
-
     // prepare columns
     Columns data_columns;
     NullColumns null_columns;

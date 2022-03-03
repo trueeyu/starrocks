@@ -385,7 +385,7 @@ public:
     static void prepare(RuntimeState* state, HashTableProbeState* probe_state) {
         probe_state->buckets.resize(state->chunk_size());
         probe_state->is_nulls.resize(state->chunk_size());
-        probe_state->probe_key_column = ColumnType::create(probe_state->probe_row_count);
+        probe_state->probe_key_column = ColumnType::create(state->chunk_size());
     }
 
     // serialize and calculate hash values for probe keys.
@@ -411,7 +411,7 @@ public:
     static void prepare(RuntimeState* state, HashTableProbeState* probe_state) {
         probe_state->buckets.resize(state->chunk_size());
         probe_state->probe_pool = std::make_unique<MemPool>();
-        probe_state->probe_slice.resize(probe_state->probe_row_count);
+        probe_state->probe_slice.resize(state->chunk_size());
         probe_state->is_nulls.resize(state->chunk_size());
     }
 
