@@ -190,8 +190,6 @@ void BinaryColumn::_build_slices() const {
     _slices_cache = false;
     _slices.clear();
 
-    _slices.reserve(_offsets.size() - 1);
-
     for (int i = 0; i < _offsets.size() - 1; ++i) {
         _slices.emplace_back(_bytes.data() + _offsets[i], _offsets[i + 1] - _offsets[i]);
     }

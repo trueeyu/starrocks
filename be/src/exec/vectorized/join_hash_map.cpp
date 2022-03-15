@@ -320,6 +320,17 @@ void JoinHashTable::create(const HashTableParam& param) {
             _table_items->output_build_tuple_ids.emplace_back(tuple_desc->id());
         }
     }
+
+    for (const auto& slot : _table_items->join_keys) {
+        ColumnPtr column = ColumnHelper::create_column(*slot.type, slot.is_nullable);
+        if (slot.is_nullable) {
+            auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(column);
+            nullable_column->append_default_not_null_value();
+        } else {
+            column->append_default();
+        }
+        _table_items->key_columns.emplace_back(column);
+    }
 }
 
 int64_t JoinHashTable::mem_usage() {
@@ -393,7 +404,7 @@ void JoinHashTable::probe_remain(RuntimeState* state, ChunkPtr* chunk, bool* eos
     }
 }
 
-void JoinHashTable::append_chunk(RuntimeState* state, const ChunkPtr& chunk) {
+void JoinHashTable::append_chunk(RuntimeState* state, const ChunkPtr& chunk, const Columns& key_columns) {
     Columns& columns = _table_items->build_chunk->columns();
     size_t chunk_memory_size = 0;
 
@@ -430,6 +441,12 @@ void JoinHashTable::append_chunk(RuntimeState* state, const ChunkPtr& chunk) {
                     chunk_memory_size += src_column->memory_usage();
                 }
             }
+        }
+    }
+
+    for (size_t i = 0; i < key_columns.size(); i++) {
+        if (_table_items->key_columns[i]->size() != _table_items->build_chunk->num_rows()) {
+            _table_items->key_columns[i]->append(*key_columns[i]);
         }
     }
 
