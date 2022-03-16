@@ -81,7 +81,7 @@ public:
    */
     template <PrimitiveType Type, PrimitiveType ResultType, typename... Args>
     static ColumnPtr evaluate(const ColumnPtr& v1, Args&&... args) {
-        auto* r1 = ColumnHelper::cast_to_raw<Type>(v1)->get_data().data();
+        auto& r1 = ColumnHelper::cast_to_raw<Type>(v1)->get_data();
 
         auto result = RunTimeColumnType<ResultType>::create(std::forward<Args>(args)...);
         result->resize(v1->size());

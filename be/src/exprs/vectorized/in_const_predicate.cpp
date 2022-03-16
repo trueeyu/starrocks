@@ -78,11 +78,11 @@ Status VectorizedInConstPredicateBuilder::add_values(const ColumnPtr& column, si
         auto& data_ptr = ColumnHelper::as_raw_column<ColumnType>(column)->get_data(); \
         if (in_pred->is_use_array()) {                                                \
             for (size_t j = column_offset; j < data_ptr.size(); j++) {                \
-                in_pred->insert_array(&data_ptr[j]);                                  \
+                in_pred->insert_array(data_ptr[j]);                                  \
             }                                                                         \
         } else {                                                                      \
             for (size_t j = column_offset; j < data_ptr.size(); j++) {                \
-                in_pred->insert(&data_ptr[j]);                                        \
+                in_pred->insert(data_ptr[j]);                                        \
             }                                                                         \
         }                                                                             \
         break;                                                                        \
@@ -102,20 +102,20 @@ Status VectorizedInConstPredicateBuilder::add_values(const ColumnPtr& column, si
         if (in_pred->is_use_array()) {                                                                          \
             for (size_t j = column_offset; j < data_array.size(); j++) {                                        \
                 if (!nullable_column->is_null(j)) {                                                             \
-                    in_pred->insert_array(&data_array[j]);                                                      \
+                    in_pred->insert_array(data_array[j]);                                                      \
                 } else {                                                                                        \
                     if (_eq_null) {                                                                             \
-                        in_pred->insert_array(nullptr);                                                         \
+                        in_pred->insert_array_null();                                                         \
                     }                                                                                           \
                 }                                                                                               \
             }                                                                                                   \
         } else {                                                                                                \
             for (size_t j = column_offset; j < data_array.size(); j++) {                                        \
                 if (!nullable_column->is_null(j)) {                                                             \
-                    in_pred->insert(&data_array[j]);                                                            \
+                    in_pred->insert(data_array[j]);                                                            \
                 } else {                                                                                        \
                     if (_eq_null) {                                                                             \
-                        in_pred->insert(nullptr);                                                               \
+                        in_pred->insert_null();                                                               \
                     }                                                                                           \
                 }                                                                                               \
             }                                                                                                   \

@@ -280,22 +280,22 @@ public:
         }
     }
 
-    void insert(const ValueType* value) {
-        if (value == nullptr) {
-            _null_in_set = true;
-        } else {
-            _hash_set.emplace(*value);
+    void insert(const ValueType& value) {
+        _hash_set.emplace(value);
+    }
+
+    void insert_null() {
+        _null_in_set = true;
+    }
+
+    void insert_array(const ValueType& value) {
+        if constexpr (can_use_array()) {
+            _set_array_index(value);
         }
     }
 
-    void insert_array(const ValueType* value) {
-        if (value == nullptr) {
-            _null_in_set = true;
-        } else {
-            if constexpr (can_use_array()) {
-                _set_array_index(*value);
-            }
-        }
+    void insert_array_null() {
+        _null_in_set = true;
     }
 
     template <bool use_array>

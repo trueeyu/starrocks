@@ -172,7 +172,7 @@ void HeapChunkSorter::_do_filter_data_for_type(detail::ChunkHolder* chunk_holder
         const auto& order_by_data_column = down_cast<NullableColumn*>(input_column.get())->data_column();
 
         const auto* null_data = order_by_null_column->get_data().data();
-        const auto* order_by_data = ColumnHelper::cast_to_raw<TYPE>(order_by_data_column)->get_data().data();
+        const auto& order_by_data = ColumnHelper::cast_to_raw<TYPE>(order_by_data_column)->get_data();
         auto* __restrict__ filter_data = filter->data();
 
         // null compare flag

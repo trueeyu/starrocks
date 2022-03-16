@@ -232,7 +232,7 @@ Status GroupReader::_rewrite_dict_column_predicates() {
 
         // get dict codes
         std::vector<int32_t> dict_codes;
-        RETURN_IF_ERROR(_column_readers[slot_id]->get_dict_codes(dict_value_column->get_data(), &dict_codes));
+        //RETURN_IF_ERROR(_column_readers[slot_id]->get_dict_codes(dict_value_column->get_data(), &dict_codes));
 
         // eq predicate is faster than in predicate
         // TODO: improve not eq and not in

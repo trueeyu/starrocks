@@ -93,10 +93,10 @@ struct FilterIniter {
             auto& data_array = ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_data();
             for (size_t j = column_offset; j < data_array.size(); j++) {
                 if (!nullable_column->is_null(j)) {
-                    filter->insert(&data_array[j]);
+                    filter->insert(data_array[j]);
                 } else {
                     if (eq_null) {
-                        filter->insert(nullptr);
+                        filter->insert_null();
                     }
                 }
             }
@@ -104,7 +104,7 @@ struct FilterIniter {
         } else {
             auto& data_ptr = ColumnHelper::as_raw_column<ColumnType>(column)->get_data();
             for (size_t j = column_offset; j < data_ptr.size(); j++) {
-                filter->insert(&data_ptr[j]);
+                filter->insert(data_ptr[j]);
             }
         }
         return nullptr;
