@@ -270,6 +270,13 @@ public:
         }
     }
 
+    static void calc_bucket_nums(const BinaryColumn::Container& data, uint32_t bucket_size, Buffer<uint32_t>* buckets,
+                                 uint32_t start, uint32_t count) {
+        for (size_t i = 0; i < count; i++) {
+            (*buckets)[i] = calc_bucket_num<Slice>(data[start + i], bucket_size);
+        }
+    }
+
     static Slice get_hash_key(const Columns& key_columns, size_t row_idx, uint8_t* buffer) {
         size_t byte_size = 0;
         for (const auto& key_column : key_columns) {
@@ -304,7 +311,7 @@ public:
     using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
 
     static void prepare(RuntimeState* runtime, JoinHashTableItems* table_items);
-    static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items);
+    static const typename ColumnType::Container& get_key_data(const JoinHashTableItems& table_items);
     static void construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
                                      HashTableProbeState* probe_state);
 };
@@ -316,7 +323,7 @@ public:
     using ColumnType = typename RunTimeTypeTraits<PT>::ColumnType;
 
     static void prepare(RuntimeState* runtime, JoinHashTableItems* table_items);
-    static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items);
+    static const typename ColumnType::Container& get_key_data(const JoinHashTableItems& table_items);
     static void construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
                                      HashTableProbeState* probe_state);
 };
@@ -329,7 +336,7 @@ public:
 
     static void prepare(RuntimeState* state, JoinHashTableItems* table_items);
 
-    static const Buffer<CppType>& get_key_data(const JoinHashTableItems& table_items) {
+    static const typename ColumnType::Container& get_key_data(const JoinHashTableItems& table_items) {
         return ColumnHelper::as_raw_column<const ColumnType>(table_items.build_key_column)->get_data();
     }
     static void construct_hash_table(RuntimeState* state, JoinHashTableItems* table_items,
@@ -368,7 +375,7 @@ public:
 
     static void prepare(RuntimeState* state, HashTableProbeState* probe_state) {}
     static void lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state);
-    static const Buffer<CppType>& get_key_data(const HashTableProbeState& probe_state);
+    static const typename ColumnType::Container& get_key_data(const HashTableProbeState& probe_state);
     static bool equal(const CppType& x, const CppType& y) { return x == y; }
 };
 
@@ -380,7 +387,7 @@ public:
 
     static void prepare(RuntimeState* state, HashTableProbeState* probe_state) {}
     static void lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state);
-    static const Buffer<CppType>& get_key_data(const HashTableProbeState& probe_state);
+    static const typename ColumnType::Container& get_key_data(const HashTableProbeState& probe_state);
     static bool equal(const CppType& x, const CppType& y) { return true; }
 };
 
@@ -398,7 +405,7 @@ public:
     // serialize and calculate hash values for probe keys.
     static void lookup_init(const JoinHashTableItems& table_items, HashTableProbeState* probe_state);
 
-    static const Buffer<CppType>& get_key_data(const HashTableProbeState& probe_state) {
+    static const typename ColumnType::Container& get_key_data(const HashTableProbeState& probe_state) {
         return ColumnHelper::as_raw_column<ColumnType>(probe_state.probe_key_column)->get_data();
     }
 
@@ -469,81 +476,67 @@ private:
     void _search_ht_remain(RuntimeState* state);
 
     template <bool first_probe>
-    void _search_ht_impl(RuntimeState* state, const Buffer<CppType>& build_data, const Buffer<CppType>& data);
+    void _search_ht_impl(RuntimeState* state);
 
     // for one key inner join
     template <bool first_probe>
-    void _probe_from_ht(RuntimeState* state, const Buffer<CppType>& build_data, const Buffer<CppType>& probe_data);
+    void _probe_from_ht(RuntimeState* state);
 
     // for one key left outer join
     template <bool first_probe>
-    void _probe_from_ht_for_left_outer_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                            const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_outer_join(RuntimeState* state);
 
     // for one key left semi join
     template <bool first_probe>
-    void _probe_from_ht_for_left_semi_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                           const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_semi_join(RuntimeState* state);
 
     // for one key left anti join
     template <bool first_probe>
-    void _probe_from_ht_for_left_anti_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                           const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_anti_join(RuntimeState* state);
 
     // for one key right outer join
     template <bool first_probe>
-    void _probe_from_ht_for_right_outer_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                             const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_outer_join(RuntimeState* state);
 
     // for one key right semi join
     template <bool first_probe>
-    void _probe_from_ht_for_right_semi_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                            const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_semi_join(RuntimeState* state);
 
     // for one key right anti join
     template <bool first_probe>
-    void _probe_from_ht_for_right_anti_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                            const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_anti_join(RuntimeState* state);
 
     // for one key full outer join
     template <bool first_probe>
-    void _probe_from_ht_for_full_outer_join(RuntimeState* state, const Buffer<CppType>& build_data,
-                                            const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_full_outer_join(RuntimeState* state);
 
     // for left outer join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_left_outer_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                                const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_outer_join_with_other_conjunct(RuntimeState* state);
 
     // for left semi join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_left_semi_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                               const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_semi_join_with_other_conjunct(RuntimeState* state);
 
     // for left anti join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_left_anti_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                               const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_left_anti_join_with_other_conjunct(RuntimeState* state);
 
     // for one key right outer join with other conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_right_outer_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                                 const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_outer_join_with_other_conjunct(RuntimeState* state);
 
     // for one key right semi join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_right_semi_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                                const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_semi_join_with_other_conjunct(RuntimeState* state);
 
     // for one key right anti join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_right_anti_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                                const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_right_anti_join_with_other_conjunct(RuntimeState* state);
 
     // for one key full outer join with other join conjunct
     template <bool first_probe>
-    void _probe_from_ht_for_full_outer_join_with_other_conjunct(RuntimeState* state, const Buffer<CppType>& build_data,
-                                                                const Buffer<CppType>& probe_data);
+    void _probe_from_ht_for_full_outer_join_with_other_conjunct(RuntimeState* state);
 
     JoinHashTableItems* _table_items = nullptr;
     HashTableProbeState* _probe_state = nullptr;
