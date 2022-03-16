@@ -386,7 +386,7 @@ public:
             if (const_column->only_null()) {
                 sel = _has_null;
             } else {
-                auto* input_data = down_cast<const ColumnType*>(const_column->data_column().get())->get_data().data();
+                auto& input_data = down_cast<const ColumnType*>(const_column->data_column().get())->get_data();
                 if constexpr (hash_partition) {
                     sel = test_data_with_hash(input_data[0], _hash_values[0]);
                 } else {
@@ -398,7 +398,7 @@ public:
             }
         } else if (input_column->is_nullable()) {
             const auto* nullable_column = down_cast<const NullableColumn*>(input_column);
-            auto* input_data = down_cast<const ColumnType*>(nullable_column->data_column().get())->get_data().data();
+            auto& input_data = down_cast<const ColumnType*>(nullable_column->data_column().get())->get_data();
             if (nullable_column->has_null()) {
                 const uint8_t* null_data = nullable_column->immutable_null_column_data().data();
                 for (int i = 0; i < size; ++i) {
@@ -424,7 +424,7 @@ public:
                 }
             }
         } else {
-            auto* input_data = down_cast<const ColumnType*>(input_column)->get_data().data();
+            auto& input_data = down_cast<const ColumnType*>(input_column)->get_data();
             for (int i = 0; i < size; ++i) {
                 if constexpr (hash_partition) {
                     _selection[i] = test_data_with_hash(input_data[i], _hash_values[i]);

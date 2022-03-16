@@ -199,7 +199,7 @@ void HeapChunkSorter::_do_filter_data_for_type(detail::ChunkHolder* chunk_holder
         const auto& need_filter_data = ColumnHelper::cast_to_raw<TYPE>(top_cursor_column)->get_data()[cursor_rid];
         auto* order_by_column = ColumnHelper::cast_to_raw<TYPE>(input_column);
 
-        const auto* __restrict__ order_by_data = order_by_column->get_data().data();
+        const auto& __restrict__ order_by_data = order_by_column->get_data();
         auto* __restrict__ filter_data = filter->data();
 
         if (_sort_order_flag[0] > 0) {

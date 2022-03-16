@@ -76,7 +76,7 @@ private:
     NullColumnPtr _null_column;
 
     // raw pointer
-    RunTimeColumnType<Type>::Container* _data;
+    typename RunTimeColumnType<Type>::Container* _data;
     //RunTimeCppType<Type>* _data;
 
     NullColumn::ValueType* _null_data;

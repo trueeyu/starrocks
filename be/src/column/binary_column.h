@@ -22,6 +22,7 @@ public:
     struct SliceData {
         explicit SliceData(BinaryColumn* src) : _src(src) {}
 
+        size_t size() const { return _src->size(); }
         Slice operator[](size_t idx) const { return _src->get_slice(idx); }
 
         BinaryColumn* _src = nullptr;

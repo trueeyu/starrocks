@@ -40,13 +40,11 @@ public:
         result->resize_uninitialized(v1->size());
         auto& r3 = result->get_data();
 
-        auto* data1 = r1.data();
-        auto* data2 = r2.data();
         auto* data3 = r3.data();
         const int s = std::min(v1->size(), v2->size());
         for (int i = 0; i < s; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
-                    data1[i], data2[i]);
+                    r1[i], r2[i]);
         }
 
         return result;
@@ -62,13 +60,12 @@ public:
         auto& r3 = result->get_data();
 
         auto data1 = r1[0];
-        auto* data2 = r2.data();
         auto* data3 = r3.data();
 
         int size = v2->size();
         for (int i = 0; i < size; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
-                    data1, data2[i]);
+                    data1, r2[i]);
         }
 
         return result;
@@ -83,14 +80,13 @@ public:
         result->resize_uninitialized(v1->size());
         auto& r3 = result->get_data();
 
-        auto* data1 = r1.data();
         auto data2 = r2[0];
         auto* data3 = r3.data();
 
         int size = v1->size();
         for (int i = 0; i < size; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
-                    data1[i], data2);
+                    r1[i], data2);
         }
 
         return result;
