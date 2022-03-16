@@ -23,12 +23,6 @@ void BinaryColumn::check_or_die() const {
     for (uint32_t i = 1; i < _offsets.size(); i++) {
         CHECK_GE(_offsets[i], _offsets[i - 1]);
     }
-    if (_slices_cache) {
-        for (int32_t i = 0; i < size(); i++) {
-            CHECK_EQ(_slices[i].data, get_slice(i).data);
-            CHECK_EQ(_slices[i].size, get_slice(i).size);
-        }
-    }
 }
 
 void BinaryColumn::append(const Column& src, size_t offset, size_t count) {
@@ -42,7 +36,6 @@ void BinaryColumn::append(const Column& src, size_t offset, size_t count) {
         size_t l = b._offsets[i + 1] - b._offsets[i];
         _offsets.emplace_back(_offsets.back() + l);
     }
-    _slices_cache = false;
 }
 
 void BinaryColumn::append_selective(const Column& src, const uint32_t* indexes, uint32_t from, uint32_t size) {
@@ -69,8 +62,6 @@ void BinaryColumn::append_selective(const Column& src, const uint32_t* indexes, 
         strings::memcpy_inlined(dest_bytes + _offsets[cur_row_count + i], src_bytes.data() + src_offsets[row_idx],
                                 str_size);
     }
-
-    _slices_cache = false;
 }
 
 void BinaryColumn::append_value_multiple_times(const Column& src, uint32_t index, uint32_t size) {
@@ -97,8 +88,6 @@ void BinaryColumn::append_value_multiple_times(const Column& src, uint32_t index
         strings::memcpy_inlined(dest_bytes + _offsets[cur_row_count + i], src_bytes.data() + src_offsets[row_idx],
                                 str_size);
     }
-
-    _slices_cache = false;
 }
 
 bool BinaryColumn::append_strings(const Buffer<Slice>& strs) {
@@ -107,7 +96,6 @@ bool BinaryColumn::append_strings(const Buffer<Slice>& strs) {
         _bytes.insert(_bytes.end(), p, p + s.size);
         _offsets.emplace_back(_bytes.size());
     }
-    _slices_cache = false;
     return true;
 }
 
@@ -150,7 +138,6 @@ bool BinaryColumn::append_strings_overflow(const Buffer<Slice>& strs, size_t max
             _offsets.emplace_back(_bytes.size());
         }
     }
-    _slices_cache = false;
     return true;
 }
 
@@ -167,7 +154,6 @@ bool BinaryColumn::append_continuous_strings(const Buffer<Slice>& strs) {
         _offsets.emplace_back(new_size);
     }
     DCHECK_EQ(_bytes.size(), new_size);
-    _slices_cache = false;
     return true;
 }
 
@@ -182,21 +168,6 @@ void BinaryColumn::append_value_multiple_times(const void* value, size_t count) 
         _bytes.insert(_bytes.end(), p, pend);
         _offsets.emplace_back(_bytes.size());
     }
-    _slices_cache = false;
-}
-
-void BinaryColumn::_build_slices() const {
-    DCHECK(_offsets.size() > 0);
-    _slices_cache = false;
-    _slices.clear();
-
-    _slices.reserve(_offsets.size() - 1);
-
-    for (int i = 0; i < _offsets.size() - 1; ++i) {
-        _slices.emplace_back(_bytes.data() + _offsets[i], _offsets[i + 1] - _offsets[i]);
-    }
-
-    _slices_cache = true;
 }
 
 Status BinaryColumn::update_rows(const Column& src, const uint32_t* indexes) {
@@ -252,7 +223,6 @@ void BinaryColumn::assign(size_t n, size_t idx) {
         _bytes.insert(_bytes.end(), start, end);
         _offsets.emplace_back(_bytes.size());
     }
-    _slices_cache = false;
 }
 
 //TODO(kks): improve this
@@ -264,7 +234,6 @@ void BinaryColumn::remove_first_n_values(size_t count) {
     auto* binary_column = down_cast<BinaryColumn*>(column.get());
     _offsets = std::move(binary_column->_offsets);
     _bytes = std::move(binary_column->_bytes);
-    _slices_cache = false;
 }
 
 ColumnPtr BinaryColumn::cut(size_t start, size_t length) const {

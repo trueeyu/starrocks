@@ -19,22 +19,32 @@ public:
 
     using Bytes = starrocks::raw::RawVectorPad16<uint8_t>;
 
-    using Container = Buffer<Slice>;
+    struct SliceData {
+        explicit SliceData(BinaryColumn* src) : _src(src) {}
+
+        Slice operator[](size_t idx) const { return _src->get_slice(idx); }
+
+        BinaryColumn* _src = nullptr;
+    };
+
+    using Container = SliceData;
 
     // TODO(kks): when we create our own vector, we could let vector[-1] = 0,
     // and then we don't need explicitly emplace_back zero value
-    BinaryColumn() { _offsets.emplace_back(0); }
-    BinaryColumn(Bytes bytes, Offsets offsets) : _bytes(std::move(bytes)), _offsets(std::move(offsets)) {
+    BinaryColumn() : _slice_data(this) { _offsets.emplace_back(0); }
+    BinaryColumn(Bytes bytes, Offsets offsets)
+            : _slice_data(this), _bytes(std::move(bytes)), _offsets(std::move(offsets)) {
         if (_offsets.empty()) {
             _offsets.emplace_back(0);
         }
     };
 
     // NOTE: do *NOT* copy |_slices|
-    BinaryColumn(const BinaryColumn& rhs) : _bytes(rhs._bytes), _offsets(rhs._offsets) {}
+    BinaryColumn(const BinaryColumn& rhs) : _slice_data(this), _bytes(rhs._bytes), _offsets(rhs._offsets) {}
 
     // NOTE: do *NOT* copy |_slices|
-    BinaryColumn(BinaryColumn&& rhs) noexcept : _bytes(std::move(rhs._bytes)), _offsets(std::move(rhs._offsets)) {}
+    BinaryColumn(BinaryColumn&& rhs) noexcept
+            : _slice_data(this), _bytes(std::move(rhs._bytes)), _offsets(std::move(rhs._offsets)) {}
 
     BinaryColumn& operator=(const BinaryColumn& rhs) {
         BinaryColumn tmp(rhs);
@@ -59,19 +69,9 @@ public:
     bool low_cardinality() const override { return false; }
     bool is_binary() const override { return true; }
 
-    const uint8_t* raw_data() const override {
-        if (!_slices_cache) {
-            _build_slices();
-        }
-        return reinterpret_cast<const uint8_t*>(_slices.data());
-    }
+    const uint8_t* raw_data() const override { assert(false); return nullptr; }
 
-    uint8_t* mutable_raw_data() override {
-        if (!_slices_cache) {
-            _build_slices();
-        }
-        return reinterpret_cast<uint8_t*>(_slices.data());
-    }
+    uint8_t* mutable_raw_data() override { assert(false); return nullptr; }
 
     size_t size() const override { return _offsets.size() - 1; }
 
@@ -103,7 +103,6 @@ public:
         // affect the performance.
         // _bytes.reserve(n * 4);
         _offsets.reserve(n + 1);
-        _slices_cache = false;
     }
 
     // If you know the size of the Byte array in advance, you can call this method,
@@ -111,13 +110,11 @@ public:
     void reserve(size_t n, size_t byte_size) {
         _offsets.reserve(n + 1);
         _bytes.reserve(byte_size);
-        _slices_cache = false;
     }
 
     void resize(size_t n) override {
         _offsets.resize(n + 1, _offsets.back());
         _bytes.resize(_offsets.back());
-        _slices_cache = false;
     }
 
     void assign(size_t n, size_t idx) override;
@@ -127,12 +124,10 @@ public:
     void append(const Slice& str) {
         _bytes.insert(_bytes.end(), str.data, str.data + str.size);
         _offsets.emplace_back(_bytes.size());
-        _slices_cache = false;
     }
 
     void append_datum(const Datum& datum) override {
         append(datum.get_slice());
-        _slices_cache = false;
     }
 
     void append(const Column& src, size_t offset, size_t count) override;
@@ -146,7 +141,6 @@ public:
     void append_string(const std::string& str) {
         _bytes.insert(_bytes.end(), str.data(), str.data() + str.size());
         _offsets.emplace_back(_bytes.size());
-        _slices_cache = false;
     }
 
     bool append_strings(const Buffer<Slice>& strs) override;
@@ -161,12 +155,10 @@ public:
 
     void append_default() override {
         _offsets.emplace_back(_bytes.size());
-        _slices_cache = false;
     }
 
     void append_default(size_t count) override {
         _offsets.insert(_offsets.end(), count, _bytes.size());
-        _slices_cache = false;
     }
 
     Status update_rows(const Column& src, const uint32_t* indexes) override;
@@ -204,16 +196,10 @@ public:
     std::string get_name() const override { return "binary"; }
 
     Container& get_data() {
-        if (!_slices_cache) {
-            _build_slices();
-        }
-        return _slices;
+        return _slice_data;
     }
     const Container& get_data() const {
-        if (!_slices_cache) {
-            _build_slices();
-        }
-        return _slices;
+        return _slice_data;
     }
 
     Bytes& get_bytes() { return _bytes; }
@@ -226,12 +212,11 @@ public:
     Datum get(size_t n) const override { return Datum(get_slice(n)); }
 
     size_t container_memory_usage() const override {
-        return _bytes.capacity() + _offsets.capacity() * sizeof(_offsets[0]) + _slices.capacity() * sizeof(_slices[0]);
+        return _bytes.capacity() + _offsets.capacity() * sizeof(_offsets[0]);
     }
 
     size_t shrink_memory_usage() const override {
-        return _bytes.size() * sizeof(uint8_t) + _offsets.size() * sizeof(_offsets[0]) +
-               _slices.size() * sizeof(_slices[0]);
+        return _bytes.size() * sizeof(uint8_t) + _offsets.size() * sizeof(_offsets[0]);
     }
 
     void swap_column(Column& rhs) override {
@@ -240,8 +225,6 @@ public:
         swap(_delete_state, r._delete_state);
         swap(_bytes, r._bytes);
         swap(_offsets, r._offsets);
-        swap(_slices, r._slices);
-        swap(_slices_cache, r._slices_cache);
     }
 
     void reset_column() override {
@@ -249,11 +232,7 @@ public:
         // TODO(zhuming): shrink size if needed.
         _bytes.clear();
         _offsets.resize(1, 0);
-        _slices.clear();
-        _slices_cache = false;
     }
-
-    void invalidate_slice_cache() { _slices_cache = false; }
 
     std::string debug_item(uint32_t idx) const override;
 
@@ -272,18 +251,15 @@ public:
     }
 
     bool reach_capacity_limit() const override {
-        return _bytes.size() >= Column::MAX_CAPACITY_LIMIT || _offsets.size() >= Column::MAX_CAPACITY_LIMIT ||
-               _slices.size() >= Column::MAX_CAPACITY_LIMIT;
+        return _bytes.size() >= Column::MAX_CAPACITY_LIMIT || _offsets.size() >= Column::MAX_CAPACITY_LIMIT;
     }
 
 private:
     void _build_slices() const;
 
+    SliceData _slice_data;
     Bytes _bytes;
     Offsets _offsets;
-
-    mutable Container _slices;
-    mutable bool _slices_cache = false;
 };
 
 using Offsets = BinaryColumn::Offsets;

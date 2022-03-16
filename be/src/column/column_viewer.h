@@ -55,11 +55,11 @@ public:
             _null_column = ColumnHelper::one_size_not_null_column;
         }
 
-        _data = _column->get_data().data();
+        _data = &_column->get_data();
         _null_data = _null_column->get_data().data();
     }
 
-    inline const RunTimeCppType<Type> value(const size_t idx) const { return _data[idx & _not_const_mask]; }
+    inline const RunTimeCppType<Type> value(const size_t idx) const { return (*_data)[idx & _not_const_mask]; }
 
     inline const bool is_null(const size_t idx) const { return _null_data[idx & _null_mask]; }
 
@@ -76,7 +76,8 @@ private:
     NullColumnPtr _null_column;
 
     // raw pointer
-    RunTimeCppType<Type>* _data;
+    RunTimeColumnType<Type>::Container* _data;
+    //RunTimeCppType<Type>* _data;
 
     NullColumn::ValueType* _null_data;
 

@@ -82,7 +82,6 @@ bool BinaryConverter::read_quoted_string(Column* column, Slice s, const Options&
         }
     }
     auto new_size = bytes.size();
-    binary->invalidate_slice_cache();
 
     int max_size = 0;
     if (options.type_desc != nullptr) {
