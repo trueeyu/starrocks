@@ -5,18 +5,18 @@
 #include "column/bytes.h"
 #include "column/column.h"
 #include "util/slice.h"
-#include "column/binary_column_base.h"
 
 namespace starrocks::vectorized {
 
-class BinaryColumn final : public ColumnFactory<Column, BinaryColumn> {
-    friend class ColumnFactory<Column, BinaryColumn>;
+template <typename T>
+class BinaryColumnBase : public ColumnFactory<Column, BinaryColumnBase<T>> {
+    friend class ColumnFactory<Column, BinaryColumnBase>;
 
 public:
     using ValueType = Slice;
 
-    using Offset = uint32_t;
-    using Offsets = Buffer<uint32_t>;
+    using Offset = T;
+    using Offsets = Buffer<T>;
 
     using Bytes = starrocks::raw::RawVectorPad16<uint8_t>;
 
@@ -24,32 +24,33 @@ public:
 
     // TODO(kks): when we create our own vector, we could let vector[-1] = 0,
     // and then we don't need explicitly emplace_back zero value
-    BinaryColumn() { _offsets.emplace_back(0); }
-    BinaryColumn(Bytes bytes, Offsets offsets) : _bytes(std::move(bytes)), _offsets(std::move(offsets)) {
+    BinaryColumnBase() { _offsets.emplace_back(0); }
+    BinaryColumnBase(Bytes bytes, Offsets offsets) : _bytes(std::move(bytes)), _offsets(std::move(offsets)) {
         if (_offsets.empty()) {
             _offsets.emplace_back(0);
         }
-    };
+    }
 
     // NOTE: do *NOT* copy |_slices|
-    BinaryColumn(const BinaryColumn& rhs) : _bytes(rhs._bytes), _offsets(rhs._offsets) {}
+    BinaryColumnBase(const BinaryColumnBase& rhs) : _bytes(rhs._bytes), _offsets(rhs._offsets) {}
 
     // NOTE: do *NOT* copy |_slices|
-    BinaryColumn(BinaryColumn&& rhs) noexcept : _bytes(std::move(rhs._bytes)), _offsets(std::move(rhs._offsets)) {}
+    BinaryColumnBase(BinaryColumnBase&& rhs) noexcept
+            : _bytes(std::move(rhs._bytes)), _offsets(std::move(rhs._offsets)) {}
 
-    BinaryColumn& operator=(const BinaryColumn& rhs) {
-        BinaryColumn tmp(rhs);
+    BinaryColumnBase& operator=(const BinaryColumnBase& rhs) {
+        BinaryColumnBase tmp(rhs);
         this->swap_column(tmp);
         return *this;
     }
 
-    BinaryColumn& operator=(BinaryColumn&& rhs) noexcept {
-        BinaryColumn tmp(std::move(rhs));
+    BinaryColumnBase& operator=(BinaryColumnBase&& rhs) noexcept {
+        BinaryColumnBase tmp(std::move(rhs));
         this->swap_column(tmp);
         return *this;
     }
 
-    ~BinaryColumn() override {
+    ~BinaryColumnBase() override {
         if (!_offsets.empty()) {
             DCHECK_EQ(_bytes.size(), _offsets.back());
         } else {
@@ -87,7 +88,7 @@ public:
         return (_offsets[from + size] - _offsets[from]) + size * sizeof(Offset);
     }
 
-    size_t byte_size(size_t idx) const override { return _offsets[idx + 1] - _offsets[idx] + sizeof(uint32_t); }
+    size_t byte_size(size_t idx) const override { return _offsets[idx + 1] - _offsets[idx] + sizeof(Offset); }
 
     Slice get_slice(size_t idx) const {
         return Slice(_bytes.data() + _offsets[idx], _offsets[idx + 1] - _offsets[idx]);
@@ -140,6 +141,12 @@ public:
 
     void append_selective(const Column& src, const uint32_t* indexes, uint32_t from, uint32_t size) override;
 
+    template <typename ColumnType>
+    void _append_selective(const ColumnType& src, const uint32_t* indexes, uint32_t from, uint32_t size);
+
+    template <typename ColumnType>
+    void _append_value_multiple_times(const ColumnType& src, uint32_t index, uint32_t size);
+
     void append_value_multiple_times(const Column& src, uint32_t index, uint32_t size) override;
 
     bool append_nulls(size_t count) override { return false; }
@@ -185,7 +192,7 @@ public:
 
     void deserialize_and_append_batch(Buffer<Slice>& srcs, size_t chunk_size) override;
 
-    uint32_t serialize_size(size_t idx) const override { return sizeof(uint32_t) + _offsets[idx + 1] - _offsets[idx]; }
+    uint32_t serialize_size(size_t idx) const override { return sizeof(Offset) + _offsets[idx + 1] - _offsets[idx]; }
 
     MutableColumnPtr clone_empty() const override { return create_mutable(); }
 
@@ -202,7 +209,7 @@ public:
 
     void put_mysql_row_buffer(MysqlRowBuffer* buf, size_t idx) const override;
 
-    std::string get_name() const override { return "binary"; }
+    //std::string get_name() const override { return "binary"; }
 
     Container& get_data() {
         if (!_slices_cache) {
@@ -272,10 +279,10 @@ public:
         return ss.str();
     }
 
-    bool reach_capacity_limit() const override {
-        return _bytes.size() >= Column::MAX_CAPACITY_LIMIT || _offsets.size() >= Column::MAX_CAPACITY_LIMIT ||
-               _slices.size() >= Column::MAX_CAPACITY_LIMIT;
-    }
+//    bool reach_capacity_limit() const override {
+//        return _bytes.size() >= Column::MAX_CAPACITY_LIMIT || _offsets.size() >= Column::MAX_CAPACITY_LIMIT ||
+//               _slices.size() >= Column::MAX_CAPACITY_LIMIT;
+//    }
 
 private:
     void _build_slices() const;
@@ -287,5 +294,5 @@ private:
     mutable bool _slices_cache = false;
 };
 
-using Offsets = BinaryColumn::Offsets;
+using Offsets = BinaryColumnBase<uint32_t>::Offsets;
 } // namespace starrocks::vectorized

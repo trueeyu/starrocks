@@ -65,6 +65,8 @@ public:
 
     virtual bool is_binary() const { return false; }
 
+    virtual bool is_large_binary() const { return false; }
+
     virtual bool is_decimal() const { return false; }
 
     virtual bool is_date() const { return false; }
