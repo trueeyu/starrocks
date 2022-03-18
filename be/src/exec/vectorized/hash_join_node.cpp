@@ -521,7 +521,7 @@ bool HashJoinNode::_has_null(const ColumnPtr& column) {
     if (column->is_nullable()) {
         const auto& null_column = ColumnHelper::as_raw_column<NullableColumn>(column)->null_column();
         DCHECK_GT(null_column->size(), 0);
-        return null_column->contain_value(1, null_column->size(), 1);
+        return null_column->contain_value(0, null_column->size(), 1);
     }
     return false;
 }

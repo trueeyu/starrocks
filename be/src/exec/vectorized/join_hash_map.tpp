@@ -5,9 +5,9 @@
 namespace starrocks::vectorized {
 template <PrimitiveType PT>
 void JoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
-    table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
+    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count);
+    table_items->first.resize(table_items->bucket_size, UINT32_MAX);
+    table_items->next.resize(table_items->row_count, UINT32_MAX);
 }
 
 template <PrimitiveType PT>
@@ -28,7 +28,7 @@ void JoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTableI
     if (table_items->key_columns[0]->is_nullable()) {
         auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(table_items->key_columns[0]);
         auto& null_array = nullable_column->null_column()->get_data();
-        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+        for (size_t i = 0; i < table_items->row_count; i++) {
             if (null_array[i] == 0) {
                 uint32_t bucket_num = JoinHashMapHelper::calc_bucket_num<CppType>(data[i], table_items->bucket_size);
                 table_items->next[i] = table_items->first[bucket_num];
@@ -36,7 +36,7 @@ void JoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinHashTableI
             }
         }
     } else {
-        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+        for (size_t i = 0; i < table_items->row_count; i++) {
             uint32_t bucket_num = JoinHashMapHelper::calc_bucket_num<CppType>(data[i], table_items->bucket_size);
             table_items->next[i] = table_items->first[bucket_num];
             table_items->first[bucket_num] = i;
@@ -49,8 +49,8 @@ void DirectMappingJoinBuildFunc<PT>::prepare(RuntimeState* runtime, JoinHashTabl
     static constexpr size_t BUCKET_SIZE =
             (int64_t)(RunTimeTypeLimits<PT>::max_value()) - (int64_t)(RunTimeTypeLimits<PT>::min_value()) + 1L;
     table_items->bucket_size = BUCKET_SIZE;
-    table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
+    table_items->first.resize(table_items->bucket_size, UINT32_MAX);
+    table_items->next.resize(table_items->row_count, UINT32_MAX);
 }
 
 template <PrimitiveType PT>
@@ -73,7 +73,7 @@ void DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, J
     if (table_items->key_columns[0]->is_nullable()) {
         auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>(table_items->key_columns[0]);
         auto& null_array = nullable_column->null_column()->get_data();
-        for (size_t i = 1; i < table_items->row_count + 1; i++) {
+        for (size_t i = 0; i < table_items->row_count; i++) {
             if (null_array[i] == 0) {
                 size_t buckets = data[i] - MIN_VALUE;
                 table_items->next[i] = table_items->first[buckets];
@@ -91,10 +91,10 @@ void DirectMappingJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, J
 
 template <PrimitiveType PT>
 void FixedSizeJoinBuildFunc<PT>::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
-    table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
-    table_items->build_key_column = ColumnType::create(table_items->row_count + 1);
+    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count);
+    table_items->first.resize(table_items->bucket_size, UINT32_MAX);
+    table_items->next.resize(table_items->row_count, UINT32_MAX);
+    table_items->build_key_column = ColumnType::create(table_items->row_count);
 }
 
 template <PrimitiveType PT>
@@ -125,16 +125,15 @@ void FixedSizeJoinBuildFunc<PT>::construct_hash_table(RuntimeState* state, JoinH
 
     if (!null_columns.empty()) {
         for (size_t i = 0; i < quo; i++) {
-            _build_nullable_columns(table_items, probe_state, data_columns, null_columns, 1 + state->chunk_size() * i,
+            _build_nullable_columns(table_items, probe_state, data_columns, null_columns, state->chunk_size() * i,
                                     state->chunk_size());
         }
-        _build_nullable_columns(table_items, probe_state, data_columns, null_columns, 1 + state->chunk_size() * quo,
-                                rem);
+        _build_nullable_columns(table_items, probe_state, data_columns, null_columns, state->chunk_size() * quo, rem);
     } else {
         for (size_t i = 0; i < quo; i++) {
-            _build_columns(table_items, probe_state, data_columns, 1 + state->chunk_size() * i, state->chunk_size());
+            _build_columns(table_items, probe_state, data_columns, state->chunk_size() * i, state->chunk_size());
         }
-        _build_columns(table_items, probe_state, data_columns, 1 + state->chunk_size() * quo, rem);
+        _build_columns(table_items, probe_state, data_columns, state->chunk_size() * quo, rem);
     }
 }
 
@@ -366,8 +365,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::probe_prepare(RuntimeState* state) {
 
     if (_table_items->join_type == TJoinOp::RIGHT_OUTER_JOIN || _table_items->join_type == TJoinOp::FULL_OUTER_JOIN ||
         _table_items->join_type == TJoinOp::RIGHT_SEMI_JOIN || _table_items->join_type == TJoinOp::RIGHT_ANTI_JOIN) {
-        _probe_state->build_match_index.resize(_table_items->row_count + 1, 0);
-        _probe_state->build_match_index[0] = 1;
+        _probe_state->build_match_index.resize(_table_items->row_count, 0);
     }
 
     ProbeFunc().prepare(state, _probe_state);
@@ -897,7 +895,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -909,7 +907,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
             _probe_state->probe_match_filter[i] = 0;
         }
         size_t build_index = _probe_state->next[i];
-        if (build_index != 0) {
+        if (build_index != UINT32_MAX) {
             do {
                 if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
@@ -923,7 +921,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht(RuntimeState* state, 
                     RETURN_IF_CHUNK_FULL()
                 }
                 build_index = _table_items->next[build_index];
-            } while (build_index != 0);
+            } while (build_index != UINT32_MAX);
 
             if constexpr (first_probe) {
                 if (_probe_state->cur_row_match_count > 1) {
@@ -957,7 +955,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join(R
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -966,7 +964,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join(R
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             _probe_state->probe_index[match_count] = i;
             _probe_state->build_index[match_count] = 0;
             match_count++;
@@ -974,7 +972,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join(R
 
             RETURN_IF_CHUNK_FULL()
         } else {
-            while (build_index != 0) {
+            while (build_index != UINT32_MAX) {
                 if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
@@ -1018,7 +1016,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_semi_join(Ru
     size_t probe_row_count = _probe_state->probe_row_count;
     for (size_t i = 0; i < probe_row_count; i++) {
         size_t index = _probe_state->next[i];
-        if (index == 0) {
+        if (index == UINT32_MAX) {
             continue;
         }
 
@@ -1053,14 +1051,14 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join(Ru
                 continue;
             }
 
-            if (index == 0) {
+            if (index == UINT32_MAX) {
                 _probe_state->probe_index[match_count] = i;
                 match_count++;
                 continue;
             }
 
             bool found = false;
-            while (index != 0) {
+            while (index != UINT32_MAX) {
                 if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                     found = true;
                     break;
@@ -1075,13 +1073,13 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join(Ru
     } else {
         for (size_t i = 0; i < probe_row_count; i++) {
             size_t index = _probe_state->next[i];
-            if (index == 0) {
+            if (index == UINT32_MAX) {
                 _probe_state->probe_index[match_count] = i;
                 match_count++;
                 continue;
             }
             bool found = false;
-            while (index != 0) {
+            while (index != UINT32_MAX) {
                 if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                     found = true;
                     break;
@@ -1111,7 +1109,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_outer_join(
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
         }
     }
@@ -1119,11 +1117,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_outer_join(
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1157,11 +1155,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_semi_join(R
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 if (_probe_state->build_match_index[build_index] == 0) {
                     _probe_state->probe_index[match_count] = i;
@@ -1187,11 +1185,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_anti_join(R
     size_t probe_row_count = _probe_state->probe_row_count;
     for (size_t i = 0; i < probe_row_count; i++) {
         size_t index = _probe_state->next[i];
-        if (index == 0) {
+        if (index == UINT32_MAX) {
             continue;
         }
 
-        while (index != 0) {
+        while (index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[index], probe_data[i])) {
                 _probe_state->build_match_index[index] = 1;
             }
@@ -1213,7 +1211,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join(R
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -1224,14 +1222,14 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join(R
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             _probe_state->probe_index[match_count] = i;
             _probe_state->build_index[match_count] = 0;
             match_count++;
 
             RETURN_IF_CHUNK_FULL()
         } else {
-            while (build_index != 0) {
+            while (build_index != UINT32_MAX) {
                 if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;
@@ -1268,7 +1266,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join_w
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -1282,7 +1280,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join_w
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             _probe_state->probe_index[match_count] = i;
             _probe_state->build_index[match_count] = 0;
             match_count++;
@@ -1291,7 +1289,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_outer_join_w
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1328,7 +1326,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_semi_join_wi
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -1341,11 +1339,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_semi_join_wi
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1372,7 +1370,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join_wi
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -1386,7 +1384,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join_wi
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             _probe_state->probe_index[match_count] = i;
             _probe_state->build_index[match_count] = 0;
             match_count++;
@@ -1395,7 +1393,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_left_anti_join_wi
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1433,11 +1431,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_outer_join_
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1464,11 +1462,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_semi_join_w
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1495,11 +1493,11 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_right_anti_join_w
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             continue;
         }
 
-        while (build_index != 0) {
+        while (build_index != UINT32_MAX) {
             if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                 _probe_state->probe_index[match_count] = i;
                 _probe_state->build_index[match_count] = build_index;
@@ -1525,7 +1523,7 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join_w
         _probe_state->probe_index[0] = _probe_state->probe_index[state->chunk_size()];
         _probe_state->build_index[0] = _probe_state->build_index[state->chunk_size()];
         match_count = 1;
-        if (_probe_state->next[i] == 0) {
+        if (_probe_state->next[i] == UINT32_MAX) {
             i++;
             _probe_state->cur_row_match_count = 0;
         }
@@ -1539,14 +1537,14 @@ void JoinHashMap<PT, BuildFunc, ProbeFunc>::_probe_from_ht_for_full_outer_join_w
     size_t probe_row_count = _probe_state->probe_row_count;
     for (; i < probe_row_count; i++) {
         size_t build_index = _probe_state->next[i];
-        if (build_index == 0) {
+        if (build_index == UINT32_MAX) {
             _probe_state->probe_index[match_count] = i;
             _probe_state->build_index[match_count] = 0;
             match_count++;
 
             RETURN_IF_CHUNK_FULL()
         } else {
-            while (build_index != 0) {
+            while (build_index != UINT32_MAX) {
                 if (ProbeFunc().equal(build_data[build_index], probe_data[i])) {
                     _probe_state->probe_index[match_count] = i;
                     _probe_state->build_index[match_count] = build_index;

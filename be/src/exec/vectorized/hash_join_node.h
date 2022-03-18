@@ -20,7 +20,7 @@ namespace vectorized {
 class ColumnRef;
 class RuntimeFilterBuildDescriptor;
 
-static constexpr size_t kHashJoinKeyColumnOffset = 1;
+static constexpr size_t kHashJoinKeyColumnOffset = 0;
 class HashJoinNode final : public ExecNode {
 public:
     HashJoinNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs);

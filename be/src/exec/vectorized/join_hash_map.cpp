@@ -13,10 +13,10 @@
 namespace starrocks::vectorized {
 
 void SerializedJoinBuildFunc::prepare(RuntimeState* state, JoinHashTableItems* table_items) {
-    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count + 1);
-    table_items->first.resize(table_items->bucket_size, 0);
-    table_items->next.resize(table_items->row_count + 1, 0);
-    table_items->build_slice.resize(table_items->row_count + 1);
+    table_items->bucket_size = JoinHashMapHelper::calc_bucket_size(table_items->row_count);
+    table_items->first.resize(table_items->bucket_size, UINT32_MAX);
+    table_items->next.resize(table_items->row_count, UINT32_MAX);
+    table_items->build_slice.resize(table_items->row_count);
     table_items->build_pool = std::make_unique<MemPool>();
 }
 
@@ -55,17 +55,16 @@ void SerializedJoinBuildFunc::construct_hash_table(RuntimeState* state, JoinHash
 
     if (!null_columns.empty()) {
         for (size_t i = 0; i < quo; i++) {
-            _build_nullable_columns(table_items, probe_state, data_columns, null_columns, 1 + state->chunk_size() * i,
+            _build_nullable_columns(table_items, probe_state, data_columns, null_columns, state->chunk_size() * i,
                                     state->chunk_size(), &ptr);
         }
-        _build_nullable_columns(table_items, probe_state, data_columns, null_columns, 1 + state->chunk_size() * quo,
-                                rem, &ptr);
+        _build_nullable_columns(table_items, probe_state, data_columns, null_columns, state->chunk_size() * quo, rem,
+                                &ptr);
     } else {
         for (size_t i = 0; i < quo; i++) {
-            _build_columns(table_items, probe_state, data_columns, 1 + state->chunk_size() * i, state->chunk_size(),
-                           &ptr);
+            _build_columns(table_items, probe_state, data_columns, state->chunk_size() * i, state->chunk_size(), &ptr);
         }
-        _build_columns(table_items, probe_state, data_columns, 1 + state->chunk_size() * quo, rem, &ptr);
+        _build_columns(table_items, probe_state, data_columns, state->chunk_size() * quo, rem, &ptr);
     }
 }
 
@@ -395,12 +394,10 @@ void JoinHashTable::probe_remain(RuntimeState* state, ChunkPtr* chunk, bool* eos
 
 void JoinHashTable::append_chunk(RuntimeState* state, const ChunkPtr& chunk) {
     Columns& columns = _table_items->build_chunk->columns();
-    size_t chunk_memory_size = 0;
 
     for (size_t i = 0; i < _table_items->build_column_count; i++) {
         SlotDescriptor* slot = _table_items->build_slots[i].slot;
         ColumnPtr& column = chunk->get_column_by_slot_id(slot->id());
-        chunk_memory_size += column->memory_usage();
 
         if (columns[i]->is_nullable()) {
             columns[i]->append(*column, 0, chunk->num_rows());
@@ -421,13 +418,11 @@ void JoinHashTable::append_chunk(RuntimeState* state, const ChunkPtr& chunk) {
                     ColumnPtr& src_column = chunk->get_tuple_column_by_id(iter->first);
                     ColumnPtr& dest_column = _table_items->build_chunk->get_tuple_column_by_id(iter->first);
                     dest_column->append(*src_column, 0, src_column->size());
-                    chunk_memory_size += src_column->memory_usage();
                 } else {
                     ColumnPtr& src_column = chunk->get_tuple_column_by_id(iter->first);
-                    ColumnPtr dest_column = BooleanColumn::create(_table_items->row_count + 1, 1);
+                    ColumnPtr dest_column = BooleanColumn::create(_table_items->row_count, 1);
                     dest_column->append(*src_column, 0, src_column->size());
                     _table_items->build_chunk->append_tuple_column(dest_column, iter->first);
-                    chunk_memory_size += src_column->memory_usage();
                 }
             }
         }
