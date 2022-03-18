@@ -55,6 +55,8 @@ public:
 
     virtual bool is_nullable() const { return false; }
 
+    virtual bool is_overflow() const { return false; }
+
     virtual bool has_null() const { return false; }
 
     virtual bool is_null(size_t idx) const { return false; }
