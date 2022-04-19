@@ -210,7 +210,7 @@ private:
 
     Status _encode_to_global_id(ScanContext* ctx);
 
-    void _switch_context(ScanContext* to);
+    Status _switch_context(ScanContext* to);
 
     // `_check_low_cardinality_optimization` and `_init_column_iterators` must have been called
     // before you calling this method, otherwise the result is incorrect.
@@ -765,7 +765,8 @@ Status SegmentIterator::_do_get_next(Chunk* result, vector<rowid_t>* rowid) {
     return Status::OK();
 }
 
-void SegmentIterator::_switch_context(ScanContext* to) {
+Status SegmentIterator::_switch_context(ScanContext* to) {
+    RETURN_IF_ERROR(CurrentThread::mem_tracker()->check_mem_limit("swith context"));
     if (_context != nullptr) {
         const ordinal_t ordinal = _context->_column_iterators[0]->get_current_ordinal();
         for (ColumnIterator* iter : to->_column_iterators) {
@@ -808,6 +809,7 @@ void SegmentIterator::_switch_context(ScanContext* to) {
                                            : to->_final_chunk;
 
     _context = to;
+    return Status::OK();
 }
 
 uint16_t SegmentIterator::_filter(Chunk* chunk, vector<rowid_t>* rowid, uint16_t from, uint16_t to) {
@@ -1074,7 +1076,7 @@ Status SegmentIterator::_init_context() {
             RETURN_IF_ERROR(_build_context<true>(&_context_list[0]));
         }
     }
-    _switch_context(&_context_list[0]);
+    RETURN_IF_ERROR(_switch_context(&_context_list[0]));
     return Status::OK();
 }
 

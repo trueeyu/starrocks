@@ -302,6 +302,7 @@ Status FragmentExecutor::prepare(ExecEnv* exec_env, const TExecPlanFragmentParam
 }
 
 Status FragmentExecutor::execute(ExecEnv* exec_env) {
+    RETURN_IF_ERROR(exec_env->query_pool_mem_tracker()->check_mem_limit("query_pool"));
     for (const auto& driver : _fragment_ctx->drivers()) {
         RETURN_IF_ERROR(driver->prepare(_fragment_ctx->runtime_state()));
     }

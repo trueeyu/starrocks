@@ -302,6 +302,7 @@ Status OlapChunkSource::_init_olap_reader(RuntimeState* runtime_state) {
 
     RETURN_IF_ERROR(_reader->prepare());
     RETURN_IF_ERROR(_reader->open(_params));
+    RETURN_IF_ERROR(runtime_state->instance_mem_tracker()->check_mem_limit("scannn"));
     return Status::OK();
 }
 
@@ -419,6 +420,7 @@ Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, vectorized
     }
     SCOPED_TIMER(_scan_timer);
     do {
+        state->check_mem_limit("scan");
         if (Status status = _prj_iter->get_next(chunk); !status.ok()) {
             return status;
         }
