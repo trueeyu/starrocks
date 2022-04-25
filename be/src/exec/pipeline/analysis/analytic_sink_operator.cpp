@@ -63,6 +63,8 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
 
     _analytor->remove_unused_buffer_values(state);
 
+    Analytor::AnalytorChunk analytor_chunk;
+
     for (size_t i = 0; i < _analytor->agg_fn_ctxs().size(); i++) {
         for (size_t j = 0; j < _analytor->agg_expr_ctxs()[i].size(); j++) {
             ASSIGN_OR_RETURN(ColumnPtr column, _analytor->agg_expr_ctxs()[i][j]->evaluate(chunk.get()));
@@ -78,9 +80,16 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
         }
     }
 
+    size_t partition_columns_nums = _analytor->partition_ctxs().size();
+    analytor_chunk.partition_columns.resize(partition_columns_nums);
     for (size_t i = 0; i < _analytor->partition_ctxs().size(); i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column));
+        if (!column->is_nullable() && (_analytor->partition_ctxs()[i]->root()->is_nullable() | _analytor->has_outer_join_build())) {
+            auto nullable_column = vectorized::NullableColumn::create(column, vectorized::NullColumn::create(chunk_size, 1));
+            analytor_chunk.partition_columns.emplace_back(nullable_column);
+        } else {
+            analytor_chunk.partition_columns.emplace_back(column);
+        }
     }
 
     for (size_t i = 0; i < _analytor->order_ctxs().size(); i++) {
@@ -88,7 +97,7 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
         TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column));
     }
 
-    _analytor->input_chunks().emplace_back(std::move(chunk));
+    _analytor->input_chunks().emplace_back(std::move(analytor_chunk));
 
     return _process_by_partition_if_necessary();
 }
@@ -105,7 +114,7 @@ Status AnalyticSinkOperator::_process_by_partition_if_necessary() {
             return Status::OK();
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         bool is_new_partition = _analytor->is_new_partition(found_partition_end);
@@ -117,7 +126,7 @@ Status AnalyticSinkOperator::_process_by_partition_if_necessary() {
 
         // Chunk may contains multiply partitions, so the chunk need to be reprocessed
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             vectorized::ChunkPtr chunk;
             RETURN_IF_ERROR(_analytor->output_result_chunk(&chunk));
             _analytor->offer_chunk_to_buffer(chunk);

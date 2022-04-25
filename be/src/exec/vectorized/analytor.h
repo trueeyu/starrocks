@@ -38,6 +38,16 @@ class Analytor final : public pipeline::ContextWithDependency {
     friend class ManagedFunctionStates;
 
 public:
+    struct AnalytorChunk {
+        vectorized::ChunkPtr chunk;
+        std::vector<vectorized::ColumnPtr> partition_columns;
+
+        void clear() {
+            chunk.reset();
+            partition_columns.clear();
+        }
+    };
+
     ~Analytor() {
         if (_state != nullptr) {
             close(_state);
@@ -63,7 +73,7 @@ public:
     void offer_chunk_to_buffer(const vectorized::ChunkPtr& chunk);
 
     bool reached_limit() { return _limit != -1 && _num_rows_returned >= _limit; }
-    std::vector<vectorized::ChunkPtr>& input_chunks() { return _input_chunks; }
+    std::vector<AnalytorChunk>& input_chunks() { return _input_chunks; }
     std::vector<int64_t>& input_chunk_first_row_positions() { return _input_chunk_first_row_positions; }
     int64_t input_rows() { return _input_rows; }
     void update_input_rows(int64_t increment) { _input_rows += increment; }
@@ -82,13 +92,13 @@ public:
     int64_t partition_end() { return _partition_end; }
     int64_t peer_group_start() { return _peer_group_start; }
     int64_t peer_group_end() { return _peer_group_end; }
+    bool has_outer_join_build() const { return _has_outer_join_child; }
 
     const std::vector<starrocks_udf::FunctionContext*>& agg_fn_ctxs() { return _agg_fn_ctxs; }
     const std::vector<std::vector<ExprContext*>>& agg_expr_ctxs() { return _agg_expr_ctxs; }
     const std::vector<std::vector<vectorized::ColumnPtr>>& agg_intput_columns() { return _agg_intput_columns; }
 
     const std::vector<ExprContext*>& partition_ctxs() { return _partition_ctxs; }
-    const vectorized::Columns& partition_columns() { return _partition_columns; }
 
     const std::vector<ExprContext*>& order_ctxs() { return _order_ctxs; }
     const vectorized::Columns& order_columns() { return _order_columns; }
@@ -103,7 +113,6 @@ public:
 
     bool is_partition_finished(int64_t found_partition_end);
     Status output_result_chunk(vectorized::ChunkPtr* chunk);
-    size_t compute_memory_usage();
     void create_agg_result_columns(int64_t chunk_size);
     void append_column(size_t chunk_size, vectorized::Column* dst_column, vectorized::ColumnPtr& src_column);
 
@@ -123,6 +132,7 @@ public:
 
 private:
     RuntimeState* _state = nullptr;
+    bool _has_outer_join_child = false;
     bool _is_closed = false;
     // TPlanNode is only valid in the PREPARE and INIT phase
     const TPlanNode& _tnode;
@@ -149,7 +159,7 @@ private:
     bool _is_range_with_start = false;
 
     vectorized::Columns _result_window_columns;
-    std::vector<vectorized::ChunkPtr> _input_chunks;
+    std::vector<AnalytorChunk> _input_chunks;
     std::vector<int64_t> _input_chunk_first_row_positions;
     int64_t _input_rows = 0;
     int64_t _removed_from_buffer_rows = 0;
@@ -186,7 +196,6 @@ private:
     std::vector<FunctionTypes> _agg_fn_types;
 
     std::vector<ExprContext*> _partition_ctxs;
-    vectorized::Columns _partition_columns;
 
     std::vector<ExprContext*> _order_ctxs;
     vectorized::Columns _order_columns;

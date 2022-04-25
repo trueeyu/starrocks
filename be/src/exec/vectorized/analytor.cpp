@@ -110,7 +110,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     _agg_fn_types.resize(agg_size);
     _agg_states_offsets.resize(agg_size);
 
-    bool has_outer_join_child = analytic_node.__isset.has_outer_join_child && analytic_node.has_outer_join_child;
+    _has_outer_join_child = analytic_node.__isset.has_outer_join_child && analytic_node.has_outer_join_child;
 
     _has_lead_lag_function = false;
     for (int i = 0; i < agg_size; ++i) {
@@ -133,7 +133,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
         bool is_input_nullable = false;
         if (fn.name.function_name == "count" || fn.name.function_name == "row_number" ||
             fn.name.function_name == "rank" || fn.name.function_name == "dense_rank") {
-            is_input_nullable = !fn.arg_types.empty() && (desc.nodes[0].has_nullable_child || has_outer_join_child);
+            is_input_nullable = !fn.arg_types.empty() && (desc.nodes[0].has_nullable_child || _has_outer_join_child);
             auto* func = vectorized::get_window_function(fn.name.function_name, TYPE_BIGINT, TYPE_BIGINT,
                                                          is_input_nullable, fn.binary_type, state->func_version());
             _agg_functions[i] = func;
@@ -209,12 +209,6 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     }
 
     RETURN_IF_ERROR(Expr::create_expr_trees(_pool, analytic_node.partition_exprs, &_partition_ctxs));
-    _partition_columns.resize(_partition_ctxs.size());
-    for (size_t i = 0; i < _partition_ctxs.size(); i++) {
-        _partition_columns[i] = vectorized::ColumnHelper::create_column(
-                _partition_ctxs[i]->root()->type(), _partition_ctxs[i]->root()->is_nullable() | has_outer_join_child,
-                _partition_ctxs[i]->root()->is_constant(), 0);
-    }
 
     RETURN_IF_ERROR(Expr::create_expr_trees(_pool, analytic_node.order_by_exprs, &_order_ctxs));
     _order_columns.resize(_order_ctxs.size());
@@ -394,18 +388,20 @@ bool Analytor::is_partition_finished(int64_t found_partition_end) {
         return false;
     }
 
-    // If found_partition_end == _partition_columns[0]->size(),
+    // If found_partition_end == partition_columns[0]->size(),
     // the next chunk maybe also belongs to the current partition.
-    return found_partition_end != _partition_columns[0]->size();
+    return found_partition_end != _input_chunks[0].chunk->num_rows();
 }
 
 Status Analytor::output_result_chunk(vectorized::ChunkPtr* chunk) {
-    vectorized::ChunkPtr output_chunk = std::move(_input_chunks[_output_chunk_index]);
+    vectorized::ChunkPtr output_chunk = std::move(_input_chunks[_output_chunk_index].chunk);
+    _input_chunks[_output_chunk_index].clear();
+
     for (size_t i = 0; i < _result_window_columns.size(); i++) {
         output_chunk->append_column(_result_window_columns[i], _result_tuple_desc->slots()[i]->id());
     }
 
-    _num_rows_returned += output_chunk->num_rows();
+    _num_rows_returned += static_cast<int64_t>(output_chunk->num_rows());
 
     if (reached_limit()) {
         int64_t num_rows_over = _num_rows_returned - _limit;
@@ -421,24 +417,6 @@ Status Analytor::output_result_chunk(vectorized::ChunkPtr* chunk) {
     _output_chunk_index++;
     _window_result_position = 0;
     return Status::OK();
-}
-
-size_t Analytor::compute_memory_usage() {
-    size_t memory_usage = 0;
-    for (size_t i = 0; i < _partition_columns.size(); ++i) {
-        memory_usage += _partition_columns[i]->memory_usage();
-    }
-
-    for (size_t i = 0; i < _order_columns.size(); ++i) {
-        memory_usage += _order_columns[i]->memory_usage();
-    }
-
-    for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
-        for (size_t j = 0; j < _agg_expr_ctxs[i].size(); j++) {
-            memory_usage += _agg_intput_columns[i][j]->memory_usage();
-        }
-    }
-    return memory_usage;
 }
 
 void Analytor::create_agg_result_columns(int64_t chunk_size) {
@@ -488,14 +466,15 @@ int64_t Analytor::find_partition_end() {
         return _partition_end;
     }
 
-    if (_partition_columns.empty() || _input_rows == 0) {
+    if (_partition_ctxs.empty() || _input_rows == 0) {
         return _input_rows;
     }
 
-    int64_t found_partition_end = _partition_columns[0]->size();
-    for (size_t i = 0; i < _partition_columns.size(); ++i) {
-        vectorized::Column* column = _partition_columns[i].get();
-        found_partition_end = _find_first_not_equal(column, _partition_end, found_partition_end);
+    auto& partition_columns = _input_chunks.back().partition_columns;
+    int64_t found_partition_end = partition_columns[0]->size();
+    for (auto& partition_column : partition_columns) {
+        vectorized::Column* column = partition_column.get();
+        found_partition_end = _find_first_not_equal(column, 0, found_partition_end);
     }
     return found_partition_end;
 }
@@ -541,9 +520,6 @@ void Analytor::remove_unused_buffer_values(RuntimeState* state) {
         for (size_t j = 0; j < _agg_expr_ctxs[i].size(); j++) {
             _agg_intput_columns[i][j]->remove_first_n_values(remove_count);
         }
-    }
-    for (size_t i = 0; i < _partition_ctxs.size(); i++) {
-        _partition_columns[i]->remove_first_n_values(remove_count);
     }
     for (size_t i = 0; i < _order_ctxs.size(); i++) {
         _order_columns[i]->remove_first_n_values(remove_count);

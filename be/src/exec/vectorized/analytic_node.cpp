@@ -262,7 +262,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
             _analytor->reset_state_for_new_partition(found_partition_end);
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         while (_analytor->current_row_position() < _analytor->partition_end() &&
@@ -280,7 +280,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
         }
 
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             return _analytor->output_result_chunk(chunk);
         }
     }
@@ -312,6 +312,8 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
     size_t chunk_size = child_chunk->num_rows();
     _analytor->update_input_rows(chunk_size);
 
+    Analytor::AnalytorChunk chunk;
+
     for (size_t i = 0; i < _analytor->agg_fn_ctxs().size(); i++) {
         for (size_t j = 0; j < _analytor->agg_expr_ctxs()[i].size(); j++) {
             ASSIGN_OR_RETURN(ColumnPtr column, _analytor->agg_expr_ctxs()[i][j]->evaluate(child_chunk.get()));
@@ -327,9 +329,16 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
         }
     }
 
-    for (size_t i = 0; i < _analytor->partition_ctxs().size(); i++) {
+    size_t partition_columns_nums = _analytor->partition_ctxs().size();
+    chunk.partition_columns.resize(partition_columns_nums);
+    for (size_t i = 0; i < partition_columns_nums; i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(child_chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column));
+        if (!column->is_nullable() && (_analytor->partition_ctxs()[i]->root()->is_nullable() | _analytor->has_outer_join_build())) {
+            auto nullable_column = NullableColumn::create(column, NullColumn::create(chunk_size, 1));
+            chunk.partition_columns.emplace_back(nullable_column);
+        } else {
+            chunk.partition_columns.emplace_back(column);
+        }
     }
 
     for (size_t i = 0; i < _analytor->order_ctxs().size(); i++) {
@@ -337,7 +346,8 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
         TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column));
     }
 
-    _analytor->input_chunks().emplace_back(std::move(child_chunk));
+    chunk.chunk = std::move(child_chunk);
+    _analytor->input_chunks().emplace_back(std::move(chunk));
     return Status::OK();
 }
 
