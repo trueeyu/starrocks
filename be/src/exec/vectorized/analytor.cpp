@@ -214,7 +214,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     _order_columns.resize(_order_ctxs.size());
     for (size_t i = 0; i < _order_ctxs.size(); i++) {
         _order_columns[i] = vectorized::ColumnHelper::create_column(
-                _order_ctxs[i]->root()->type(), _order_ctxs[i]->root()->is_nullable() | has_outer_join_child,
+                _order_ctxs[i]->root()->type(), _order_ctxs[i]->root()->is_nullable() | _has_outer_join_child,
                 _order_ctxs[i]->root()->is_constant(), 0);
     }
 
