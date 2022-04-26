@@ -72,7 +72,6 @@ public:
 
     bool reached_limit() const { return _limit != -1 && _num_rows_returned >= _limit; }
     std::vector<ChunkNode>& input_chunks() { return _input_chunks; }
-    std::vector<int64_t>& input_chunk_first_row_positions() { return _input_chunk_first_row_positions; }
     int64_t input_rows() const { return _input_rows; }
     void update_input_rows(int64_t increment) { _input_rows += increment; }
     int64_t output_chunk_index() const { return _output_chunk_index; }
@@ -151,7 +150,6 @@ private:
 
     vectorized::Columns _result_window_columns;
     std::vector<ChunkNode> _input_chunks;
-    std::vector<int64_t> _input_chunk_first_row_positions;
     int64_t _input_rows = 0;
     int64_t _removed_from_buffer_rows = 0;
     int64_t _removed_chunk_index = 0;
