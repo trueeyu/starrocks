@@ -159,6 +159,7 @@ private:
     bool _input_eos = false;
 
     int64_t _current_row_position = 0;
+    int64_t _partition_start_chunk_index = 0;
     int64_t _partition_start = 0;
     int64_t _partition_end = 0;
     // A peer group is all of the rows that are peers within the specified ordering.

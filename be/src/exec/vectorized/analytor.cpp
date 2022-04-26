@@ -517,6 +517,7 @@ void Analytor::find_peer_group_end() {
 }
 
 void Analytor::reset_state_for_new_partition(int64_t found_partition_end) {
+    _partition_start_chunk_index = static_cast<int64_t>(_input_chunks.size()) - 1;
     _partition_start = _partition_end;
     _partition_end = found_partition_end;
     _current_row_position = _partition_start;
