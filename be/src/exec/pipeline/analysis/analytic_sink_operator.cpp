@@ -86,9 +86,9 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(chunk.get()));
         if (!column->is_nullable() && (_analytor->partition_ctxs()[i]->root()->is_nullable() | _analytor->has_outer_join_build())) {
             auto nullable_column = vectorized::NullableColumn::create(column, vectorized::NullColumn::create(chunk_size, 1));
-            analytor_chunk.partition_columns.emplace_back(nullable_column);
+            analytor_chunk.partition_columns[i] = std::move(nullable_column);
         } else {
-            analytor_chunk.partition_columns.emplace_back(column);
+            analytor_chunk.partition_columns[i] = std::move(column);
         }
     }
 

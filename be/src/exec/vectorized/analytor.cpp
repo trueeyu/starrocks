@@ -470,11 +470,12 @@ int64_t Analytor::find_partition_end() {
         return _input_rows;
     }
 
+    std::cout<<"SIZE:"<<_input_chunks.size()<<std::endl;
     auto& partition_columns = _input_chunks.back().partition_columns;
     int64_t found_partition_end = partition_columns[0]->size();
     for (auto& partition_column : partition_columns) {
         vectorized::Column* column = partition_column.get();
-        found_partition_end = _find_first_not_equal(column, 0, found_partition_end);
+        found_partition_end = _find_first_not_equal(column, _partition_end, found_partition_end);
     }
     return found_partition_end;
 }
@@ -526,8 +527,8 @@ void Analytor::remove_unused_buffer_values(RuntimeState* state) {
     }
 
     _removed_from_buffer_rows += remove_count;
-    _partition_start -= remove_count;
-    _partition_end -= remove_count;
+    //_partition_start -= remove_count;
+    //_partition_end -= remove_count;
     _current_row_position -= remove_count;
     _peer_group_start -= remove_count;
     _peer_group_end -= remove_count;

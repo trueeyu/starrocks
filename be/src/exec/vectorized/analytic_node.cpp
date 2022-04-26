@@ -128,6 +128,7 @@ Status AnalyticNode::_get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr
         }
 
         size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
+        std::cout<<"CHUNK_SIZE:"<<chunk_size<<std::endl;
         _analytor->create_agg_result_columns(chunk_size);
 
         if (is_new_partition) {
@@ -141,6 +142,7 @@ Status AnalyticNode::_get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr
                 _analytor->get_total_position(_analytor->current_row_position()) - chunk_first_row_position;
         int64_t get_value_end =
                 std::min<int64_t>(_analytor->current_row_position() + chunk_size, _analytor->partition_end());
+        std::cout<<"START:"<<get_value_start<<":"<<get_value_end<<std::endl;
         _analytor->set_window_result_position(std::min<int64_t>(
                 (_analytor->get_total_position(get_value_end) - chunk_first_row_position), chunk_size));
 
@@ -336,9 +338,9 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(child_chunk.get()));
         if (!column->is_nullable() && (_analytor->partition_ctxs()[i]->root()->is_nullable() | _analytor->has_outer_join_build())) {
             auto nullable_column = NullableColumn::create(column, NullColumn::create(chunk_size, 1));
-            chunk.partition_columns.emplace_back(nullable_column);
+            chunk.partition_columns[i] = std::move(nullable_column);
         } else {
-            chunk.partition_columns.emplace_back(column);
+            chunk.partition_columns[i] = std::move(column);
         }
     }
 
