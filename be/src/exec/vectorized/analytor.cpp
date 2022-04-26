@@ -499,7 +499,8 @@ void Analytor::find_peer_group_end() {
 }
 
 void Analytor::reset_state_for_new_partition(int64_t found_partition_end) {
-    _partition_start_chunk_index = static_cast<int64_t>(_input_chunks.size()) - 1;
+    _partition_start_chunk_index = _partition_end_chunk_index;
+    _partition_end_chunk_index = static_cast<int64_t>(_input_chunks.size()) - 1;
     _partition_start = _partition_end;
     _partition_end = found_partition_end;
     _current_row_position = _partition_start;
@@ -508,40 +509,9 @@ void Analytor::reset_state_for_new_partition(int64_t found_partition_end) {
 }
 
 void Analytor::remove_unused_buffer_values(RuntimeState* state) {
-    if (_input_chunks.size() <= _output_chunk_index ||
-        _input_chunk_first_row_positions[_output_chunk_index] - _removed_from_buffer_rows <
-                state->chunk_size() * BUFFER_CHUNK_NUMBER) {
-        return;
+    while (_removed_chunk_index < _partition_start_chunk_index) {
+        _input_chunks[_removed_chunk_index++].reset();
     }
-
-    int64_t remove_end_position = _input_chunk_first_row_positions[_removed_chunk_index + BUFFER_CHUNK_NUMBER];
-    if (_partition_start <= remove_end_position) {
-        return;
-    }
-
-    int64_t remove_count = remove_end_position - _removed_from_buffer_rows;
-    for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
-        for (size_t j = 0; j < _agg_expr_ctxs[i].size(); j++) {
-            _agg_intput_columns[i][j]->remove_first_n_values(remove_count);
-        }
-    }
-    for (size_t i = 0; i < _partition_ctxs.size(); i++) {
-        _partition_columns[i]->remove_first_n_values(remove_count);
-    }
-    for (size_t i = 0; i < _order_ctxs.size(); i++) {
-        _order_columns[i]->remove_first_n_values(remove_count);
-    }
-
-    _removed_from_buffer_rows += remove_count;
-    _partition_start -= remove_count;
-    _partition_end -= remove_count;
-    _current_row_position -= remove_count;
-    _peer_group_start -= remove_count;
-    _peer_group_end -= remove_count;
-
-    _removed_chunk_index += BUFFER_CHUNK_NUMBER;
-
-    DCHECK_GE(_current_row_position, 0);
 }
 
 void Analytor::_update_window_batch_lead_lag(int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start,
