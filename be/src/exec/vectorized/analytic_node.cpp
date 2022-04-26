@@ -87,7 +87,7 @@ Status AnalyticNode::get_next(RuntimeState* state, ChunkPtr* chunk, bool* eos) {
         return Status::OK();
     }
 
-    _analytor->remove_unused_buffer_values(state);
+    _analytor->remove_unused_buffer_values();
 
     RETURN_IF_ERROR((this->*_get_next)(state, chunk, eos));
     if (*eos) {

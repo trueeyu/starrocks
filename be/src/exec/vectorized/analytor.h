@@ -120,13 +120,7 @@ public:
     void find_peer_group_end();
     void reset_state_for_new_partition(int64_t found_partition_end);
 
-    void remove_unused_buffer_values(RuntimeState* state);
-
-#ifdef NDEBUG
-    static constexpr int32_t BUFFER_CHUNK_NUMBER = 1000;
-#else
-    static constexpr int32_t BUFFER_CHUNK_NUMBER = 1;
-#endif
+    void remove_unused_buffer_values();
 
 private:
     RuntimeState* _state = nullptr;

@@ -508,7 +508,7 @@ void Analytor::reset_state_for_new_partition(int64_t found_partition_end) {
     DCHECK_GE(_current_row_position, 0);
 }
 
-void Analytor::remove_unused_buffer_values(RuntimeState* state) {
+void Analytor::remove_unused_buffer_values() {
     while (_removed_chunk_index < _partition_start_chunk_index) {
         _input_chunks[_removed_chunk_index++].reset();
     }
