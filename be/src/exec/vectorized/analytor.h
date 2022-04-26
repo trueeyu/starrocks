@@ -122,9 +122,12 @@ public:
 
     void remove_unused_buffer_values();
 
+    bool has_outer_join_build() { return _has_outer_join_child; }
+
 private:
     RuntimeState* _state = nullptr;
     bool _is_closed = false;
+    bool _has_outer_join_child = false;
     // TPlanNode is only valid in the PREPARE and INIT phase
     const TPlanNode& _tnode;
     const RowDescriptor& _child_row_desc;

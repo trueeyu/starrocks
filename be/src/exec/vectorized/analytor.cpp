@@ -110,7 +110,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     _agg_fn_types.resize(agg_size);
     _agg_states_offsets.resize(agg_size);
 
-    bool has_outer_join_child = analytic_node.__isset.has_outer_join_child && analytic_node.has_outer_join_child;
+    _has_outer_join_child = analytic_node.__isset.has_outer_join_child && analytic_node.has_outer_join_child;
 
     _has_lead_lag_function = false;
     for (int i = 0; i < agg_size; ++i) {
@@ -133,7 +133,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
         bool is_input_nullable = false;
         if (fn.name.function_name == "count" || fn.name.function_name == "row_number" ||
             fn.name.function_name == "rank" || fn.name.function_name == "dense_rank") {
-            is_input_nullable = !fn.arg_types.empty() && (desc.nodes[0].has_nullable_child || has_outer_join_child);
+            is_input_nullable = !fn.arg_types.empty() && (desc.nodes[0].has_nullable_child || _has_outer_join_child);
             auto* func = vectorized::get_window_function(fn.name.function_name, TYPE_BIGINT, TYPE_BIGINT,
                                                          is_input_nullable, fn.binary_type, state->func_version());
             _agg_functions[i] = func;
@@ -212,7 +212,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     _partition_columns.resize(_partition_ctxs.size());
     for (size_t i = 0; i < _partition_ctxs.size(); i++) {
         _partition_columns[i] = vectorized::ColumnHelper::create_column(
-                _partition_ctxs[i]->root()->type(), _partition_ctxs[i]->root()->is_nullable() | has_outer_join_child,
+                _partition_ctxs[i]->root()->type(), _partition_ctxs[i]->root()->is_nullable() | _has_outer_join_child,
                 _partition_ctxs[i]->root()->is_constant(), 0);
     }
 
@@ -220,7 +220,7 @@ Status Analytor::prepare(RuntimeState* state, ObjectPool* pool, RuntimeProfile* 
     _order_columns.resize(_order_ctxs.size());
     for (size_t i = 0; i < _order_ctxs.size(); i++) {
         _order_columns[i] = vectorized::ColumnHelper::create_column(
-                _order_ctxs[i]->root()->type(), _order_ctxs[i]->root()->is_nullable() | has_outer_join_child,
+                _order_ctxs[i]->root()->type(), _order_ctxs[i]->root()->is_nullable() | _has_outer_join_child,
                 _order_ctxs[i]->root()->is_constant(), 0);
     }
 
