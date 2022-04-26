@@ -470,7 +470,7 @@ int64_t Analytor::find_partition_end() {
         return _partition_end;
     }
 
-    if (_partition_columns.empty() || _input_rows == 0) {
+    if (_partition_ctxs.empty() || _input_rows == 0) {
         return _input_rows;
     }
 
