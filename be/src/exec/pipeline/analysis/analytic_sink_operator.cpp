@@ -57,6 +57,8 @@ StatusOr<vectorized::ChunkPtr> AnalyticSinkOperator::pull_chunk(RuntimeState* st
 }
 
 Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::ChunkPtr& chunk) {
+    TRY_CATCH_ALLOC_SCOPE_START()
+
     Analytor::ChunkNode node;
     _analytor->input_chunk_first_row_positions().emplace_back(_analytor->input_rows());
     size_t chunk_size = chunk->num_rows();
@@ -71,28 +73,30 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
             // For performance, we do this special handle.
             // In future, if need, we could remove this if else easily.
             if (j == 0) {
-                TRY_CATCH_BAD_ALLOC(
-                        _analytor->append_column(chunk_size, _analytor->agg_intput_columns()[i][j].get(), column));
+                _analytor->append_column(chunk_size, _analytor->agg_intput_columns()[i][j].get(), column);
             } else {
-                TRY_CATCH_BAD_ALLOC(_analytor->agg_intput_columns()[i][j]->append(*column, 0, column->size()));
+                _analytor->agg_intput_columns()[i][j]->append(*column, 0, column->size());
             }
         }
     }
 
     for (size_t i = 0; i < _analytor->partition_ctxs().size(); i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column));
+        _analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column);
     }
 
     for (size_t i = 0; i < _analytor->order_ctxs().size(); i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->order_ctxs()[i]->evaluate(chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column));
+        _analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column);
     }
 
     node.chunk = chunk;
     _analytor->input_chunks().emplace_back(std::move(node));
 
-    return _process_by_partition_if_necessary();
+    RETURN_IF_ERROR(_process_by_partition_if_necessary());
+
+    TRY_CATCH_ALLOC_SCOPE_END()
+    return Status::OK();
 }
 
 Status AnalyticSinkOperator::_process_by_partition_if_necessary() {

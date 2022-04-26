@@ -303,6 +303,9 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
     do {
         RETURN_IF_ERROR(_children[0]->get_next(state, &child_chunk, &_analytor->input_eos()));
     } while (!_analytor->input_eos() && child_chunk->is_empty());
+
+    TRY_CATCH_ALLOC_SCOPE_START()
+
     SCOPED_TIMER(_analytor->compute_timer());
     if (_analytor->input_eos()) {
         return Status::OK();
@@ -321,26 +324,27 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
             // For performance, we do this special handle.
             // In future, if need, we could remove this if else easily.
             if (j == 0) {
-                TRY_CATCH_BAD_ALLOC(
-                        _analytor->append_column(chunk_size, _analytor->agg_intput_columns()[i][j].get(), column));
+                _analytor->append_column(chunk_size, _analytor->agg_intput_columns()[i][j].get(), column);
             } else {
-                TRY_CATCH_BAD_ALLOC(_analytor->agg_intput_columns()[i][j]->append(*column, 0, column->size()));
+                _analytor->agg_intput_columns()[i][j]->append(*column, 0, column->size());
             }
         }
     }
 
     for (size_t i = 0; i < _analytor->partition_ctxs().size(); i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->partition_ctxs()[i]->evaluate(child_chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column));
+        _analytor->append_column(chunk_size, _analytor->partition_columns()[i].get(), column);
     }
 
     for (size_t i = 0; i < _analytor->order_ctxs().size(); i++) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->order_ctxs()[i]->evaluate(child_chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column));
+        _analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column);
     }
     node.chunk = std::move(child_chunk);
 
     _analytor->input_chunks().emplace_back(std::move(node));
+
+    TRY_CATCH_ALLOC_SCOPE_END()
     return Status::OK();
 }
 
