@@ -400,7 +400,7 @@ bool Analytor::is_partition_finished(int64_t found_partition_end) {
 }
 
 Status Analytor::output_result_chunk(vectorized::ChunkPtr* chunk) {
-    vectorized::ChunkPtr output_chunk = std::move(_input_chunks[_output_chunk_index]);
+    vectorized::ChunkPtr output_chunk = std::move(_input_chunks[_output_chunk_index].chunk);
     for (size_t i = 0; i < _result_window_columns.size(); i++) {
         output_chunk->append_column(_result_window_columns[i], _result_tuple_desc->slots()[i]->id());
     }

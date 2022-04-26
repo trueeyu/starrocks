@@ -38,6 +38,14 @@ class Analytor final : public pipeline::ContextWithDependency {
     friend class ManagedFunctionStates;
 
 public:
+    struct ChunkNode {
+        vectorized::ChunkPtr chunk;
+
+        void reset() {
+            chunk.reset();
+        }
+    };
+
     ~Analytor() {
         if (_state != nullptr) {
             close(_state);
@@ -63,7 +71,7 @@ public:
     void offer_chunk_to_buffer(const vectorized::ChunkPtr& chunk);
 
     bool reached_limit() { return _limit != -1 && _num_rows_returned >= _limit; }
-    std::vector<vectorized::ChunkPtr>& input_chunks() { return _input_chunks; }
+    std::vector<ChunkNode>& input_chunks() { return _input_chunks; }
     std::vector<int64_t>& input_chunk_first_row_positions() { return _input_chunk_first_row_positions; }
     int64_t input_rows() { return _input_rows; }
     void update_input_rows(int64_t increment) { _input_rows += increment; }
@@ -149,7 +157,7 @@ private:
     bool _is_range_with_start = false;
 
     vectorized::Columns _result_window_columns;
-    std::vector<vectorized::ChunkPtr> _input_chunks;
+    std::vector<ChunkNode> _input_chunks;
     std::vector<int64_t> _input_chunk_first_row_positions;
     int64_t _input_rows = 0;
     int64_t _removed_from_buffer_rows = 0;

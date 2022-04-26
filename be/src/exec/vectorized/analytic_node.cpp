@@ -127,7 +127,7 @@ Status AnalyticNode::_get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr
             _analytor->reset_state_for_new_partition(found_partition_end);
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         if (is_new_partition) {
@@ -148,7 +148,7 @@ Status AnalyticNode::_get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr
         _analytor->update_current_row_position(_analytor->window_result_position() - get_value_start);
 
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             return _analytor->output_result_chunk(chunk);
         }
     }
@@ -171,7 +171,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_range_frame(RuntimeState*
             _analytor->reset_state_for_new_partition(found_partition_end);
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         while (_analytor->current_row_position() < _analytor->partition_end() &&
@@ -199,7 +199,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_range_frame(RuntimeState*
         }
 
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             return _analytor->output_result_chunk(chunk);
         }
     }
@@ -221,7 +221,7 @@ Status AnalyticNode::_get_next_for_sliding_frame(RuntimeState* state, ChunkPtr* 
             _analytor->reset_state_for_new_partition(found_partition_end);
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         while (_analytor->current_row_position() < _analytor->partition_end() &&
@@ -239,7 +239,7 @@ Status AnalyticNode::_get_next_for_sliding_frame(RuntimeState* state, ChunkPtr* 
         }
 
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             return _analytor->output_result_chunk(chunk);
         }
     }
@@ -262,7 +262,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
             _analytor->reset_state_for_new_partition(found_partition_end);
         }
 
-        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows();
+        size_t chunk_size = _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows();
         _analytor->create_agg_result_columns(chunk_size);
 
         while (_analytor->current_row_position() < _analytor->partition_end() &&
@@ -280,7 +280,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
         }
 
         if (_analytor->window_result_position() ==
-            _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+            _analytor->input_chunks()[_analytor->output_chunk_index()].chunk->num_rows()) {
             return _analytor->output_result_chunk(chunk);
         }
     }
@@ -307,6 +307,8 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
     if (_analytor->input_eos()) {
         return Status::OK();
     }
+
+    Analytor::ChunkNode node;
 
     _analytor->input_chunk_first_row_positions().emplace_back(_analytor->input_rows());
     size_t chunk_size = child_chunk->num_rows();
@@ -336,8 +338,9 @@ Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
         ASSIGN_OR_RETURN(ColumnPtr column, _analytor->order_ctxs()[i]->evaluate(child_chunk.get()));
         TRY_CATCH_BAD_ALLOC(_analytor->append_column(chunk_size, _analytor->order_columns()[i].get(), column));
     }
+    node.chunk = std::move(child_chunk);
 
-    _analytor->input_chunks().emplace_back(std::move(child_chunk));
+    _analytor->input_chunks().emplace_back(std::move(node));
     return Status::OK();
 }
 
