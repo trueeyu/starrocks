@@ -475,11 +475,24 @@ bool Analytor::is_new_partition(int64_t found_partition_end) {
     // _current_row_position >= _partition_end : current partition data has been processed
     // _partition_end == 0 : the first partition
     return ((_current_row_position >= _partition_end) &
-            ((_partition_end == 0) | (_partition_end != found_partition_end)));
+            ((_partition_end == 0) | (_partition_end > found_partition_end)));
 }
 
 int64_t Analytor::get_total_position(int64_t local_position) {
     return _removed_from_buffer_rows + local_position;
+}
+
+int64_t Analytor::find_first_not_equal() {
+    if (_partition_columns.empty() || _input_rows == 0) {
+        return _input_rows;
+    }
+
+    int64_t found_partition_end = _partition_columns[0]->size();
+    for (size_t i = 0; i < _partition_columns.size(); ++i) {
+        vectorized::Column* column = _partition_columns[i].get();
+        found_partition_end = _find_first_not_equal(column, _current_row_position, found_partition_end);
+    }
+    return found_partition_end;
 }
 
 int64_t Analytor::find_partition_end() {
