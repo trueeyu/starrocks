@@ -488,14 +488,15 @@ int64_t Analytor::find_partition_end() {
         return _partition_end;
     }
 
+    // no partition column or start before fetch chunk from child node
     if (_partition_columns.empty() || _input_rows == 0) {
         return _input_rows;
     }
 
-    int64_t found_partition_end = _partition_columns[0]->size();
-    for (size_t i = 0; i < _partition_columns.size(); ++i) {
-        vectorized::Column* column = _partition_columns[i].get();
-        found_partition_end = _find_first_not_equal(column, _partition_end, found_partition_end);
+    auto found_partition_end = static_cast<int64_t>(_partition_columns[0]->size());
+    for (auto& column : _partition_columns) {
+        found_partition_end =
+                _find_first_not_equal(column.get(), _partition_end, _current_row_position, found_partition_end);
     }
     return found_partition_end;
 }
@@ -507,13 +508,14 @@ void Analytor::find_peer_group_end() {
     }
 
     _peer_group_start = _peer_group_end;
-    _peer_group_end = _partition_end;
     DCHECK(!_order_columns.empty());
 
-    for (size_t i = 0; i < _order_columns.size(); ++i) {
-        vectorized::Column* column = _order_columns[i].get();
-        _peer_group_end = _find_first_not_equal(column, _peer_group_start, _peer_group_end);
+    int64_t found_peer_group_end = _partition_end;
+    for (auto& column : _order_columns) {
+        found_peer_group_end =
+                _find_first_not_equal(column.get(), _peer_group_end, _current_row_position, found_peer_group_end);
     }
+    _peer_group_end = found_peer_group_end;
 }
 
 void Analytor::reset_state_for_new_partition(int64_t found_partition_end) {
@@ -583,8 +585,7 @@ void Analytor::_update_window_batch_normal(int64_t peer_group_start, int64_t pee
     }
 }
 
-int64_t Analytor::_find_first_not_equal(vectorized::Column* column, int64_t start, int64_t end) {
-    int64_t target = start;
+int64_t Analytor::_find_first_not_equal(vectorized::Column* column, int64_t target, int64_t start, int64_t end) {
     while (start + 1 < end) {
         int64_t mid = start + (end - start) / 2;
         if (column->compare_at(target, mid, *column, 1) == 0) {
