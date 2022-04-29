@@ -13,7 +13,7 @@ public:
             : Operator(factory, id, "analytic_sink", plan_node_id), _tnode(tnode), _analytor(std::move(analytor)) {
         _analytor->ref();
     }
-    ~AnalyticSinkOperator() = default;
+    ~AnalyticSinkOperator() override = default;
 
     bool has_output() const override { return false; }
     bool need_input() const override { return !is_finished(); }
@@ -27,12 +27,16 @@ public:
     Status push_chunk(RuntimeState* state, const vectorized::ChunkPtr& chunk) override;
 
 private:
-    Status _process_by_partition_if_necessary();
+    Status _process_by_partition_if_necessary_for_other();
+    Status _process_by_partition_if_necessary_for_unbounded_preceding_rows_frame();
+
     void _process_by_partition_for_unbounded_frame(size_t chunk_size, bool is_new_partition);
     void _process_by_partition_for_unbounded_preceding_range_frame(size_t chunk_size, bool is_new_partition);
-    void _process_by_partition_for_unbounded_preceding_rows_frame(size_t chunk_size, bool is_new_partition);
+    void _process_by_partition_for_unbounded_preceding_rows_frame(size_t chunk_size);
     void _process_by_partition_for_sliding_frame(size_t chunk_size, bool is_new_partition);
+
     void (AnalyticSinkOperator::*_process_by_partition)(size_t chunk_size, bool is_new_partition) = nullptr;
+    Status (AnalyticSinkOperator::*_process_by_partition_if_necessary)() = nullptr;
 
     TPlanNode _tnode;
     // It is used to perform analytic algorithms
