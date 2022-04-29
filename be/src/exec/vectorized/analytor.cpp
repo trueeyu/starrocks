@@ -483,7 +483,7 @@ int64_t Analytor::get_total_position(int64_t local_position) {
 }
 
 bool Analytor::find_and_check_partition_end(int64_t* found_partition_end) {
-    if (_partition_columns.empty()) {
+    if (_partition_columns.empty() || _input_rows == 0) {
         *found_partition_end = _input_rows;
         return false;
     }
