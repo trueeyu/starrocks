@@ -35,13 +35,14 @@ private:
     AnalytorPtr _analytor = nullptr;
 
     Status _get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr* chunk, bool* eos);
-    Status _get_next_for_unbounded_preceding_range_frame(RuntimeState* state, ChunkPtr* chunk, bool* eos);
+    Status _get_next_for_range_frame_between_unbounded_preceding_and_current_row(RuntimeState* state, ChunkPtr* chunk,
+                                                                                 bool* eos);
     Status _get_next_for_rows_between_unbounded_preceding_and_current_row(RuntimeState* state, ChunkPtr* chunk,
-                                                                          bool* eos);
+                                                                                bool* eos);
     Status _get_next_for_sliding_frame(RuntimeState* state, ChunkPtr* chunk, bool* eos);
     Status (AnalyticNode::*_get_next)(RuntimeState* state, ChunkPtr* chunk, bool* eos) = nullptr;
 
-    Status _fetch_next_chunk(RuntimeState* state);
-    Status _try_fetch_next_partition_data(RuntimeState* state);
+    Status _fetch_next_chunk(RuntimeState* state, ScopedTimer<MonotonicStopWatch>* timer);
+    Status _fetch_next_partition_data(RuntimeState* state, ScopedTimer<MonotonicStopWatch>* timer, bool* eos);
 };
 } // namespace starrocks::vectorized

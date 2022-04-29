@@ -102,7 +102,6 @@ public:
     void reset_window_state();
     void get_window_function_result(size_t start, size_t end);
 
-    bool is_partition_finished();
     Status output_result_chunk(vectorized::ChunkPtr* chunk);
     void create_agg_result_columns(int64_t chunk_size);
     void append_column(size_t chunk_size, vectorized::Column* dst_column, vectorized::ColumnPtr& src_column);

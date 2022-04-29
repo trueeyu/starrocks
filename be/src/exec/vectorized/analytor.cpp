@@ -384,21 +384,6 @@ void Analytor::get_window_function_result(size_t start, size_t end) {
     }
 }
 
-bool Analytor::is_partition_finished() {
-    if (_input_eos) {
-        return true;
-    }
-
-    // There is no partition, or it hasn't fetched any chunk.
-    if (_partition_ctxs.empty() || _found_partition_end == 0) {
-        return false;
-    }
-
-    // If found_partition_end == _partition_columns[0]->size(),
-    // the next chunk maybe also belongs to the current partition.
-    return _found_partition_end != _partition_columns[0]->size();
-}
-
 Status Analytor::output_result_chunk(vectorized::ChunkPtr* chunk) {
     vectorized::ChunkPtr output_chunk = std::move(_input_chunks[_output_chunk_index]);
     for (size_t i = 0; i < _result_window_columns.size(); i++) {
@@ -454,26 +439,19 @@ void Analytor::append_column(size_t chunk_size, vectorized::Column* dst_column, 
 }
 
 bool Analytor::is_new_partition() {
-    // _current_row_position >= _partition_end : current partition data has been processed
-    // _partition_end == 0 : the first partition
-    return ((_current_row_position >= _partition_end) &
-            ((_partition_end == 0) | (_partition_end != _found_partition_end)));
+    // _current_row_position: first partition
+    // _current_row_position >= found_partition_end: current partition is over
+    return _current_row_position == _partition_end;
 }
 
 int64_t Analytor::get_total_position(int64_t local_position) {
     return _removed_from_buffer_rows + local_position;
 }
 
-void Analytor::find_partition_end() {
-    // current partition data don't consume finished
-    if (_current_row_position < _partition_end) {
-        _found_partition_end = _partition_end;
-        return;
-    }
-
+bool Analytor::find_and_check_partition_end() {
     if (_partition_columns.empty() || _input_rows == 0) {
         _found_partition_end = _input_rows;
-        return;
+        return false;
     }
 
     int64_t start = _found_partition_end;
@@ -481,6 +459,7 @@ void Analytor::find_partition_end() {
     for (auto& column : _partition_columns) {
         _found_partition_end = _find_first_not_equal(column.get(), _partition_end, start, _found_partition_end);
     }
+    return _found_partition_end != static_cast<int64_t>(_partition_columns[0]->size());
 }
 
 bool Analytor::find_and_check_partition_end() {
