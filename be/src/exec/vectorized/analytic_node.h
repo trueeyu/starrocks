@@ -42,7 +42,6 @@ private:
     Status (AnalyticNode::*_get_next)(RuntimeState* state, ChunkPtr* chunk, bool* eos) = nullptr;
 
     Status _fetch_next_chunk(RuntimeState* state);
-    Status _try_fetch_next_partition_data(RuntimeState* state, int64_t* partition_end);
     Status _fetch_next_partition_data(RuntimeState* state, bool* eos);
 };
 } // namespace vectorized

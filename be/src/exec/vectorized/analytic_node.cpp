@@ -277,16 +277,6 @@ Status AnalyticNode::_fetch_next_partition_data(RuntimeState* state, bool* eos) 
     return Status::OK();
 }
 
-Status AnalyticNode::_try_fetch_next_partition_data(RuntimeState* state, int64_t* partition_end) {
-    *partition_end = _analytor->find_partition_end();
-    while (!_analytor->is_partition_finished(*partition_end)) {
-        RETURN_IF_ERROR(state->check_mem_limit("analytic node fetch next partition data"));
-        RETURN_IF_ERROR(_fetch_next_chunk(state));
-        *partition_end = _analytor->find_partition_end();
-    }
-    return Status::OK();
-}
-
 Status AnalyticNode::_fetch_next_chunk(RuntimeState* state) {
     ChunkPtr child_chunk;
     RETURN_IF_CANCELLED(state);
