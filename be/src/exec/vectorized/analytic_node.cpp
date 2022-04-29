@@ -255,21 +255,19 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
 }
 
 Status AnalyticNode::_fetch_next_partition_data(RuntimeState* state, bool* eos) {
-    int64_t found_partition_end = _analytor->partition_end();
-
-    bool end = _analytor->find_and_check_partition_end(&found_partition_end);
+    bool end = _analytor->find_and_check_partition_end();
     while (!end) {
         RETURN_IF_ERROR(state->check_mem_limit("analytic node fetch next partition data"));
         RETURN_IF_ERROR(_fetch_next_chunk(state));
         if (_analytor->input_eos()) {
             break;
         } else {
-            end = _analytor->find_and_check_partition_end(&found_partition_end);
+            end = _analytor->find_and_check_partition_end();
         }
     }
 
-    if (found_partition_end > _analytor->partition_end()) {
-        _analytor->reset_state_for_new_partition(found_partition_end);
+    if (_analytor->found_partition_end() > _analytor->partition_end()) {
+        _analytor->reset_state_for_new_partition();
         *eos = false;
     } else {
         *eos = true;
