@@ -99,7 +99,7 @@ public:
 
     void update_window_batch(int64_t peer_group_start, int64_t peer_group_end, int64_t frame_start, int64_t frame_end);
     void reset_window_state();
-    void get_window_function_result(int32_t start, int32_t end);
+    void get_window_function_result(size_t start, size_t end);
 
     bool is_partition_finished(int64_t found_partition_end);
     Status output_result_chunk(vectorized::ChunkPtr* chunk);

@@ -375,7 +375,7 @@ void Analytor::reset_window_state() {
     }
 }
 
-void Analytor::get_window_function_result(int32_t start, int32_t end) {
+void Analytor::get_window_function_result(size_t start, size_t end) {
     DCHECK_GT(end, start);
     for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
         vectorized::Column* agg_column = _result_window_columns[i].get();
