@@ -115,32 +115,30 @@ Status AnalyticNode::close(RuntimeState* state) {
 Status AnalyticNode::_get_next_for_unbounded_frame(RuntimeState* state, ChunkPtr* chunk, bool* eos) {
     SCOPED_TIMER(_analytor->compute_timer());
 
-    do {
-        if (_analytor->current_row_position() >= _analytor->partition_end()) {
-            RETURN_IF_ERROR(_fetch_next_partition_data(state, eos));
-            if (*eos) {
-                return Status::OK();
-            }
-            _analytor->update_window_batch(_analytor->partition_start(), _analytor->partition_end(),
-                                           _analytor->partition_start(), _analytor->partition_end());
-        }
+    RETURN_IF_ERROR(_fetch_next_chunk(state));
+    if (_analytor->input_eos()) {
+        *eos = true;
+        return Status::OK();
+    }
 
-        auto chunk_size = static_cast<int64_t>(_analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows());
-        _analytor->create_agg_result_columns(chunk_size);
+    auto chunk_size = static_cast<int64_t>(_analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows());
+    _analytor->create_agg_result_columns(chunk_size);
+
+    do {
+        _analytor->find_and_check_partition_end();
+        _analytor->update_window_batch(_analytor->partition_start(), _analytor->found_partition_end(),
+                                       _analytor->current_row_position(), _analytor->found_partition_end());
 
         int64_t chunk_first_row_position =
                 _analytor->input_chunk_first_row_positions()[_analytor->output_chunk_index()];
         int64_t get_value_start =
                 _analytor->get_total_position(_analytor->current_row_position()) - chunk_first_row_position;
-        int64_t get_value_end =
-                std::min<int64_t>(_analytor->current_row_position() + chunk_size, _analytor->partition_end());
-        _analytor->set_window_result_position(std::min<int64_t>(
-                (_analytor->get_total_position(get_value_end) - chunk_first_row_position), chunk_size));
+        int64_t get_value_end = _analytor->found_partition_end();
+        _analytor->set_window_result_position(_analytor->get_total_position(get_value_end) - chunk_first_row_position);
 
         _analytor->get_window_function_result(get_value_start, _analytor->window_result_position());
         _analytor->update_current_row_position(_analytor->window_result_position() - get_value_start);
-    } while (_analytor->window_result_position() <
-             _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows());
+    } while (_analytor->window_result_position() < chunk_size);
 
     return _analytor->output_result_chunk(chunk);
 }
