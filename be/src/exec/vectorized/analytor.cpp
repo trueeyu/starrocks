@@ -472,9 +472,9 @@ void Analytor::append_column(size_t chunk_size, vectorized::Column* dst_column, 
 }
 
 bool Analytor::is_new_partition() {
-    // _current_row_position >= _partition_end: current found partition data has been processed
-    // _partition_end != found_partition_end: need open one new partitition
-    return (_current_row_position >= _found_partition_end) & (_partition_end != _found_partition_end);
+    // _current_row_position: first partition
+    // _current_row_position >= found_partition_end: current partition is over
+    return _current_row_position == _partition_end;
 }
 
 int64_t Analytor::get_total_position(int64_t local_position) {
