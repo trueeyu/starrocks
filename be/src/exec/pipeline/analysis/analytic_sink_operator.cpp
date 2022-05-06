@@ -18,21 +18,26 @@ Status AnalyticSinkOperator::prepare(RuntimeState* state) {
 
     if (!_tnode.analytic_node.__isset.window) {
         _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_unbounded_frame;
+        _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_other;
     } else if (window.type == TAnalyticWindowType::RANGE) {
         // RANGE windows must have UNBOUNDED PRECEDING
         // RANGE window end bound must be CURRENT ROW or UNBOUNDED FOLLOWING
         if (!window.__isset.window_end) {
             _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_unbounded_frame;
+            _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_other;
         } else {
             _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_unbounded_preceding_range_frame;
+            _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_other;
         }
     } else {
         if (!window.__isset.window_start && !window.__isset.window_end) {
             _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_unbounded_frame;
+            _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_other;
         } else if (!window.__isset.window_start && window.window_end.type == TAnalyticWindowBoundaryType::CURRENT_ROW) {
-            _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_unbounded_preceding_rows_frame;
+            _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_unbounded_preceding_rows_frame;
         } else {
             _process_by_partition = &AnalyticSinkOperator::_process_by_partition_for_sliding_frame;
+            _process_by_partition_if_necessary = &AnalyticSinkOperator::_process_by_partition_if_necessary_for_other;
         }
     }
 
@@ -47,7 +52,7 @@ void AnalyticSinkOperator::close(RuntimeState* state) {
 Status AnalyticSinkOperator::set_finishing(RuntimeState* state) {
     _is_finished = true;
     _analytor->input_eos() = true;
-    RETURN_IF_ERROR(_process_by_partition_if_necessary());
+    RETURN_IF_ERROR((this->*_process_by_partition_if_necessary)());
     _analytor->sink_complete();
     return Status::OK();
 }
@@ -90,10 +95,10 @@ Status AnalyticSinkOperator::push_chunk(RuntimeState* state, const vectorized::C
 
     _analytor->input_chunks().emplace_back(std::move(chunk));
 
-    return _process_by_partition_if_necessary();
+    return (this->*_process_by_partition_if_necessary)();
 }
 
-Status AnalyticSinkOperator::_process_by_partition_if_necessary() {
+Status AnalyticSinkOperator::_process_by_partition_if_necessary_for_other() {
     while (_analytor->has_output()) {
         if (_analytor->reached_limit()) {
             return Status::OK();
@@ -123,6 +128,27 @@ Status AnalyticSinkOperator::_process_by_partition_if_necessary() {
             _analytor->offer_chunk_to_buffer(chunk);
         }
     }
+    return Status::OK();
+}
+
+Status AnalyticSinkOperator::_process_by_partition_if_necessary_for_unbounded_preceding_rows_frame() {
+    if (_analytor->reached_limit()) {
+        return Status::OK();
+    }
+
+    auto chunk_size = static_cast<int64_t>(_analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows());
+    _analytor->create_agg_result_columns(chunk_size);
+
+    _process_by_partition_for_unbounded_preceding_rows_frame(chunk_size);
+
+    // Chunk may contains multiply partitions, so the chunk need to be reprocessed
+    if (_analytor->window_result_position() ==
+        _analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows()) {
+        vectorized::ChunkPtr chunk;
+        RETURN_IF_ERROR(_analytor->output_result_chunk(&chunk));
+        _analytor->offer_chunk_to_buffer(chunk);
+    }
+
     return Status::OK();
 }
 
@@ -170,21 +196,28 @@ void AnalyticSinkOperator::_process_by_partition_for_unbounded_preceding_range_f
     }
 }
 
-void AnalyticSinkOperator::_process_by_partition_for_unbounded_preceding_rows_frame(size_t chunk_size,
-                                                                                    bool is_new_partition) {
-    while (_analytor->current_row_position() < _analytor->partition_end() &&
-           _analytor->window_result_position() < chunk_size) {
-        _analytor->update_window_batch(_analytor->partition_start(), _analytor->partition_end(),
-                                       _analytor->current_row_position(), _analytor->current_row_position() + 1);
+void AnalyticSinkOperator::_process_by_partition_for_unbounded_preceding_rows_frame(size_t chunk_size) {
+    do {
+        bool end = _analytor->find_and_check_partition_end();
 
-        _analytor->update_window_result_position(1);
-        int64_t frame_start = _analytor->get_total_position(_analytor->current_row_position()) -
-                              _analytor->input_chunk_first_row_positions()[_analytor->output_chunk_index()];
+        while (_analytor->current_row_position() < _analytor->partition_end() &&
+               _analytor->window_result_position() < chunk_size) {
+            _analytor->update_window_batch(_analytor->partition_start(), _analytor->partition_end(),
+                                           _analytor->current_row_position(), _analytor->current_row_position() + 1);
 
-        DCHECK_GE(frame_start, 0);
-        _analytor->get_window_function_result(frame_start, _analytor->window_result_position());
-        _analytor->update_current_row_position(1);
-    }
+            _analytor->update_window_result_position(1);
+            int64_t frame_start = _analytor->get_total_position(_analytor->current_row_position()) -
+                                  _analytor->input_chunk_first_row_positions()[_analytor->output_chunk_index()];
+
+            DCHECK_GE(frame_start, 0);
+            _analytor->get_window_function_result(frame_start, _analytor->window_result_position());
+            _analytor->update_current_row_position(1);
+        }
+
+        if (end) {
+            _analytor->reset_state_for_new_partition(end);
+        }
+    } while (_analytor->window_result_position() < chunk_size);
 }
 
 void AnalyticSinkOperator::_process_by_partition_for_sliding_frame(size_t chunk_size, bool is_new_partition) {
