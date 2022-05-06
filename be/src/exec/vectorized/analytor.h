@@ -113,6 +113,8 @@ public:
     bool find_and_check_partition_end();
     void find_peer_group_end();
     void reset_state_for_new_partition(bool end = true);
+    void reset_state_for_cur_partition();
+    void reset_state_for_next_partition(bool end = true);
 
     void remove_unused_buffer_values(RuntimeState* state);
 

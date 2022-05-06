@@ -464,11 +464,13 @@ int64_t Analytor::get_total_position(int64_t local_position) {
 }
 
 bool Analytor::find_and_check_partition_end() {
-    if (_partition_columns.empty()) {
+    if (_partition_columns.empty() || _input_rows == 0) {
+        _found_partition_end = _input_rows;
         return false;
     }
 
     _found_partition_end = static_cast<int64_t>(_partition_columns[0]->size());
+    std::cout<<"PTR:"<<_partition_columns[0].get()<<std::endl;
     for (auto& column : _partition_columns) {
         _found_partition_end =
                 _find_first_not_equal(column.get(), _partition_end, _current_row_position, _found_partition_end);
@@ -514,9 +516,23 @@ void Analytor::find_peer_group_end() {
 }
 
 void Analytor::reset_state_for_new_partition(bool end) {
-    if (end) {
-        _partition_end = _found_partition_end;
-    }
+    _partition_start = _partition_end;
+    _partition_end = _found_partition_end;
+    _current_row_position = _partition_start;
+    reset_window_state();
+    DCHECK_GE(_current_row_position, 0);
+}
+
+void Analytor::reset_state_for_cur_partition() {
+    _partition_start = _partition_end;
+    _partition_end = _found_partition_end;
+    _current_row_position = _partition_start;
+    reset_window_state();
+    DCHECK_GE(_current_row_position, 0);
+}
+
+void Analytor::reset_state_for_next_partition(bool end) {
+    _partition_end = _found_partition_end;
     _partition_start = _partition_end;
     _current_row_position = _partition_start;
     reset_window_state();
