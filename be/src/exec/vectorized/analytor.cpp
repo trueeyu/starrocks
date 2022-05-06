@@ -290,8 +290,6 @@ Status Analytor::open(RuntimeState* state) {
         RETURN_IF_ERROR(create_fn_states());
     }
 
-    reset_window_state();
-
     return Status::OK();
 }
 

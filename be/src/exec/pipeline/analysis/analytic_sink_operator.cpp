@@ -136,6 +136,10 @@ Status AnalyticSinkOperator::_process_by_partition_if_necessary_for_unbounded_pr
         return Status::OK();
     }
 
+    if (_analytor->current_row_position() == 0) {
+        _analytor->reset_window_state();
+    }
+
     auto chunk_size = static_cast<int64_t>(_analytor->input_chunks()[_analytor->output_chunk_index()]->num_rows());
     _analytor->create_agg_result_columns(chunk_size);
 
