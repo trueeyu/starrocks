@@ -83,7 +83,6 @@ public:
     int64_t found_partition_end() const { return _found_partition_end; }
     int64_t peer_group_start() { return _peer_group_start; }
     int64_t peer_group_end() { return _peer_group_end; }
-    void update_partition_end(int64_t end) { _partition_end = end; }
 
     const std::vector<starrocks_udf::FunctionContext*>& agg_fn_ctxs() { return _agg_fn_ctxs; }
     const std::vector<std::vector<ExprContext*>>& agg_expr_ctxs() { return _agg_expr_ctxs; }
@@ -105,7 +104,6 @@ public:
 
     bool is_partition_finished();
     Status output_result_chunk(vectorized::ChunkPtr* chunk);
-    size_t compute_memory_usage();
     void create_agg_result_columns(int64_t chunk_size);
     void append_column(size_t chunk_size, vectorized::Column* dst_column, vectorized::ColumnPtr& src_column);
 

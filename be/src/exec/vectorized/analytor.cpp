@@ -425,24 +425,6 @@ Status Analytor::output_result_chunk(vectorized::ChunkPtr* chunk) {
     return Status::OK();
 }
 
-size_t Analytor::compute_memory_usage() {
-    size_t memory_usage = 0;
-    for (size_t i = 0; i < _partition_columns.size(); ++i) {
-        memory_usage += _partition_columns[i]->memory_usage();
-    }
-
-    for (size_t i = 0; i < _order_columns.size(); ++i) {
-        memory_usage += _order_columns[i]->memory_usage();
-    }
-
-    for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
-        for (size_t j = 0; j < _agg_expr_ctxs[i].size(); j++) {
-            memory_usage += _agg_intput_columns[i][j]->memory_usage();
-        }
-    }
-    return memory_usage;
-}
-
 void Analytor::create_agg_result_columns(int64_t chunk_size) {
     if (_window_result_position == 0) {
         _result_window_columns.resize(_agg_fn_types.size());
