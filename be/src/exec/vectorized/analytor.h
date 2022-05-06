@@ -83,6 +83,7 @@ public:
     int64_t found_partition_end() const { return _found_partition_end; }
     int64_t peer_group_start() { return _peer_group_start; }
     int64_t peer_group_end() { return _peer_group_end; }
+    void update_partition_end(int64_t end) { _partition_end = end; }
 
     const std::vector<starrocks_udf::FunctionContext*>& agg_fn_ctxs() { return _agg_fn_ctxs; }
     const std::vector<std::vector<ExprContext*>>& agg_expr_ctxs() { return _agg_expr_ctxs; }
@@ -113,7 +114,7 @@ public:
     void find_partition_end();
     bool find_and_check_partition_end();
     void find_peer_group_end();
-    void reset_state_for_new_partition();
+    void reset_state_for_new_partition(bool end = true);
 
     void remove_unused_buffer_values(RuntimeState* state);
 

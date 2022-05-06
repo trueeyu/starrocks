@@ -234,10 +234,7 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
     _analytor->create_agg_result_columns(chunk_size);
 
     do {
-        _analytor->find_and_check_partition_end();
-        if (_analytor->is_new_partition()) {
-            _analytor->reset_state_for_new_partition();
-        }
+        bool end = _analytor->find_and_check_partition_end();
 
         while (_analytor->current_row_position() < _analytor->found_partition_end()) {
             _analytor->update_window_batch(_analytor->partition_start(), _analytor->found_partition_end(),
@@ -250,6 +247,10 @@ Status AnalyticNode::_get_next_for_unbounded_preceding_rows_frame(RuntimeState* 
             DCHECK_GE(frame_start, 0);
             _analytor->get_window_function_result(frame_start, _analytor->window_result_position());
             _analytor->update_current_row_position(1);
+        }
+
+        if (end) {
+            _analytor->reset_state_for_new_partition(end);
         }
     } while (_analytor->window_result_position() < chunk_size);
 

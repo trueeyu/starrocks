@@ -290,6 +290,8 @@ Status Analytor::open(RuntimeState* state) {
         RETURN_IF_ERROR(create_fn_states());
     }
 
+    reset_window_state();
+
     return Status::OK();
 }
 
@@ -482,7 +484,7 @@ int64_t Analytor::get_total_position(int64_t local_position) {
 }
 
 bool Analytor::find_and_check_partition_end() {
-    if (_partition_columns.empty() || _input_rows == 0) {
+    if (_partition_columns.empty()) {
         return false;
     }
 
@@ -531,9 +533,11 @@ void Analytor::find_peer_group_end() {
     _peer_group_end = found_peer_group_end;
 }
 
-void Analytor::reset_state_for_new_partition() {
+void Analytor::reset_state_for_new_partition(bool end) {
+    if (end) {
+        _partition_end = _found_partition_end;
+    }
     _partition_start = _partition_end;
-    _partition_end = _found_partition_end;
     _current_row_position = _partition_start;
     reset_window_state();
     DCHECK_GE(_current_row_position, 0);
@@ -567,6 +571,7 @@ void Analytor::remove_unused_buffer_values(RuntimeState* state) {
     _removed_from_buffer_rows += remove_count;
     _partition_start -= remove_count;
     _partition_end -= remove_count;
+    _found_partition_end -= remove_count;
     _current_row_position -= remove_count;
     _peer_group_start -= remove_count;
     _peer_group_end -= remove_count;
