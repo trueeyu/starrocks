@@ -40,7 +40,6 @@
 
 namespace starrocks {
 class Field;
-class FieldInfo;
 class Tablet;
 
 namespace vectorized {
@@ -82,7 +81,7 @@ public:
 
     Status allocate(ChunkPtr& chunk, size_t num_rows, Schema& schema);
     void release(ChunkPtr& chunk, size_t num_rows);
-    bool is_memory_enough_to_sort(size_t num_rows, size_t allocated_rows);
+    bool is_memory_enough_to_sort(size_t num_rows, size_t allocated_rows) const;
 
 private:
     const TabletSchema& _tablet_schema;

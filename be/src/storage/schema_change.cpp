@@ -42,8 +42,7 @@
 #include "util/defer_op.h"
 #include "util/unaligned_access.h"
 
-namespace starrocks {
-namespace vectorized {
+namespace starrocks::vectorized {
 
 using ChunkRow = std::pair<size_t, Chunk*>;
 
@@ -647,8 +646,8 @@ bool ChunkSorter::sort(ChunkPtr& chunk, TabletSharedPtr new_tablet) {
 
 ChunkAllocator::ChunkAllocator(const TabletSchema& tablet_schema, size_t memory_limitation)
         : _tablet_schema(tablet_schema), _memory_allocated(0), _memory_limitation(memory_limitation) {
-    _row_len = 0;
-    _row_len = tablet_schema.row_size();
+    // Variable length types are calculated by 4 bytes, which is a conservative estimate
+    _row_len = tablet_schema.estimate_row_size(4);
 }
 
 ChunkAllocator::~ChunkAllocator() {
@@ -657,7 +656,7 @@ ChunkAllocator::~ChunkAllocator() {
     }
 }
 
-bool ChunkAllocator::is_memory_enough_to_sort(size_t num_rows, size_t allocated_rows) {
+bool ChunkAllocator::is_memory_enough_to_sort(size_t num_rows, size_t allocated_rows) const {
     if (num_rows <= allocated_rows) {
         return true;
     }
@@ -1795,5 +1794,4 @@ Status SchemaChangeHandler::_validate_alter_result(TabletSharedPtr new_tablet, c
     }
 }
 
-} // namespace vectorized
 } // namespace starrocks
