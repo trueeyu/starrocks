@@ -1021,7 +1021,7 @@ bool SchemaChangeWithSorting::process(vectorized::TabletReader* reader, RowsetWr
     bool bg_worker_stopped = storage_engine->bg_worker_stopped();
     while (!bg_worker_stopped) {
 #ifndef BE_TEST
-        Status st = tls_thread_status.mem_tracker()->check_mem_limit("SortSchemaChange");
+        Status st = CurrentThread::mem_tracker()->check_mem_limit("SortSchemaChange");
         if (!st.ok()) {
             LOG(WARNING) << "fail to execute schema change: " << st.message() << std::endl;
             return false;
@@ -1041,7 +1041,7 @@ bool SchemaChangeWithSorting::process(vectorized::TabletReader* reader, RowsetWr
 
         if (!_chunk_allocator->is_memory_enough_to_sort(2 * base_chunk->num_rows(), chunk_sorter.allocated_rows())) {
             VLOG(3) << "do internal sorting because of memory limit";
-            if (chunk_arr.size() < 1) {
+            if (chunk_arr.empty()) {
                 LOG(WARNING) << "Memory limitation is too small for Schema Change."
                              << "memory_limitation=" << _memory_limitation;
                 return false;
@@ -1052,7 +1052,7 @@ bool SchemaChangeWithSorting::process(vectorized::TabletReader* reader, RowsetWr
                 return false;
             }
 
-            for (std::vector<ChunkPtr>::iterator it = chunk_arr.begin(); it != chunk_arr.end(); ++it) {
+            for (auto it = chunk_arr.begin(); it != chunk_arr.end(); ++it) {
                 _chunk_allocator->release(*it, (*it)->num_rows());
             }
 

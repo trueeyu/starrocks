@@ -141,6 +141,8 @@ public:
     static FieldAggregationMethod get_aggregation_type_by_string(const std::string& str);
     static uint32_t get_field_length_by_type(FieldType type, uint32_t string_length);
 
+    size_t estimate_row_size(uint32_t variable_length) const;
+
     std::string debug_string() const;
 
     bool is_format_v1_column() const;
@@ -251,6 +253,8 @@ public:
 
     bool contains_format_v1_column() const;
     bool contains_format_v2_column() const;
+
+    size_t estimate_row_size(uint32_t variable_length) const;
 
     std::unique_ptr<TabletSchema> convert_to_format(DataFormatVersion format) const;
 

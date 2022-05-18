@@ -187,6 +187,64 @@ std::string TabletColumn::get_string_by_aggregation_type(FieldAggregationMethod 
     return "";
 }
 
+size_t TabletColumn::estimate_row_size(uint32_t variable_length) const {
+    size_t size;
+    switch (_type) {
+    case OLAP_FIELD_TYPE_UNKNOWN:
+    case OLAP_FIELD_TYPE_DISCRETE_DOUBLE:
+    case OLAP_FIELD_TYPE_STRUCT:
+    case OLAP_FIELD_TYPE_MAP:
+    case OLAP_FIELD_TYPE_NONE:
+    case OLAP_FIELD_TYPE_MAX_VALUE:
+    case OLAP_FIELD_TYPE_BOOL:
+    case OLAP_FIELD_TYPE_TINYINT:
+    case OLAP_FIELD_TYPE_UNSIGNED_TINYINT:
+        size = 1;
+        break;
+    case OLAP_FIELD_TYPE_SMALLINT:
+    case OLAP_FIELD_TYPE_UNSIGNED_SMALLINT:
+        size = 2;
+        break;
+    case OLAP_FIELD_TYPE_DATE:
+        size = 3;
+        break;
+    case OLAP_FIELD_TYPE_INT:
+    case OLAP_FIELD_TYPE_UNSIGNED_INT:
+    case OLAP_FIELD_TYPE_FLOAT:
+    case OLAP_FIELD_TYPE_DATE_V2:
+    case OLAP_FIELD_TYPE_DECIMAL32:
+        size = 4;
+        break;
+    case OLAP_FIELD_TYPE_BIGINT:
+    case OLAP_FIELD_TYPE_UNSIGNED_BIGINT:
+    case OLAP_FIELD_TYPE_DOUBLE:
+    case OLAP_FIELD_TYPE_DATETIME:
+    case OLAP_FIELD_TYPE_TIMESTAMP:
+    case OLAP_FIELD_TYPE_DECIMAL64:
+        size = 8;
+        break;
+    case OLAP_FIELD_TYPE_DECIMAL:
+        size = 12;
+        break;
+    case OLAP_FIELD_TYPE_LARGEINT:
+    case OLAP_FIELD_TYPE_OBJECT:
+    case OLAP_FIELD_TYPE_DECIMAL_V2:
+    case OLAP_FIELD_TYPE_DECIMAL128:
+        size = 16;
+        break;
+    default:
+        // char, varchar, hll, percentile, json, array
+        size = variable_length;
+        break;
+    }
+    if (_extra_fields != nullptr) {
+        for (auto& field : _extra_fields->sub_columns) {
+            size += field.estimate_row_size(variable_length);
+        }
+    }
+    return size;
+}
+
 uint32_t TabletColumn::get_field_length_by_type(FieldType type, uint32_t string_length) {
     switch (type) {
     case OLAP_FIELD_TYPE_UNKNOWN:
@@ -486,6 +544,14 @@ void TabletSchema::to_schema_pb(TabletSchemaPB* tablet_schema_pb) const {
 
 bool TabletSchema::contains_format_v1_column() const {
     return std::any_of(_cols.begin(), _cols.end(), [](const TabletColumn& col) { return col.is_format_v1_column(); });
+}
+
+size_t TabletSchema::estimate_row_size(uint32_t variable_length) const {
+    size_t size = 0;
+    for (auto& col : _cols) {
+        size += col.estimate_row_size(variable_length);
+    }
+    return size;
 }
 
 bool TabletSchema::contains_format_v2_column() const {
