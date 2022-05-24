@@ -152,6 +152,56 @@ bool MemTable::insert(const Chunk& chunk, const uint32_t* indexes, uint32_t from
     return suggest_flush;
 }
 
+bool MemTable::insert(const Chunk& chunk, uint32_t from, uint32_t size) {
+    if (_chunk == nullptr) {
+        _chunk = ChunkHelper::new_chunk(_vectorized_schema, 0);
+    }
+
+    if (_use_slot_desc) {
+        // For schema change, FE will construct a shadow column.
+        // The shadow column is not exist in _vectorized_schema
+        // So the chunk can only be accessed by the subscript
+        // instead of the column name.
+        for (int i = 0; i < _slot_descs->size(); ++i) {
+            const ColumnPtr& src = chunk.get_column_by_slot_id((*_slot_descs)[i]->id());
+            ColumnPtr& dest = _chunk->get_column_by_index(i);
+            dest->append(*src, from, size);
+        }
+    } else {
+        for (int i = 0; i < _vectorized_schema.num_fields(); i++) {
+            const ColumnPtr& src = chunk.get_column_by_index(i);
+            ColumnPtr& dest = _chunk->get_column_by_index(i);
+            dest->append(*src, from, size);
+        }
+    }
+
+    if (chunk.has_rows()) {
+        _chunk_memory_usage += chunk.memory_usage() * size / chunk.num_rows();
+        _chunk_bytes_usage += chunk.bytes_usage() * size / chunk.num_rows();
+    }
+
+    // if memtable is full, push it to the flush executor,
+    // and create a new memtable for incoming data
+    bool suggest_flush = false;
+    if (is_full()) {
+        size_t orig_bytes = write_buffer_size();
+        _merge();
+        size_t new_bytes = write_buffer_size();
+        if (new_bytes > orig_bytes * 2 / 3 && _merge_count <= 1) {
+            // this means aggregate doesn't remove enough duplicate rows,
+            // keep inserting into the buffer will cause additional sort&merge,
+            // the cost of extra sort&merge is greater than extra flush IO,
+            // so flush is suggested even buffer is not full
+            suggest_flush = true;
+        }
+    }
+    if (is_full()) {
+        suggest_flush = true;
+    }
+
+    return suggest_flush;
+}
+
 Status MemTable::finalize() {
     if (_chunk == nullptr) {
         return Status::OK();

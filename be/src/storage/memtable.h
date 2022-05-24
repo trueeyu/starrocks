@@ -40,6 +40,8 @@ public:
     // return true suggests caller should flush this memory table
     bool insert(const Chunk& chunk, const uint32_t* indexes, uint32_t from, uint32_t size);
 
+    bool insert(const Chunk& chunk, uint32_t from, uint32_t size);
+
     Status flush();
 
     Status finalize();

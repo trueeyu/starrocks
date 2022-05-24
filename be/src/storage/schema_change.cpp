@@ -1091,12 +1091,6 @@ Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* ne
     auto mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), new_schema, new_rowset_writer,
                                                 _memory_limitation * 0.8, tls_thread_status.mem_tracker());
 
-    auto selective = std::make_unique<std::vector<uint32_t>>();
-    selective->resize(config::vector_chunk_size);
-    for (uint32_t i = 0; i < config::vector_chunk_size; i++) {
-        (*selective)[i] = i;
-    }
-
     std::unique_ptr<MemPool> mem_pool(new MemPool());
 
     StorageEngine* storage_engine = ExecEnv::GetInstance()->storage_engine();
@@ -1137,7 +1131,7 @@ Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* ne
 
         ChunkHelper::padding_char_columns(char_field_indexes, new_schema, new_tablet->tablet_schema(), new_chunk.get());
 
-        bool full = mem_table->insert(*new_chunk, selective->data(), 0, new_chunk->num_rows());
+        bool full = mem_table->insert(*new_chunk, 0, new_chunk->num_rows());
         if (full) {
             RETURN_IF_ERROR_WITH_WARN(mem_table->finalize(), "failed to finalize mem table");
             RETURN_IF_ERROR_WITH_WARN(mem_table->flush(), "failed to flush mem table");
