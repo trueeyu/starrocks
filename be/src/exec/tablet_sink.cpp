@@ -337,9 +337,17 @@ Status NodeChannel::add_chunk(vectorized::Chunk* input, const int64_t* tablet_id
         RETURN_IF_ERROR(_serialize_chunk(chunk.get(), pchunk));
     }
 
+    auto cur_time = std::chrono::steady_clock::now();
+    auto timeout = _rpc_timeout_ms -
+                   std::chrono::duration_cast<std::chrono::milliseconds>(cur_time - _parent->_start_time).count();
+    if (timeout <= 0) {
+        return Status::TimedOut(fmt::format("the load already timeout: load_id {}, index_id {}, node_id {}, timeout {}",
+                                            print_id(_parent->_load_id), std::to_string(_index_id),
+                                            std::to_string(_node_id), _rpc_timeout_ms));
+    }
     _add_batch_closures[_current_request_index]->ref();
     _add_batch_closures[_current_request_index]->reset();
-    _add_batch_closures[_current_request_index]->cntl.set_timeout_ms(_rpc_timeout_ms);
+    _add_batch_closures[_current_request_index]->cntl.set_timeout_ms(timeout);
 
     _stub->tablet_writer_add_chunk(&_add_batch_closures[_current_request_index]->cntl, &request,
                                    &_add_batch_closures[_current_request_index]->result,
@@ -564,6 +572,7 @@ Status OlapTableSink::init(const TDataSink& t_sink) {
     } else {
         _load_channel_timeout_s = config::streaming_load_rpc_max_alive_time_sec;
     }
+    _start_time = std::chrono::steady_clock::now();
 
     return Status::OK();
 }

@@ -29,6 +29,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include <chrono>
 
 #include "common/object_pool.h"
 #include "common/status.h"
@@ -380,6 +381,7 @@ private:
 
     // the timeout of load channels opened by this tablet sink. in second
     int64_t _load_channel_timeout_s = 0;
+    std::chrono::steady_clock::time_point _start_time;
 };
 
 } // namespace stream_load
