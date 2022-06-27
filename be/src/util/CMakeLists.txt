@@ -32,7 +32,6 @@ set(UTIL_FILES
   arrow/row_block.cpp
   arrow/utils.cpp
   bfd_parser.cpp
-  bitmap.cpp
   block_compression.cpp
   coding.cpp
   cpu_info.cpp
