@@ -738,6 +738,9 @@ CONF_Int32(max_batch_publish_latency_ms, "100");
 // Config for opentelemetry tracing.
 CONF_String(jaeger_endpoint, "");
 
+CONF_Bool(kafka_debug, "true");
+CONF_String(kafka_topic, "dwd_users_table_record");
+
 #ifdef USE_STAROS
 CONF_String(starmgr_addr, "");
 CONF_Int32(starlet_port, "9070");
