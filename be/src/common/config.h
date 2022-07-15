@@ -739,7 +739,7 @@ CONF_Int32(max_batch_publish_latency_ms, "100");
 CONF_String(jaeger_endpoint, "");
 
 CONF_Bool(kafka_debug, "true");
-CONF_String(kafka_topic, "dwd_users_table_record");
+CONF_String(kafka_topic, "dwd_users_table_record_test");
 
 #ifdef USE_STAROS
 CONF_String(starmgr_addr, "");
