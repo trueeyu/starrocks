@@ -408,7 +408,9 @@ uint64_t ScalarColumnWriter::estimate_buffer_size() {
 }
 
 Status ScalarColumnWriter::finish() {
+    std::cout<<"FINISH_DICT_1:"<<DICT_ENCODING<<":"<<_opts.global_dict<<std::endl;
     if (_encoding_info->encoding() == DICT_ENCODING && _opts.global_dict != nullptr) {
+        std::cout<<"FINISH_DICT_2"<<std::endl;
         _is_global_dict_valid = _page_builder->is_valid_global_dict(_opts.global_dict);
     } else {
         _is_global_dict_valid = false;

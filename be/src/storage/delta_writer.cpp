@@ -188,7 +188,7 @@ Status DeltaWriter::_init() {
         LOG(WARNING) << msg;
         return Status::InternalError(msg);
     }
-    _mem_table_sink = std::make_unique<MemTableRowsetWriterSink>(_rowset_writer.get());
+    _mem_table_sink = std::make_shared<MemTableRowsetWriterSink>(_rowset_writer);
     _tablet_schema = writer_context.tablet_schema;
     _flush_token = _storage_engine->memtable_flush_executor()->create_flush_token();
     _set_state(kWriting);
@@ -269,7 +269,7 @@ void DeltaWriter::_reset_mem_table() {
         _schema_initialized = true;
     }
     _mem_table = std::make_unique<MemTable>(_tablet->tablet_id(), &_vectorized_schema, _opt.slots,
-                                            _mem_table_sink.get(), _mem_tracker);
+                                            _mem_table_sink, _mem_tracker);
 }
 
 Status DeltaWriter::commit() {

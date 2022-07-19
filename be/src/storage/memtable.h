@@ -22,9 +22,9 @@ class MemTableSink;
 class MemTable {
 public:
     MemTable(int64_t tablet_id, const Schema* schema, const std::vector<SlotDescriptor*>* slot_descs,
-             MemTableSink* sink, MemTracker* mem_tracker);
+             std::shared_ptr<MemTableSink> sink, MemTracker* mem_tracker);
 
-    MemTable(int64_t tablet_id, const Schema* schema, MemTableSink* sink, int64_t max_buffer_size,
+    MemTable(int64_t tablet_id, const Schema* schema, std::shared_ptr<MemTableSink> sink, int64_t max_buffer_size,
              MemTracker* mem_tracker);
 
     ~MemTable();
@@ -75,7 +75,7 @@ private:
     const std::vector<SlotDescriptor*>* _slot_descs;
     KeysType _keys_type;
 
-    MemTableSink* _sink;
+    std::shared_ptr<MemTableSink> _sink;
 
     // aggregate
     std::unique_ptr<ChunkAggregator> _aggregator;

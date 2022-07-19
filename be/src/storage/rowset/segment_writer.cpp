@@ -155,7 +155,8 @@ Status SegmentWriter::init(const std::vector<uint32_t>& column_indexes, bool has
         std::cout<<"GET 3"<<std::endl;
 
         if (column.type() == FieldType::OLAP_FIELD_TYPE_VARCHAR && _opts.global_dicts != nullptr) {
-            std::cout<<"GET DICT"<<std::endl;
+            std::cout<<"GET DICT:"<<column.name()<<std::endl;
+            std::cout<<"MAP_SIZE:"<<_opts.global_dicts->size()<<std::endl;
             auto iter = _opts.global_dicts->find(column.name().data());
             if (iter != _opts.global_dicts->end()) {
                 opts.global_dict = &iter->second;
@@ -225,6 +226,7 @@ Status SegmentWriter::finalize_columns(uint64_t* index_size) {
         *index_size += _wfile->size() - index_offset;
 
         // global dict
+        std::cout<<"GLOBAL:"<<column_writer->is_global_dict_valid()<<std::endl;
         if (!column_writer->is_global_dict_valid()) {
             std::string col_name(_tablet_schema->columns()[column_index].name().data(),
                                  _tablet_schema->columns()[column_index].name().size());

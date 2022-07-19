@@ -120,11 +120,11 @@ private:
 
     TabletSharedPtr _tablet;
     RowsetSharedPtr _cur_rowset;
-    std::unique_ptr<RowsetWriter> _rowset_writer;
+    std::shared_ptr<RowsetWriter> _rowset_writer;
     bool _schema_initialized;
     Schema _vectorized_schema;
     std::unique_ptr<MemTable> _mem_table;
-    std::unique_ptr<MemTableSink> _mem_table_sink;
+    std::shared_ptr<MemTableSink> _mem_table_sink;
     const TabletSchema* _tablet_schema;
 
     std::unique_ptr<FlushToken> _flush_token;

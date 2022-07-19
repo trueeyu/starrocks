@@ -105,7 +105,7 @@ inline void DeltaWriterImpl::reset_memtable() {
         _vectorized_schema = std::move(MemTable::convert_schema(_tablet_schema.get(), _slots));
         _schema_initialized = true;
     }
-    _mem_table.reset(new MemTable(_tablet_id, &_vectorized_schema, _slots, _mem_table_sink.get(), _mem_tracker));
+    _mem_table.reset(new MemTable(_tablet_id, &_vectorized_schema, _slots, nullptr, _mem_tracker));
 }
 
 inline Status DeltaWriterImpl::flush_async() {

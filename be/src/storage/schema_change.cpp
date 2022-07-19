@@ -1076,7 +1076,7 @@ bool SchemaChangeWithSorting::process(TabletReader* reader, RowsetWriter* new_ro
 Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* new_rowset_writer,
                                           TabletSharedPtr new_tablet, TabletSharedPtr base_tablet,
                                           RowsetSharedPtr rowset) {
-    MemTableRowsetWriterSink mem_table_sink(new_rowset_writer);
+    MemTableRowsetWriterSink mem_table_sink(nullptr);
     Schema base_schema = std::move(ChunkHelper::convert_schema_to_format_v2(
             base_tablet->tablet_schema(), *_chunk_changer->get_mutable_selected_column_indexs()));
     Schema new_schema = std::move(ChunkHelper::convert_schema_to_format_v2(new_tablet->tablet_schema()));
@@ -1086,7 +1086,7 @@ Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* ne
     // set max memtable size to 4G since some column has limit size, it will make invalid data
     size_t max_buffer_size = std::min<size_t>(
             4294967296, static_cast<size_t>(_memory_limitation * config::memory_ratio_for_sorting_schema_change));
-    auto mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, &mem_table_sink, max_buffer_size,
+    auto mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, nullptr, max_buffer_size,
                                                 CurrentThread::mem_tracker());
 
     auto selective = std::make_unique<std::vector<uint32_t>>();
@@ -1107,7 +1107,7 @@ Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* ne
         if (cur_usage > CurrentThread::mem_tracker()->limit() * 0.9) {
             RETURN_IF_ERROR_WITH_WARN(mem_table->finalize(), "failed to finalize mem table");
             RETURN_IF_ERROR_WITH_WARN(mem_table->flush(), "failed to flush mem table");
-            mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, &mem_table_sink,
+            mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, nullptr,
                                                    max_buffer_size, CurrentThread::mem_tracker());
             VLOG(1) << "SortSchemaChange memory usage: " << cur_usage << " after mem table flush "
                     << CurrentThread::mem_tracker()->consumption();
@@ -1139,7 +1139,7 @@ Status SchemaChangeWithSorting::processV2(TabletReader* reader, RowsetWriter* ne
         if (full) {
             RETURN_IF_ERROR_WITH_WARN(mem_table->finalize(), "failed to finalize mem table");
             RETURN_IF_ERROR_WITH_WARN(mem_table->flush(), "failed to flush mem table");
-            mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, &mem_table_sink,
+            mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, nullptr,
                                                    max_buffer_size, CurrentThread::mem_tracker());
         }
 

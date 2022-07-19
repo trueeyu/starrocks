@@ -189,6 +189,7 @@ private:
 
     vectorized::GlobalDictByNameMaps _global_dicts;
     std::unique_ptr<MemPool> _mem_pool;
+    uint8_t* _tmp_mem = nullptr;
 };
 
 std::atomic<uint64_t> LocalTabletsChannel::_s_tablet_writer_count;
@@ -213,6 +214,7 @@ LocalTabletsChannel::~LocalTabletsChannel() {
     delete _schema;
     std::cout<<"LocalTabletsChannel"<<std::endl;
     _mem_pool.reset();
+    free(_tmp_mem);
 }
 
 Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params) {
@@ -461,15 +463,19 @@ Status LocalTabletsChannel::_open_all_writers(const PTabletWriterOpenRequest& pa
         vectorized::GlobalDictMap global_dict;
         if (slot.global_dict_words_size()) {
             std::cout<<"INIT DICT"<<std::endl;
+            _tmp_mem = (uint8_t*)malloc(2 * 1024 * 1024);
+            size_t idx = 0;
             for (size_t i = 0; i < slot.global_dict_words_size(); i++) {
                 const std::string& dict_word = slot.global_dict_words(i);
-                auto* data = _mem_pool->allocate(dict_word.size());
-                RETURN_IF_UNLIKELY_NULL(data, Status::MemoryAllocFailed("alloc mem for global dict failed"));
-                memcpy(data, dict_word.data(), dict_word.size());
-                Slice slice(data, dict_word.size());
+                //auto* data = _mem_pool->allocate(dict_word.size());
+                //RETURN_IF_UNLIKELY_NULL(data, Status::MemoryAllocFailed("alloc mem for global dict failed"));
+                memcpy(_tmp_mem + idx, dict_word.data(), dict_word.size());
+                Slice slice(_tmp_mem + idx, dict_word.size());
+                idx += dict_word.size();
                 global_dict.emplace(slice, i);
             }
             _global_dicts.insert(std::make_pair(slot.col_name(), std::move(global_dict)));
+            std::cout<<"INIT_MAP_SIZE:"<<_global_dicts.size()<<std::endl;
         }
     }
 

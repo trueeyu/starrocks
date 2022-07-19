@@ -77,4 +77,41 @@ Status RowsetFactory::create_rowset_writer(const RowsetWriterContext& context, s
     return (*output)->init();
 }
 
+Status RowsetFactory::create_rowset_writer(const RowsetWriterContext& context, std::shared_ptr<RowsetWriter>* output) {
+    auto tablet_schema = context.tablet_schema;
+    auto memory_format_version = context.memory_format_version;
+    auto storage_format_version = context.storage_format_version;
+
+    if (memory_format_version == kDataFormatUnknown) {
+        if (tablet_schema->contains_format_v1_column()) {
+            memory_format_version = kDataFormatV1;
+        } else if (tablet_schema->contains_format_v2_column()) {
+            memory_format_version = kDataFormatV2;
+        } else {
+            memory_format_version = storage_format_version;
+        }
+    }
+
+    if (storage_format_version != kDataFormatV1 && storage_format_version != kDataFormatV2) {
+        LOG(WARNING) << "Invalid storage format version " << storage_format_version;
+        return Status::InvalidArgument("invalid storage_format_version");
+    }
+    if (memory_format_version != kDataFormatV1 && memory_format_version != kDataFormatV2) {
+        LOG(WARNING) << "Invalid memory format version " << memory_format_version;
+        return Status::InvalidArgument("invalid memory_format_version");
+    }
+
+    if (memory_format_version != storage_format_version) {
+        auto adapter_context = context;
+        adapter_context.memory_format_version = memory_format_version;
+        *output = std::make_unique<vectorized::RowsetWriterAdapter>(adapter_context);
+    } else if (context.writer_type == kHorizontal) {
+        *output = std::make_unique<HorizontalBetaRowsetWriter>(context);
+    } else {
+        DCHECK(context.writer_type == kVertical);
+        *output = std::make_unique<VerticalBetaRowsetWriter>(context);
+    }
+    return (*output)->init();
+}
+
 } // namespace starrocks

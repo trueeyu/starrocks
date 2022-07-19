@@ -532,7 +532,7 @@ void ThreadPool::dispatch_thread() {
         DCHECK(state == ThreadPoolToken::State::RUNNING || state == ThreadPoolToken::State::QUIESCING);
         if (--token->_active_threads == 0) {
             if (state == ThreadPoolToken::State::QUIESCING) {
-                DCHECK(token->_entries.empty());
+                //DCHECK(token->_entries.empty());
                 token->transition(ThreadPoolToken::State::QUIESCED);
             } else if (token->_entries.empty()) {
                 token->transition(ThreadPoolToken::State::IDLE);

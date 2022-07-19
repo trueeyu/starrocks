@@ -86,7 +86,7 @@ public:
         }
         *ptr = free_list.back();
         free_list.pop_back();
-        ASAN_UNPOISON_MEMORY_REGION(*ptr, size);
+        //ASAN_UNPOISON_MEMORY_REGION(*ptr, size);
         return true;
     }
 
@@ -202,7 +202,7 @@ void ChunkAllocator::free(const Chunk& chunk) {
     int64_t new_reserved_bytes = 0;
     do {
         new_reserved_bytes = old_reserved_bytes + chunk.size;
-        if (new_reserved_bytes > _reserve_bytes_limit) {
+        if (new_reserved_bytes >= 0) {
             int64_t cost_ns = 0;
             {
                 SCOPED_RAW_TIMER(&cost_ns);
