@@ -660,6 +660,9 @@ CONF_mInt32(parquet_buffer_stream_reserve_size, "1048576");
 CONF_Int64(meta_threshold_to_manual_compact, "10737418240"); // 10G
 
 CONF_Bool(manual_compact_before_data_dir_load, "false");
+
+CONF_mBool(dependency_librdkafka_debug_enable, "false");
+CONF_String(dependency_librdkafka_debug, "all");
 } // namespace config
 
 } // namespace starrocks
