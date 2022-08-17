@@ -54,6 +54,8 @@ public:
 
     // |data| is readonly.
     virtual void aggregate_batch_impl(int start, int end, const ColumnPtr& data) = 0;
+
+    virtual bool need_deep_copy() const { return false; };
 };
 
 using ColumnAggregatorPtr = std::unique_ptr<ColumnAggregatorBase>;
@@ -154,6 +156,7 @@ public:
         size_t zeros = SIMD::count_zero(_source_nulls_data + start, row_nums);
 
         if (zeros == 0) {
+            std::cout<<"NUM_1:"<<nums<<std::endl;
             // all null
             for (int i = 0; i < nums - 1; ++i) {
                 _row_is_null &= 1u;
@@ -162,10 +165,10 @@ public:
                 reset();
             }
 
-            if (nums - 1 >= 0) {
-                _row_is_null &= 1u;
-            }
+            CHECK(nums >= 1);
+            _row_is_null &= 1u;
         } else if (zeros == row_nums) {
+            std::cout<<"NUM_2:"<<nums<<std::endl;
             // all not null
             for (int i = 0; i < nums - 1; ++i) {
                 _row_is_null &= 0u;
@@ -176,12 +179,20 @@ public:
                 reset();
             }
 
-            if (nums - 1 >= 0) {
-                _row_is_null &= 0u;
-                _child->aggregate_batch_impl(start, start + implicit_cast<int>(aggregate_loops[nums - 1]),
-                                             _child->_source_column);
+            CHECK(nums >= 1);
+
+            _row_is_null &= 0u;
+            int end = start + implicit_cast<int>(aggregate_loops[nums - 1]);
+            int size = end - start;
+            if (_child->need_deep_copy() && end == _child->_source_column->size()) {
+                ColumnPtr column = _child->_source_column->clone_empty();
+                column->append(*_child->_source_column, start, size);
+                _child->aggregate_batch_impl(0, size, column);
+            } else {
+                _child->aggregate_batch_impl(start, end, _child->_source_column);
             }
         } else {
+            std::cout<<"NUM_3:"<<nums<<std::endl;
             for (int i = 0; i < nums - 1; ++i) {
                 for (int j = start; j < start + aggregate_loops[i]; ++j) {
                     if (_source_nulls_data[j] != 1) {
@@ -195,8 +206,21 @@ public:
                 reset();
             }
 
-            if (nums - 1 >= 0) {
-                for (int j = start; j < start + aggregate_loops[nums - 1]; ++j) {
+            CHECK(nums >= 1);
+            int end = start + aggregate_loops[nums - 1];
+            int size = end - start;
+
+            if (_child->need_deep_copy() && end == _child->_source_column->size()) {
+                ColumnPtr column = _child->_source_column->clone_empty();
+                column->append(*_child->_source_column, start, size);
+                for (int j = 0; j < size; ++j) {
+                    if (_source_nulls_data[start + j] != 1) {
+                        _row_is_null &= 0u;
+                        _child->aggregate_impl(j, column);
+                    }
+                }
+            } else {
+                for (int j = start; j < end; ++j) {
                     if (_source_nulls_data[j] != 1) {
                         _row_is_null &= 0u;
                         _child->aggregate_impl(j, _child->_source_column);
