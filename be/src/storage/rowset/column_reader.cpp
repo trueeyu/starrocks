@@ -125,7 +125,8 @@ Status ColumnReader::_init(ColumnMetaPB* meta) {
                                          _zonemap_index_meta->SpaceUsedLong())
                 _zonemap_index = std::make_unique<ZoneMapIndexReader>();
                 _segment_zone_map.reset(_zonemap_index_meta->release_segment_zone_map());
-                mem_tracker()->consume(_segment_zone_map->SpaceUsedLong());
+                MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->segment_zone_map_mem_tracker(),
+                                         _segment_zone_map->SpaceUsedLong())
                 break;
             case BITMAP_INDEX:
                 _bitmap_index_meta.reset(index_meta->release_bitmap_index());
