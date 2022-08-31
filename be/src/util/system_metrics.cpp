@@ -219,6 +219,7 @@ void SystemMetrics::_install_memory_metrics(MetricRegistry* registry) {
     registry->register_metric("metadata_mem_bytes", &_memory_metrics->metadata_mem_bytes);
     registry->register_metric("tablet_schema_mem_bytes", &_memory_metrics->tablet_schema_mem_bytes);
     registry->register_metric("column_zone_map_bytes", &_memory_metrics->column_zone_map_mem_bytes);
+    registry->register_metric("ordinal_index_map_bytes", &_memory_metrics->ordinal_index_mem_bytes);
     registry->register_metric("compaction_mem_bytes", &_memory_metrics->compaction_mem_bytes);
     registry->register_metric("schema_change_mem_bytes", &_memory_metrics->schema_change_mem_bytes);
     registry->register_metric("column_pool_mem_bytes", &_memory_metrics->column_pool_mem_bytes);
@@ -307,6 +308,7 @@ void SystemMetrics::_update_memory_metrics() {
     SET_MEM_METRIC(_memory_metrics->metadata_mem_bytes, ExecEnv::GetInstance()->metadata_mem_tracker())
     SET_MEM_METRIC(_memory_metrics->tablet_schema_mem_bytes, ExecEnv::GetInstance()->tablet_schema_mem_tracker())
     SET_MEM_METRIC(_memory_metrics->column_zone_map_mem_bytes, ExecEnv::GetInstance()->column_zone_map_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->ordinal_index_mem_bytes, ExecEnv::GetInstance()->ordianl_index_mem_tracker())
     SET_MEM_METRIC(_memory_metrics->compaction_mem_bytes, ExecEnv::GetInstance()->compaction_mem_tracker())
     SET_MEM_METRIC(_memory_metrics->schema_change_mem_bytes, ExecEnv::GetInstance()->schema_change_mem_tracker())
     SET_MEM_METRIC(_memory_metrics->storage_page_cache_mem_bytes, ExecEnv::GetInstance()->page_cache_mem_tracker())

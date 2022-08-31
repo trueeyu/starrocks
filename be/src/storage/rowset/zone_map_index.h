@@ -84,13 +84,13 @@ public:
     // REQUIRES: the index data has been successfully `load()`ed into memory.
     int32_t num_pages() const { return _page_zone_maps.size(); }
 
-    size_t mem_usage() const;
-
     bool loaded() const { return invoked(_load_once); }
 
 private:
     Status _do_load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta, bool use_page_cache,
                     bool kept_in_memory);
+
+    size_t _mem_usage() const;
 
     OnceFlag _load_once;
     std::vector<ZoneMapPB> _page_zone_maps;

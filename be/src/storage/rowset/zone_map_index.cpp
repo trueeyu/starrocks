@@ -194,7 +194,7 @@ ZoneMapIndexReader::ZoneMapIndexReader() : _load_once() {
 }
 
 ZoneMapIndexReader::~ZoneMapIndexReader() {
-    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->column_zone_map_mem_tracker(), mem_usage());
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->column_zone_map_mem_tracker(), _mem_usage());
 }
 
 StatusOr<bool> ZoneMapIndexReader::load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta,
@@ -203,10 +203,9 @@ StatusOr<bool> ZoneMapIndexReader::load(FileSystem* fs, const std::string& filen
         Status st = _do_load(fs, filename, meta, use_page_cache, kept_in_memory);
         if (st.ok()) {
             MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_zone_map_mem_tracker(),
-                                     mem_usage() - sizeof(ZoneMapIndexReader));
+                                     _mem_usage() - sizeof(ZoneMapIndexReader));
         } else {
-            std::vector<ZoneMapPB> tmp_zone_map;
-            _page_zone_maps.swap(tmp_zone_map);
+            std::vector<ZoneMapPB>().swap(_page_zone_maps);
         }
         return st;
     });
@@ -244,7 +243,7 @@ Status ZoneMapIndexReader::_do_load(FileSystem* fs, const std::string& filename,
     return Status::OK();
 }
 
-size_t ZoneMapIndexReader::mem_usage() const {
+size_t ZoneMapIndexReader::_mem_usage() const {
     size_t size = sizeof(ZoneMapIndexReader);
     for (const auto& zone_map : _page_zone_maps) {
         size += zone_map.SpaceUsedLong();

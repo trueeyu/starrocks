@@ -347,6 +347,7 @@ Status ExecEnv::init_mem_tracker() {
     _metadata_mem_tracker = new MemTracker(-1, "metadata", nullptr);
     _tablet_schema_mem_tracker = new MemTracker(-1, "tablet_schema", _metadata_mem_tracker);
     _column_zone_map_mem_tracker = new MemTracker(-1, "column_zone_map", _metadata_mem_tracker);
+    _ordinal_index_mem_tracker = new MemTracker(-1, "ordinal_index", _ordinal_index_mem_tracker);
 
     int64_t compaction_mem_limit = calc_max_compaction_memory(_mem_tracker->limit());
     _compaction_mem_tracker = new MemTracker(compaction_mem_limit, "compaction", _mem_tracker);
@@ -524,6 +525,11 @@ void ExecEnv::_destroy() {
     }
 
     _lake_tablet_manager->prune_metacache();
+
+    if (_ordinal_index_mem_tracker) {
+        delete _ordinal_index_mem_tracker;
+        _ordinal_index_mem_tracker = nullptr;
+    }
 
     if (_column_zone_map_mem_tracker) {
         delete _column_zone_map_mem_tracker;

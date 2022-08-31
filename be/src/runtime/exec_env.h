@@ -37,7 +37,6 @@ class BfdParser;
 class BrokerMgr;
 class BrpcStubCache;
 class DataStreamMgr;
-class DiskIoMgr;
 class EvHttpServer;
 class ExternalScanContextMgr;
 class FragmentMgr;
@@ -58,7 +57,6 @@ class WebPageHandler;
 class StreamLoadExecutor;
 class RoutineLoadTaskExecutor;
 class SmallFileMgr;
-class PluginMgr;
 class RuntimeFilterWorker;
 class RuntimeFilterCache;
 struct RfTracePoint;
@@ -128,6 +126,7 @@ public:
     MemTracker* metadata_mem_tracker() { return _metadata_mem_tracker; }
     MemTracker* tablet_schema_mem_tracker() { return _tablet_schema_mem_tracker; }
     MemTracker* column_zone_map_mem_tracker() { return _column_zone_map_mem_tracker; }
+    MemTracker* ordianl_index_mem_tracker() { return _ordinal_index_mem_tracker; }
     MemTracker* compaction_mem_tracker() { return _compaction_mem_tracker; }
     MemTracker* schema_change_mem_tracker() { return _schema_change_mem_tracker; }
     MemTracker* column_pool_mem_tracker() { return _column_pool_mem_tracker; }
@@ -219,6 +218,7 @@ private:
     MemTracker* _metadata_mem_tracker = nullptr;
     MemTracker* _tablet_schema_mem_tracker = nullptr;
     MemTracker* _column_zone_map_mem_tracker = nullptr;
+    MemTracker* _ordinal_index_mem_tracker = nullptr;
 
     // The memory used for compaction
     MemTracker* _compaction_mem_tracker = nullptr;
@@ -255,8 +255,8 @@ private:
     pipeline::QueryContextManager* _query_context_mgr = nullptr;
     pipeline::DriverExecutor* _driver_executor = nullptr;
     pipeline::DriverExecutor* _wg_driver_executor = nullptr;
-    pipeline::DriverLimiter* _driver_limiter;
-    int64_t _max_executor_threads; // Max thread number of executor
+    pipeline::DriverLimiter* _driver_limiter = nullptr;
+    int64_t _max_executor_threads = 0; // Max thread number of executor
 
     LoadPathMgr* _load_path_mgr = nullptr;
 

@@ -31,7 +31,6 @@
 #include "column/datum_convert.h"
 #include "common/logging.h"
 #include "storage/rowset/array_column_iterator.h"
-#include "storage/rowset/binary_dict_page.h" // for BinaryDictPageDecoder
 #include "storage/rowset/bitmap_index_reader.h"
 #include "storage/rowset/bloom_filter.h"
 #include "storage/rowset/bloom_filter_index_reader.h"
@@ -45,7 +44,6 @@
 #include "storage/vectorized_column_predicate.h"
 #include "storage/wrapper_field.h"
 #include "util/compression/block_compression.h"
-#include "util/json.h"
 #include "util/rle_encoding.h" // for RleDecoder
 
 namespace starrocks {
@@ -70,10 +68,6 @@ ColumnReader::~ColumnReader() {
     if (_ordinal_index_meta != nullptr) {
         size += _ordinal_index_meta->SpaceUsedLong();
         _ordinal_index_meta.reset(nullptr);
-    }
-    if (_ordinal_index != nullptr) {
-        size += _ordinal_index->mem_usage();
-        _ordinal_index.reset(nullptr);
     }
     if (_zonemap_index_meta != nullptr) {
         size += _zonemap_index_meta->SpaceUsedLong();
@@ -121,17 +115,16 @@ Status ColumnReader::_init(ColumnMetaPB* meta) {
             switch (index_meta->type()) {
             case ORDINAL_INDEX:
                 _ordinal_index_meta.reset(index_meta->release_ordinal_index());
+                MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->ordianl_index_mem_tracker(),
+                                         _ordinal_index_meta->SpaceUsedLong())
                 _ordinal_index = std::make_unique<OrdinalIndexReader>();
-                mem_tracker()->consume(_ordinal_index_meta->SpaceUsedLong());
-                mem_tracker()->consume(_ordinal_index->mem_usage());
                 break;
             case ZONE_MAP_INDEX:
                 _zonemap_index_meta.reset(index_meta->release_zone_map_index());
                 MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_zone_map_mem_tracker(),
-                                         _zonemap_index_meta->SpaceUsedLong());
+                                         _zonemap_index_meta->SpaceUsedLong())
                 _zonemap_index = std::make_unique<ZoneMapIndexReader>();
                 _segment_zone_map.reset(_zonemap_index_meta->release_segment_zone_map());
-                mem_tracker()->consume(_zonemap_index->mem_usage());
                 mem_tracker()->consume(_segment_zone_map->SpaceUsedLong());
                 break;
             case BITMAP_INDEX:
