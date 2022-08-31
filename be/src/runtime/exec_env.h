@@ -128,6 +128,7 @@ public:
     MemTracker* column_zone_map_mem_tracker() { return _column_zone_map_mem_tracker; }
     MemTracker* ordianl_index_mem_tracker() { return _ordinal_index_mem_tracker; }
     MemTracker* segment_zone_map_mem_tracker() { return _segment_zone_map_mem_tracker; }
+    MemTracker* bitmap_index_mam_tracker() { return _bitmap_index_mem_tracker; }
     MemTracker* compaction_mem_tracker() { return _compaction_mem_tracker; }
     MemTracker* schema_change_mem_tracker() { return _schema_change_mem_tracker; }
     MemTracker* column_pool_mem_tracker() { return _column_pool_mem_tracker; }
@@ -221,6 +222,7 @@ private:
     MemTracker* _column_zone_map_mem_tracker = nullptr;
     MemTracker* _ordinal_index_mem_tracker = nullptr;
     MemTracker* _segment_zone_map_mem_tracker = nullptr;
+    MemTracker* _bitmap_index_mem_tracker = nullptr;
 
     // The memory used for compaction
     MemTracker* _compaction_mem_tracker = nullptr;
