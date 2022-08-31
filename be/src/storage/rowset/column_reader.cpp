@@ -79,10 +79,6 @@ ColumnReader::~ColumnReader() {
         size += _zonemap_index_meta->SpaceUsedLong();
         _zonemap_index_meta.reset(nullptr);
     }
-    if (_zonemap_index != nullptr) {
-        size += _zonemap_index->mem_usage();
-        _zonemap_index.reset(nullptr);
-    }
     if (_bitmap_index_meta != nullptr) {
         size += _bitmap_index_meta->SpaceUsedLong();
         _bitmap_index_meta.reset(nullptr);
@@ -131,9 +127,10 @@ Status ColumnReader::_init(ColumnMetaPB* meta) {
                 break;
             case ZONE_MAP_INDEX:
                 _zonemap_index_meta.reset(index_meta->release_zone_map_index());
+                MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_zone_map_mem_tracker(),
+                                         _zonemap_index_meta->SpaceUsedLong());
                 _zonemap_index = std::make_unique<ZoneMapIndexReader>();
                 _segment_zone_map.reset(_zonemap_index_meta->release_segment_zone_map());
-                mem_tracker()->consume(_zonemap_index_meta->SpaceUsedLong());
                 mem_tracker()->consume(_zonemap_index->mem_usage());
                 mem_tracker()->consume(_segment_zone_map->SpaceUsedLong());
                 break;
@@ -309,8 +306,7 @@ Status ColumnReader::_load_zonemap_index() {
     auto meta = _zonemap_index_meta.get();
     auto use_page_cache = !config::disable_storage_page_cache;
     auto kept_in_memory = keep_in_memory();
-    ASSIGN_OR_RETURN(auto first_load,
-                     _zonemap_index->load(fs, file_name(), *meta, use_page_cache, kept_in_memory, mem_tracker()));
+    ASSIGN_OR_RETURN(auto first_load, _zonemap_index->load(fs, file_name(), *meta, use_page_cache, kept_in_memory));
     if (UNLIKELY(first_load)) {
         mem_tracker()->release(_zonemap_index_meta->SpaceUsedLong());
         _zonemap_index_meta.reset();

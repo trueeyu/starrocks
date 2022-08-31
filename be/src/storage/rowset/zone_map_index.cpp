@@ -189,15 +189,31 @@ Status ZoneMapIndexWriterImpl<type>::finish(WritableFile* wfile, ColumnIndexMeta
     return writer.finish(meta->mutable_page_zone_maps());
 }
 
-StatusOr<bool> ZoneMapIndexReader::load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta,
-                                        bool use_page_cache, bool kept_in_memory, MemTracker* mem_tracker) {
-    return success_once(_load_once,
-                        [&]() { return do_load(fs, filename, meta, use_page_cache, kept_in_memory, mem_tracker); });
+ZoneMapIndexReader::ZoneMapIndexReader() : _load_once() {
+    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_zone_map_mem_tracker(), sizeof(ZoneMapIndexReader));
 }
 
-Status ZoneMapIndexReader::do_load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta,
-                                   bool use_page_cache, bool kept_in_memory, MemTracker* mem_tracker) {
-    auto old_mem_usage = mem_usage();
+ZoneMapIndexReader::~ZoneMapIndexReader() {
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->column_zone_map_mem_tracker(), mem_usage());
+}
+
+StatusOr<bool> ZoneMapIndexReader::load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta,
+                                        bool use_page_cache, bool kept_in_memory) {
+    return success_once(_load_once, [&]() {
+        Status st = _do_load(fs, filename, meta, use_page_cache, kept_in_memory);
+        if (st.ok()) {
+            MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_zone_map_mem_tracker(),
+                                     mem_usage() - sizeof(ZoneMapIndexReader));
+        } else {
+            std::vector<ZoneMapPB> tmp_zone_map;
+            _page_zone_maps.swap(tmp_zone_map);
+        }
+        return st;
+    });
+}
+
+Status ZoneMapIndexReader::_do_load(FileSystem* fs, const std::string& filename, const ZoneMapIndexPB& meta,
+                                    bool use_page_cache, bool kept_in_memory) {
     IndexedColumnReader reader(fs, filename, meta.page_zone_maps());
     RETURN_IF_ERROR(reader.load(use_page_cache, kept_in_memory));
     std::unique_ptr<IndexedColumnIterator> iter;
@@ -225,14 +241,11 @@ Status ZoneMapIndexReader::do_load(FileSystem* fs, const std::string& filename, 
         }
         pool.clear();
     }
-    auto new_mem_usage = mem_usage();
-    mem_tracker->consume(new_mem_usage - old_mem_usage);
     return Status::OK();
 }
 
 size_t ZoneMapIndexReader::mem_usage() const {
     size_t size = sizeof(ZoneMapIndexReader);
-    size += _page_zone_maps.capacity() * sizeof(_page_zone_maps[0]);
     for (const auto& zone_map : _page_zone_maps) {
         size += zone_map.SpaceUsedLong();
     }

@@ -60,6 +60,7 @@ public:
     // Tablet meta memory usage
     METRIC_DEFINE_INT_GAUGE(metadata_mem_bytes, MetricUnit::BYTES);
     METRIC_DEFINE_INT_GAUGE(tablet_schema_mem_bytes, MetricUnit::BYTES);
+    METRIC_DEFINE_INT_GAUGE(column_zone_map_mem_bytes, MetricUnit::BYTES);
     // Compaction memory usage
     METRIC_DEFINE_INT_GAUGE(compaction_mem_bytes, MetricUnit::BYTES);
     // SchemaChange memory usage
