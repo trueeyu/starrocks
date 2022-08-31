@@ -283,10 +283,11 @@ Status ColumnReader::_load_ordinal_index() {
     auto meta = _ordinal_index_meta.get();
     auto use_page_cache = !config::disable_storage_page_cache;
     auto kept_in_memory = keep_in_memory();
-    ASSIGN_OR_RETURN(auto first_load, _ordinal_index->load(fs, file_name(), *meta, num_rows(), use_page_cache,
-                                                           kept_in_memory, mem_tracker()));
+    ASSIGN_OR_RETURN(auto first_load,
+                     _ordinal_index->load(fs, file_name(), *meta, num_rows(), use_page_cache, kept_in_memory));
     if (UNLIKELY(first_load)) {
-        mem_tracker()->release(_ordinal_index_meta->SpaceUsedLong());
+        MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->ordianl_index_mem_tracker(),
+                                 _ordinal_index_meta->SpaceUsedLong());
         _ordinal_index_meta.reset();
     }
     return Status::OK();
@@ -301,7 +302,8 @@ Status ColumnReader::_load_zonemap_index() {
     auto kept_in_memory = keep_in_memory();
     ASSIGN_OR_RETURN(auto first_load, _zonemap_index->load(fs, file_name(), *meta, use_page_cache, kept_in_memory));
     if (UNLIKELY(first_load)) {
-        mem_tracker()->release(_zonemap_index_meta->SpaceUsedLong());
+        MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->column_zone_map_mem_tracker(),
+                                 _zonemap_index_meta->SpaceUsedLong());
         _zonemap_index_meta.reset();
     }
     return Status::OK();
