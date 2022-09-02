@@ -221,6 +221,7 @@ void SystemMetrics::_install_memory_metrics(MetricRegistry* registry) {
     registry->register_metric("column_zone_map_bytes", &_memory_metrics->column_zone_map_mem_bytes);
     registry->register_metric("ordinal_index_map_bytes", &_memory_metrics->ordinal_index_mem_bytes);
     registry->register_metric("segment_zone_map_bytes", &_memory_metrics->segment_zone_map_mem_bytes);
+    registry->register_metric("bitmap_index_map_bytes", &_memory_metrics->bitmap_index_mem_bytes);
     registry->register_metric("compaction_mem_bytes", &_memory_metrics->compaction_mem_bytes);
     registry->register_metric("schema_change_mem_bytes", &_memory_metrics->schema_change_mem_bytes);
     registry->register_metric("column_pool_mem_bytes", &_memory_metrics->column_pool_mem_bytes);
@@ -298,27 +299,28 @@ void SystemMetrics::_update_memory_metrics() {
     _memory_metrics->pageheap_unmapped_bytes.set_value(value);
 #endif
 
-#define SET_MEM_METRIC(metric, value)              \
-    if ((value) != nullptr) {                      \
-        (metric).set_value(value->consumption()); \
+#define SET_MEM_METRIC(metric, value)                                     \
+    if (ExecEnv::GetInstance()->value != nullptr) {                       \
+        (metric).set_value(ExecEnv::GetInstance()->value->consumption()); \
     }
 
-    SET_MEM_METRIC(_memory_metrics->process_mem_bytes, ExecEnv::GetInstance()->process_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->query_mem_bytes, ExecEnv::GetInstance()->query_pool_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->load_mem_bytes, ExecEnv::GetInstance()->load_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->metadata_mem_bytes, ExecEnv::GetInstance()->metadata_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->tablet_schema_mem_bytes, ExecEnv::GetInstance()->tablet_schema_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->column_zone_map_mem_bytes, ExecEnv::GetInstance()->column_zone_map_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->ordinal_index_mem_bytes, ExecEnv::GetInstance()->ordianl_index_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->segment_zone_map_mem_bytes, ExecEnv::GetInstance()->segment_zone_map_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->compaction_mem_bytes, ExecEnv::GetInstance()->compaction_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->schema_change_mem_bytes, ExecEnv::GetInstance()->schema_change_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->storage_page_cache_mem_bytes, ExecEnv::GetInstance()->page_cache_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->update_mem_bytes, ExecEnv::GetInstance()->update_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->chunk_allocator_mem_bytes, ExecEnv::GetInstance()->chunk_allocator_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->clone_mem_bytes, ExecEnv::GetInstance()->clone_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->column_pool_mem_bytes, ExecEnv::GetInstance()->column_pool_mem_tracker())
-    SET_MEM_METRIC(_memory_metrics->consistency_mem_bytes, ExecEnv::GetInstance()->consistency_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->process_mem_bytes, process_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->query_mem_bytes, query_pool_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->load_mem_bytes, load_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->metadata_mem_bytes, metadata_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->tablet_schema_mem_bytes, tablet_schema_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->column_zone_map_mem_bytes, column_zone_map_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->ordinal_index_mem_bytes, ordianl_index_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->segment_zone_map_mem_bytes, segment_zone_map_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->bitmap_index_mem_bytes, bitmap_index_mam_tracker())
+    SET_MEM_METRIC(_memory_metrics->compaction_mem_bytes, compaction_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->schema_change_mem_bytes, schema_change_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->storage_page_cache_mem_bytes, page_cache_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->update_mem_bytes, update_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->chunk_allocator_mem_bytes, chunk_allocator_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->clone_mem_bytes, clone_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->column_pool_mem_bytes, column_pool_mem_tracker())
+    SET_MEM_METRIC(_memory_metrics->consistency_mem_bytes, consistency_mem_tracker())
 #undef SET_MEM_METRIC
 
 #define UPDATE_COLUMN_POOL_METRIC(var, type)                                         \
