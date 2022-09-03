@@ -211,7 +211,7 @@ private:
     // so here we just use a normal pointer
     const Segment* _segment = nullptr;
 
-    uint8_t _flags;
+    uint8_t _flags = 0;
 };
 
 } // namespace starrocks
