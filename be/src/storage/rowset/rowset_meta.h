@@ -60,23 +60,7 @@ public:
         return true;
     }
 
-    bool init_from_json(const std::string& json_rowset_meta) {
-        bool ret = json2pb::JsonToProtoMessage(json_rowset_meta, &_rowset_meta_pb);
-        if (!ret) {
-            return false;
-        }
-        _init();
-        return true;
-    }
-
     bool serialize(std::string* value) { return _serialize_to_pb(value); }
-
-    bool json_rowset_meta(std::string* json_rowset_meta) {
-        json2pb::Pb2JsonOptions json_options;
-        json_options.pretty_json = true;
-        bool ret = json2pb::ProtoMessageToJson(_rowset_meta_pb, json_rowset_meta, json_options);
-        return ret;
-    }
 
     RowsetId rowset_id() const { return _rowset_id; }
 
@@ -106,8 +90,6 @@ public:
     void set_tablet_schema_hash(int64_t tablet_schema_hash) {
         _rowset_meta_pb.set_tablet_schema_hash(tablet_schema_hash);
     }
-
-    RowsetTypePB rowset_type() const { return _rowset_meta_pb.rowset_type(); }
 
     void set_rowset_type(RowsetTypePB rowset_type) { _rowset_meta_pb.set_rowset_type(rowset_type); }
 
@@ -161,10 +143,6 @@ public:
     void set_delete_predicate(const DeletePredicatePB& delete_predicate) {
         *_rowset_meta_pb.mutable_delete_predicate() = delete_predicate;
     }
-
-    const RowsetTxnMetaPB& txn_meta() const { return _rowset_meta_pb.txn_meta(); }
-
-    RowsetTxnMetaPB* mutable_txn_meta() { return _rowset_meta_pb.mutable_txn_meta(); }
 
     // return semgent_footer position and size if rowset is partial_rowset
     const FooterPointerPB* partial_rowset_footer(size_t segment_id) const {

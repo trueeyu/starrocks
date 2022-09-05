@@ -70,6 +70,9 @@ public:
 
     Tablet(TabletMetaSharedPtr tablet_meta, DataDir* data_dir);
 
+    Tablet(const Tablet&) = delete;
+    const Tablet& operator=(const Tablet&) = delete;
+
     // for ut
     Tablet() = default;
 
@@ -352,9 +355,6 @@ private:
     std::atomic<int64_t> _cumulative_point{0};
     std::atomic<int32_t> _newly_created_rowset_num{0};
     std::atomic<int64_t> _last_checkpoint_time{0};
-
-    Tablet(const Tablet&) = delete;
-    const Tablet& operator=(const Tablet&) = delete;
 };
 
 inline bool Tablet::init_succeeded() {
