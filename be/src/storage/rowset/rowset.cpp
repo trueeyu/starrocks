@@ -30,7 +30,6 @@
 #include "fs/fs_util.h"
 #include "gutil/strings/substitute.h"
 #include "rowset_options.h"
-#include "runtime/current_thread.h"
 #include "runtime/exec_env.h"
 #include "segment_options.h"
 #include "storage/chunk_helper.h"
@@ -42,7 +41,6 @@
 #include "storage/rowset/rowid_range_option.h"
 #include "storage/storage_engine.h"
 #include "storage/union_iterator.h"
-#include "storage/update_manager.h"
 #include "storage/utils.h"
 #include "util/defer_op.h"
 #include "util/time.h"
@@ -53,7 +51,13 @@ Rowset::Rowset(const TabletSchema* schema, std::string rowset_path, RowsetMetaSh
         : _schema(schema),
           _rowset_path(std::move(rowset_path)),
           _rowset_meta(std::move(rowset_meta)),
-          _refs_by_reader(0) {}
+          _refs_by_reader(0) {
+    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
+}
+
+Rowset::~Rowset() {
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
+}
 
 Status Rowset::load() {
     // if the state is ROWSET_UNLOADING it means close() is called
