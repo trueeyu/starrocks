@@ -31,7 +31,6 @@
 #include "column/datum_convert.h"
 #include "common/logging.h"
 #include "storage/rowset/array_column_iterator.h"
-#include "storage/rowset/binary_dict_page.h"
 #include "storage/rowset/bitmap_index_reader.h"
 #include "storage/rowset/bloom_filter.h"
 #include "storage/rowset/bloom_filter_index_reader.h"
@@ -45,7 +44,6 @@
 #include "storage/vectorized_column_predicate.h"
 #include "storage/wrapper_field.h"
 #include "util/compression/block_compression.h"
-#include "util/json.h"
 #include "util/rle_encoding.h"
 
 namespace starrocks {
@@ -57,7 +55,7 @@ StatusOr<std::unique_ptr<ColumnReader>> ColumnReader::create(ColumnMetaPB* meta,
 }
 
 ColumnReader::ColumnReader(const private_type&, const Segment* segment) : _segment(segment) {
-    mem_tracker()->consume(sizeof(ColumnReader));
+    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->column_metadata_mem_tracker(), sizeof(ColumnReader));
 }
 
 ColumnReader::~ColumnReader() {
@@ -86,7 +84,7 @@ ColumnReader::~ColumnReader() {
                                  _bloom_filter_index_meta->SpaceUsedLong());
         _bloom_filter_index_meta.reset(nullptr);
     }
-    mem_tracker()->release(sizeof(ColumnReader));
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->column_metadata_mem_tracker(), sizeof(ColumnReader));
 }
 
 Status ColumnReader::_init(ColumnMetaPB* meta) {
