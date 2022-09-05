@@ -2685,10 +2685,7 @@ Status TabletUpdates::load_snapshot(const SnapshotMeta& snapshot_meta) {
         for (const auto& rowset_meta_pb : snapshot_meta.rowset_metas()) {
             RETURN_IF_ERROR(check_rowset_files(rowset_meta_pb));
             RowsetSharedPtr rowset;
-            auto rowset_meta = std::make_shared<RowsetMeta>();
-            if (!rowset_meta->init_from_pb(rowset_meta_pb)) {
-                return Status::InternalError("rowset meta init from pb failed");
-            }
+            auto rowset_meta = std::make_shared<RowsetMeta>(rowset_meta_pb);
             if (rowset_meta->tablet_id() != _tablet.tablet_id()) {
                 return Status::InternalError("mismatched tablet id");
             }
@@ -2754,10 +2751,7 @@ Status TabletUpdates::load_snapshot(const SnapshotMeta& snapshot_meta) {
 
         uint32_t new_next_rowset_id = _next_rowset_id;
         for (const auto& rowset_meta_pb : snapshot_meta.rowset_metas()) {
-            RowsetMetaSharedPtr rowset_meta = std::make_shared<RowsetMeta>();
-            if (!rowset_meta->init_from_pb(rowset_meta_pb)) {
-                return Status::InternalError("fail to init rowset meta");
-            }
+            RowsetMetaSharedPtr rowset_meta = std::make_shared<RowsetMeta>(rowset_meta_pb);
             const auto new_id = rowset_meta_pb.rowset_seg_id() + _next_rowset_id;
             new_next_rowset_id =
                     std::max<uint32_t>(new_next_rowset_id, new_id + std::max(1L, rowset_meta_pb.num_segments()));

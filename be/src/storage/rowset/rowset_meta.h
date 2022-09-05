@@ -40,23 +40,28 @@ using RowsetMetaSharedPtr = std::shared_ptr<RowsetMeta>;
 
 class RowsetMeta {
 public:
-    // for ut
-    RowsetMeta() = default;
+    RowsetMeta() {
+        MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
+    }
 
-    ~RowsetMeta() = default;
+    explicit RowsetMeta(const RowsetMetaPB& rowset_meta_pb) {
+        _init_from_pb(rowset_meta_pb);
+        MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
+    }
+
+    ~RowsetMeta() {
+        MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
+    }
 
     bool init(std::string_view pb_rowset_meta) {
+        int64_t old_usage = mem_usage();
         bool ret = _deserialize_from_pb(pb_rowset_meta);
         if (!ret) {
+            _rowset_meta_pb.Clear();
             return false;
         }
         _init();
-        return true;
-    }
-
-    bool init_from_pb(const RowsetMetaPB& rowset_meta_pb) {
-        _rowset_meta_pb = rowset_meta_pb;
-        _init();
+        MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage() - old_usage);
         return true;
     }
 
@@ -250,6 +255,11 @@ public:
     const RowsetMetaPB& get_meta_pb() const { return _rowset_meta_pb; }
 
 private:
+    void _init_from_pb(const RowsetMetaPB& rowset_meta_pb) {
+        _rowset_meta_pb = rowset_meta_pb;
+        _init();
+    }
+
     bool _deserialize_from_pb(std::string_view value) {
         return _rowset_meta_pb.ParseFromArray(value.data(), value.size());
     }
