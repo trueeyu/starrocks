@@ -152,6 +152,8 @@ public:
 
     const ShortKeyIndexDecoder* decoder() const { return _sk_index_decoder.get(); }
 
+    int64_t mem_usage() { return _basic_info_mem_usage() + _short_key_index_mem_usage(); }
+
     DISALLOW_COPY_AND_MOVE(Segment);
 
 private:
