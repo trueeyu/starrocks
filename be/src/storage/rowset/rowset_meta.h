@@ -40,12 +40,11 @@ using RowsetMetaSharedPtr = std::shared_ptr<RowsetMeta>;
 
 class RowsetMeta {
 public:
-    RowsetMeta();
+    RowsetMeta() = delete;
+    RowsetMeta(std::string_view pb_rowset_meta, bool* parsed);
     explicit RowsetMeta(const RowsetMetaPB& rowset_meta_pb);
 
     ~RowsetMeta();
-
-    bool init(std::string_view pb_rowset_meta);
 
     bool serialize(std::string* value) { return _serialize_to_pb(value); }
 
@@ -237,6 +236,8 @@ public:
     const RowsetMetaPB& get_meta_pb() const { return _rowset_meta_pb; }
 
 private:
+    bool _init(std::string_view pb_rowset_meta);
+
     void _init_from_pb(const RowsetMetaPB& rowset_meta_pb) {
         _rowset_meta_pb = rowset_meta_pb;
         _init();

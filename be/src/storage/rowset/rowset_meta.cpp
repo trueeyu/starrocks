@@ -7,7 +7,8 @@
 
 namespace starrocks {
 
-RowsetMeta::RowsetMeta() {
+RowsetMeta::RowsetMeta(std::string_view pb_rowset_meta, bool* parsed) {
+    *parsed = _init(pb_rowset_meta);
     MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
 }
 
@@ -20,11 +21,10 @@ RowsetMeta::~RowsetMeta() {
     MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage());
 }
 
-bool RowsetMeta::init(std::string_view pb_rowset_meta) {
+bool RowsetMeta::_init(std::string_view pb_rowset_meta) {
     int64_t old_usage = mem_usage();
     bool ret = _deserialize_from_pb(pb_rowset_meta);
     if (!ret) {
-        _rowset_meta_pb.Clear();
         return false;
     }
     _init();
