@@ -226,6 +226,7 @@ void SystemMetrics::_install_memory_metrics(MetricRegistry* registry) {
     registry->register_metric("bitmap_index_mem_bytes", &_memory_metrics->bitmap_index_mem_bytes);
     registry->register_metric("bloom_filter_index_mem_bytes", &_memory_metrics->bloom_filter_index_mem_bytes);
     registry->register_metric("segment_zonemap_mem_bytes", &_memory_metrics->segment_zonemap_mem_bytes);
+    registry->register_metric("short_key_index_mem_bytes", &_memory_metrics->short_key_index_mem_bytes);
     registry->register_metric("compaction_mem_bytes", &_memory_metrics->compaction_mem_bytes);
     registry->register_metric("schema_change_mem_bytes", &_memory_metrics->schema_change_mem_bytes);
     registry->register_metric("column_pool_mem_bytes", &_memory_metrics->column_pool_mem_bytes);
@@ -322,6 +323,7 @@ void SystemMetrics::_update_memory_metrics() {
     SET_MEM_METRIC_VALUE(bitmap_index_mem_tracker, bitmap_index_mem_bytes)
     SET_MEM_METRIC_VALUE(bloom_filter_index_mem_tracker, bloom_filter_index_mem_bytes)
     SET_MEM_METRIC_VALUE(segment_zonemap_mem_tracker, segment_zonemap_mem_bytes)
+    SET_MEM_METRIC_VALUE(short_key_index_mem_tracker, short_key_index_mem_bytes)
     SET_MEM_METRIC_VALUE(compaction_mem_tracker, compaction_mem_bytes)
     SET_MEM_METRIC_VALUE(schema_change_mem_tracker, schema_change_mem_bytes)
     SET_MEM_METRIC_VALUE(page_cache_mem_tracker, storage_page_cache_mem_bytes)

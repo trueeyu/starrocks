@@ -248,36 +248,50 @@ StatusOr<ChunkIteratorPtr> Segment::new_iterator(const vectorized::Schema& schem
     }
 }
 
-Status Segment::load_index(MemTracker* mem_tracker) {
-    auto res = success_once(_load_index_once, [this, mem_tracker] {
+Status Segment::load_index() {
+    auto res = success_once(_load_index_once, [this] {
         SCOPED_THREAD_LOCAL_CHECK_MEM_LIMIT_SETTER(false);
-        // read and parse short key index page
-        ASSIGN_OR_RETURN(auto read_file, _fs->new_random_access_file(_fname));
 
-        PageReadOptions opts;
-        opts.use_page_cache = !config::disable_storage_page_cache;
-        opts.read_file = read_file.get();
-        opts.page_pointer = _short_key_index_page;
-        opts.codec = nullptr; // short key index page uses NO_COMPRESSION for now
-        OlapReaderStatistics tmp_stats;
-        opts.stats = &tmp_stats;
-
-        Slice body;
-        PageFooterPB footer;
-        RETURN_IF_ERROR(PageIO::read_and_decompress_page(opts, &_sk_index_handle, &body, &footer));
-
-        mem_tracker->consume(_sk_index_handle.mem_usage());
-
-        DCHECK_EQ(footer.type(), SHORT_KEY_PAGE);
-        DCHECK(footer.has_short_key_page_footer());
-
-        _sk_index_decoder = std::make_unique<ShortKeyIndexDecoder>();
-        Status st = _sk_index_decoder->parse(body, footer.short_key_page_footer());
-        mem_tracker->consume(_sk_index_decoder->mem_usage());
-
+        Status st = _load_index();
+        if (st.ok()) {
+            size_t short_key_mem_usage = _sk_index_handle.mem_usage() + _sk_index_decoder->mem_usage();
+            MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->short_key_index_mem_tracker(), short_key_mem_usage);
+        } else {
+            _reset();
+        }
         return st;
     });
     return res.status();
+}
+
+Status Segment::_load_index() {
+    // read and parse short key index page
+    ASSIGN_OR_RETURN(auto read_file, _fs->new_random_access_file(_fname));
+
+    PageReadOptions opts;
+    opts.use_page_cache = !config::disable_storage_page_cache;
+    opts.read_file = read_file.get();
+    opts.page_pointer = _short_key_index_page;
+    opts.codec = nullptr; // short key index page uses NO_COMPRESSION for now
+    OlapReaderStatistics tmp_stats;
+    opts.stats = &tmp_stats;
+
+    Slice body;
+    PageFooterPB footer;
+    RETURN_IF_ERROR(PageIO::read_and_decompress_page(opts, &_sk_index_handle, &body, &footer));
+
+    DCHECK_EQ(footer.type(), SHORT_KEY_PAGE);
+    DCHECK(footer.has_short_key_page_footer());
+
+    _sk_index_decoder = std::make_unique<ShortKeyIndexDecoder>();
+    RETURN_IF_ERROR(_sk_index_decoder->parse(body, footer.short_key_page_footer()));
+
+    return Status::OK();
+}
+
+void Segment::_reset() {
+    _sk_index_decoder.reset();
+    _sk_index_decoder.reset();
 }
 
 bool Segment::has_loaded_index() const {

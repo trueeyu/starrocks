@@ -157,7 +157,7 @@ public:
 
     // Load and decode short key index.
     // May be called multiple times, subsequent calls will no op.
-    Status load_index(MemTracker* mem_tracker);
+    Status load_index();
     bool has_loaded_index() const;
 
     const ShortKeyIndexDecoder* decoder() const { return _sk_index_decoder.get(); }
@@ -187,6 +187,10 @@ private:
     private:
         std::shared_ptr<const TabletSchema> _schema;
     };
+
+    Status _load_index();
+
+    void _reset();
 
     // open segment file and read the minimum amount of necessary information (footer)
     Status _open(MemTracker* mem_tracker, size_t* footer_length_hint, const FooterPointerPB* partial_rowset_footer);
