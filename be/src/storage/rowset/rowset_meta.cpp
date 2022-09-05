@@ -22,13 +22,11 @@ RowsetMeta::~RowsetMeta() {
 }
 
 bool RowsetMeta::_init(std::string_view pb_rowset_meta) {
-    int64_t old_usage = mem_usage();
     bool ret = _deserialize_from_pb(pb_rowset_meta);
     if (!ret) {
         return false;
     }
     _init();
-    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), mem_usage() - old_usage);
     return true;
 }
 
