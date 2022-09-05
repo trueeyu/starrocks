@@ -62,30 +62,25 @@ namespace starrocks {
 
 using strings::Substitute;
 
-StatusOr<std::shared_ptr<Segment>> Segment::open(MemTracker* mem_tracker, std::shared_ptr<FileSystem> fs,
+StatusOr<std::shared_ptr<Segment>> Segment::open(std::shared_ptr<FileSystem> fs,
                                                  const std::string& path, uint32_t segment_id,
                                                  const TabletSchema* tablet_schema, size_t* footer_length_hint,
                                                  const FooterPointerPB* partial_rowset_footer) {
-    auto segment = std::shared_ptr<Segment>(
-            new Segment(private_type(0), std::move(fs), path, segment_id, tablet_schema, mem_tracker),
-            DeleterWithMemTracker<Segment>(mem_tracker));
-    mem_tracker->consume(segment->mem_usage());
+    auto segment = std::make_shared<Segment>(private_type(0), std::move(fs), path, segment_id, tablet_schema);
 
-    RETURN_IF_ERROR(segment->_open(mem_tracker, footer_length_hint, partial_rowset_footer));
+    RETURN_IF_ERROR(segment->_open(footer_length_hint, partial_rowset_footer));
     return std::move(segment);
 }
 
-StatusOr<std::shared_ptr<Segment>> Segment::open(MemTracker* mem_tracker, std::shared_ptr<FileSystem> fs,
+StatusOr<std::shared_ptr<Segment>> Segment::open(std::shared_ptr<FileSystem> fs,
                                                  const std::string& path, uint32_t segment_id,
                                                  std::shared_ptr<const TabletSchema> tablet_schema,
                                                  size_t* footer_length_hint,
                                                  const FooterPointerPB* partial_rowset_footer) {
-    auto segment = std::shared_ptr<Segment>(
-            new Segment(private_type(0), std::move(fs), path, segment_id, std::move(tablet_schema), mem_tracker),
-            DeleterWithMemTracker<Segment>(mem_tracker));
-    mem_tracker->consume(segment->mem_usage());
+    auto segment =
+            std::make_shared<Segment>(private_type(0), std::move(fs), path, segment_id, std::move(tablet_schema));
 
-    RETURN_IF_ERROR(segment->_open(mem_tracker, footer_length_hint, partial_rowset_footer));
+    RETURN_IF_ERROR(segment->_open(footer_length_hint, partial_rowset_footer));
     return std::move(segment);
 }
 
@@ -180,28 +175,31 @@ Status Segment::parse_segment_footer(RandomAccessFile* read_file, SegmentFooterP
 }
 
 Segment::Segment(const private_type&, std::shared_ptr<FileSystem> fs, std::string path, uint32_t segment_id,
-                 const TabletSchema* tablet_schema, MemTracker* mem_tracker)
-        : _fs(std::move(fs)),
-          _fname(std::move(path)),
-          _tablet_schema(tablet_schema),
-          _segment_id(segment_id),
-          _mem_tracker(mem_tracker) {}
+                 const TabletSchema* tablet_schema)
+        : _fs(std::move(fs)), _fname(std::move(path)), _tablet_schema(tablet_schema), _segment_id(segment_id) {
+    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->segment_metadata_mem_tracker(), _basic_info_mem_usage());
+}
 
 Segment::Segment(const private_type&, std::shared_ptr<FileSystem> fs, std::string path, uint32_t segment_id,
-                 std::shared_ptr<const TabletSchema> tablet_schema, MemTracker* mem_tracker)
+                 std::shared_ptr<const TabletSchema> tablet_schema)
         : _fs(std::move(fs)),
           _fname(std::move(path)),
           _tablet_schema(std::move(tablet_schema)),
-          _segment_id(segment_id),
-          _mem_tracker(mem_tracker) {}
+          _segment_id(segment_id) {
+    MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->segment_metadata_mem_tracker(), _basic_info_mem_usage());
+}
 
-Status Segment::_open(MemTracker* mem_tracker, size_t* footer_length_hint,
-                      const FooterPointerPB* partial_rowset_footer) {
+Segment::~Segment() {
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->segment_metadata_mem_tracker(), _basic_info_mem_usage());
+    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->short_key_index_mem_tracker(), _short_key_index_mem_usage());
+}
+
+Status Segment::_open(size_t* footer_length_hint, const FooterPointerPB* partial_rowset_footer) {
     SegmentFooterPB footer;
     ASSIGN_OR_RETURN(auto read_file, _fs->new_random_access_file(_fname));
     RETURN_IF_ERROR(Segment::parse_segment_footer(read_file.get(), &footer, footer_length_hint, partial_rowset_footer));
 
-    RETURN_IF_ERROR(_create_column_readers(mem_tracker, &footer));
+    RETURN_IF_ERROR(_create_column_readers(&footer));
     _num_rows = footer.num_rows();
     _short_key_index_page = PagePointer(footer.short_key_index_page());
     _prepare_adapter_info();
@@ -290,7 +288,7 @@ Status Segment::_load_index() {
 }
 
 void Segment::_reset() {
-    _sk_index_decoder.reset();
+    _sk_index_handle.reset();
     _sk_index_decoder.reset();
 }
 
@@ -298,7 +296,7 @@ bool Segment::has_loaded_index() const {
     return invoked(_load_index_once);
 }
 
-Status Segment::_create_column_readers(MemTracker* mem_tracker, SegmentFooterPB* footer) {
+Status Segment::_create_column_readers(SegmentFooterPB* footer) {
     std::unordered_map<uint32_t, uint32_t> column_id_to_footer_ordinal;
     for (uint32_t ordinal = 0, sz = footer->columns().size(); ordinal < sz; ++ordinal) {
         const auto& column_pb = footer->columns(ordinal);

@@ -72,14 +72,14 @@ class Segment : public std::enable_shared_from_this<Segment> {
 
 public:
     // Does NOT take the ownership of |tablet_schema|.
-    static StatusOr<std::shared_ptr<Segment>> open(MemTracker* mem_tracker, std::shared_ptr<FileSystem> fs,
+    static StatusOr<std::shared_ptr<Segment>> open(std::shared_ptr<FileSystem> fs,
                                                    const std::string& path, uint32_t segment_id,
                                                    const TabletSchema* tablet_schema,
                                                    size_t* footer_length_hint = nullptr,
                                                    const FooterPointerPB* partial_rowset_footer = nullptr);
 
     // Like above but share the ownership of |tablet_schema|.
-    static StatusOr<std::shared_ptr<Segment>> open(MemTracker* mem_tracker, std::shared_ptr<FileSystem> fs,
+    static StatusOr<std::shared_ptr<Segment>> open(std::shared_ptr<FileSystem> fs,
                                                    const std::string& path, uint32_t segment_id,
                                                    std::shared_ptr<const TabletSchema> tablet_schema,
                                                    size_t* footer_length_hint = nullptr,
@@ -89,12 +89,12 @@ public:
                                        const FooterPointerPB* partial_rowset_footer);
 
     Segment(const private_type&, std::shared_ptr<FileSystem> fs, std::string path, uint32_t segment_id,
-            const TabletSchema* tablet_schema, MemTracker* mem_tracker);
+            const TabletSchema* tablet_schema);
 
     Segment(const private_type&, std::shared_ptr<FileSystem> fs, std::string path, uint32_t segment_id,
-            std::shared_ptr<const TabletSchema> tablet_schema, MemTracker* mem_tracker);
+            std::shared_ptr<const TabletSchema> tablet_schema);
 
-    ~Segment() = default;
+    ~Segment();
 
     // may return EndOfFile
     StatusOr<ChunkIteratorPtr> new_iterator(const vectorized::Schema& schema,
@@ -136,16 +136,6 @@ public:
     size_t num_columns() const { return _column_readers.size(); }
 
     const ColumnReader* column(size_t i) const { return _column_readers[i].get(); }
-
-    int64_t mem_usage() {
-        int64_t size = sizeof(Segment) + _sk_index_handle.mem_usage();
-        if (_sk_index_decoder != nullptr) {
-            size += _sk_index_decoder->mem_usage();
-        }
-        return size;
-    }
-
-    MemTracker* mem_tracker() const { return _mem_tracker; }
 
     FileSystem* file_system() const { return _fs.get(); }
 
@@ -192,16 +182,27 @@ private:
 
     void _reset();
 
+    int64_t _basic_info_mem_usage() {
+        return static_cast<int64_t>(sizeof(Segment) + _fname.size());
+    }
+
+    int64_t _short_key_index_mem_usage() {
+        int64_t size = _sk_index_handle.mem_usage();
+        if (_sk_index_decoder != nullptr) {
+            size += _sk_index_decoder->mem_usage();
+        }
+        return size;
+    }
+
     // open segment file and read the minimum amount of necessary information (footer)
-    Status _open(MemTracker* mem_tracker, size_t* footer_length_hint, const FooterPointerPB* partial_rowset_footer);
-    Status _create_column_readers(MemTracker* mem_tracker, SegmentFooterPB* footer);
+    Status _open(size_t* footer_length_hint, const FooterPointerPB* partial_rowset_footer);
+    Status _create_column_readers(SegmentFooterPB* footer);
 
     StatusOr<ChunkIteratorPtr> _new_iterator(const vectorized::Schema& schema,
                                              const vectorized::SegmentReadOptions& read_options);
 
     void _prepare_adapter_info();
 
-    friend class SegmentIterator;
     friend class vectorized::SegmentIterator;
 
     std::shared_ptr<FileSystem> _fs;

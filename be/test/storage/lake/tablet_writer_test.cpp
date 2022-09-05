@@ -139,12 +139,10 @@ TEST_F(DuplicateTabletWriterTest, test_write_success) {
     writer->close();
 
     ASSIGN_OR_ABORT(auto fs, FileSystem::CreateSharedFromString(kTestGroupPath));
-    ASSIGN_OR_ABORT(auto seg0, Segment::open(_mem_tracker.get(), fs,
-                                             _location_provider->segment_location(_tablet_metadata->id(), files[0]), 0,
-                                             _tablet_schema.get()));
-    ASSIGN_OR_ABORT(auto seg1, Segment::open(_mem_tracker.get(), fs,
-                                             _location_provider->segment_location(_tablet_metadata->id(), files[1]), 1,
-                                             _tablet_schema.get()));
+    ASSIGN_OR_ABORT(auto seg0, Segment::open(fs, _location_provider->segment_location(_tablet_metadata->id(), files[0]),
+                                             0, _tablet_schema.get()));
+    ASSIGN_OR_ABORT(auto seg1, Segment::open(fs, _location_provider->segment_location(_tablet_metadata->id(), files[1]),
+                                             1, _tablet_schema.get()));
 
     OlapReaderStatistics statistics;
     SegmentReadOptions opts;

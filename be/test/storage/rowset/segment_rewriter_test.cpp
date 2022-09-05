@@ -95,7 +95,7 @@ TEST_F(SegmentRewriterTest, rewrite_test) {
     partial_rowset_footer.set_position(footer_position);
     partial_rowset_footer.set_size(file_size - footer_position);
 
-    auto partial_segment = *Segment::open(_metadata_mem_tracker.get(), _fs, file_name, 0, partial_tablet_schema.get());
+    auto partial_segment = *Segment::open(_fs, file_name, 0, partial_tablet_schema.get());
     ASSERT_EQ(partial_segment->num_rows(), num_rows);
 
     std::unique_ptr<TabletSchema> tablet_schema = TabletSchemaHelper::create_tablet_schema(
@@ -117,7 +117,7 @@ TEST_F(SegmentRewriterTest, rewrite_test) {
     ASSERT_OK(SegmentRewriter::rewrite(file_name, dst_file_name, *tablet_schema, read_column_ids, write_columns,
                                        partial_segment->id(), partial_rowset_footer));
 
-    auto segment = *Segment::open(_metadata_mem_tracker.get(), _fs, dst_file_name, 0, tablet_schema.get());
+    auto segment = *Segment::open(_fs, dst_file_name, 0, tablet_schema.get());
     ASSERT_EQ(segment->num_rows(), num_rows);
 
     vectorized::SegmentReadOptions seg_options;
@@ -168,7 +168,7 @@ TEST_F(SegmentRewriterTest, rewrite_test) {
     }
     ASSERT_OK(SegmentRewriter::rewrite(file_name, *tablet_schema, read_column_ids, new_write_columns,
                                        partial_segment->id(), partial_rowset_footer));
-    auto rewrite_segment = *Segment::open(_metadata_mem_tracker.get(), _fs, file_name, 0, tablet_schema.get());
+    auto rewrite_segment = *Segment::open(_fs, file_name, 0, tablet_schema.get());
 
     ASSERT_EQ(rewrite_segment->num_rows(), num_rows);
     res = rewrite_segment->new_iterator(schema, seg_options);

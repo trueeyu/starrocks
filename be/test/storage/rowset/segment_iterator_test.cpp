@@ -107,7 +107,7 @@ TEST_F(SegmentIteratorTest, TestGlobalDictNotSuperSet) {
     }
     ASSERT_OK(writer.finalize_footer(&file_size));
 
-    auto segment = *Segment::open(_metadata_mem_tracker.get(), _fs, file_name, 0, tablet_schema.get());
+    auto segment = *Segment::open(_fs, file_name, 0, tablet_schema.get());
     ASSERT_EQ(segment->num_rows(), num_rows);
 
     vectorized::SegmentReadOptions seg_options;
@@ -227,7 +227,7 @@ TEST_F(SegmentIteratorTest, TestGlobalDictNoLocalDict) {
     }
     ASSERT_OK(writer.finalize_footer(&file_size));
 
-    auto segment = *Segment::open(_metadata_mem_tracker.get(), _fs, file_name, 0, tablet_schema.get());
+    auto segment = *Segment::open(_fs, file_name, 0, tablet_schema.get());
     ASSERT_EQ(segment->num_rows(), num_rows);
 
     vectorized::SegmentReadOptions seg_options;
