@@ -77,10 +77,6 @@ public:
 
     TabletUid tablet_uid() const { return _rowset_meta_pb.tablet_uid(); }
 
-    void set_tablet_uid(const TabletUid& tablet_uid) {
-        *(_rowset_meta_pb.mutable_tablet_uid()) = tablet_uid.to_proto();
-    }
-
     int64_t txn_id() const { return _rowset_meta_pb.txn_id(); }
 
     void set_txn_id(int64_t txn_id) { _rowset_meta_pb.set_txn_id(txn_id); }
@@ -90,8 +86,6 @@ public:
     void set_tablet_schema_hash(int64_t tablet_schema_hash) {
         _rowset_meta_pb.set_tablet_schema_hash(tablet_schema_hash);
     }
-
-    void set_rowset_type(RowsetTypePB rowset_type) { _rowset_meta_pb.set_rowset_type(rowset_type); }
 
     RowsetStatePB rowset_state() const { return _rowset_meta_pb.rowset_state(); }
 
@@ -120,19 +114,9 @@ public:
 
     int64_t total_row_size() { return _rowset_meta_pb.total_row_size(); }
 
-    void set_total_row_size(int64_t total_row_size) { _rowset_meta_pb.set_total_row_size(total_row_size); }
-
     size_t total_disk_size() const { return _rowset_meta_pb.total_disk_size(); }
-
-    void set_total_disk_size(size_t total_disk_size) { _rowset_meta_pb.set_total_disk_size(total_disk_size); }
-
     size_t data_disk_size() const { return _rowset_meta_pb.data_disk_size(); }
-
-    void set_data_disk_size(size_t data_disk_size) { _rowset_meta_pb.set_data_disk_size(data_disk_size); }
-
     size_t index_disk_size() const { return _rowset_meta_pb.index_disk_size(); }
-
-    void set_index_disk_size(size_t index_disk_size) { _rowset_meta_pb.set_index_disk_size(index_disk_size); }
 
     bool has_delete_predicate() const { return _rowset_meta_pb.has_delete_predicate(); }
 
@@ -152,8 +136,6 @@ public:
         return &_rowset_meta_pb.txn_meta().partial_rowset_footers(segment_id);
     }
 
-    void set_txn_meta(const RowsetTxnMetaPB& txn_meta) { *_rowset_meta_pb.mutable_txn_meta() = txn_meta; }
-
     void clear_txn_meta() { _rowset_meta_pb.clear_txn_meta(); }
 
     bool empty() const { return _rowset_meta_pb.empty(); }
@@ -161,12 +143,6 @@ public:
     void set_empty(bool empty) { _rowset_meta_pb.set_empty(empty); }
 
     PUniqueId load_id() const { return _rowset_meta_pb.load_id(); }
-
-    void set_load_id(const PUniqueId& load_id) {
-        PUniqueId* new_load_id = _rowset_meta_pb.mutable_load_id();
-        new_load_id->set_hi(load_id.hi());
-        new_load_id->set_lo(load_id.lo());
-    }
 
     bool delete_flag() const { return _rowset_meta_pb.delete_flag(); }
 
@@ -179,8 +155,6 @@ public:
     void set_partition_id(int64_t partition_id) { return _rowset_meta_pb.set_partition_id(partition_id); }
 
     int64_t num_segments() const { return _rowset_meta_pb.num_segments(); }
-
-    void set_num_segments(int64_t num_segments) { _rowset_meta_pb.set_num_segments(num_segments); }
 
     void to_rowset_pb(RowsetMetaPB* rs_meta_pb) const { *rs_meta_pb = _rowset_meta_pb; }
 
