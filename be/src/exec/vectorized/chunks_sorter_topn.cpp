@@ -213,6 +213,7 @@ void ChunksSorterTopn::_set_permutation_complete(std::pair<Permutation, Permutat
         std::cout << "INVALID_SIZE:" << first_size << "," << permutations.first.size() << "," << second_size << ","
                   << permutations.second.size() << std::endl;
     }
+	CHECK(permutations.second.size() == second_size) << "SORT2 FATAL";
 }
 
 // In general, we take the first and last row from _merged_segment:

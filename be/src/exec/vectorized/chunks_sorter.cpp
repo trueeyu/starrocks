@@ -140,6 +140,7 @@ Status DataSegment::get_filter_array(std::vector<DataSegment>& data_segments, si
             std::cout << "LOG:" << tmp_least << "," << least_num << "," << tmp_middle << ","
                       << middle_num << std::endl;
         }
+		CHECK(tmp_middle == middle_num) << "SORT FATAL";
     }
 
     return Status::OK();
