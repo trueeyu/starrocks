@@ -488,6 +488,14 @@ Status OlapTableSink::init(const TDataSink& t_sink) {
     return Status::OK();
 }
 
+void OlapTableSink::cancel() {
+    Status st = Status::InternalError("xxxxxxxx");
+    std::cout<<"OlapTableSink::cancel"<<std::endl;
+    for (auto& channel : _channels) {
+        channel->for_each_node_channel([&st](NodeChannel* ch) { ch->cancel(st); });
+    }
+}
+
 Status OlapTableSink::prepare(RuntimeState* state) {
     RETURN_IF_ERROR(DataSink::prepare(state));
 

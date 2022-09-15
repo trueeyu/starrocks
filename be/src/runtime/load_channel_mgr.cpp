@@ -121,7 +121,9 @@ void LoadChannelMgr::cancel(brpc::Controller* cntl, const PTabletWriterCancelReq
                             PTabletWriterCancelResult* response, google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
     UniqueId load_id(request.id());
+    std::cout<<"CANCEL_1"<<std::endl;
     if (auto channel = remove_load_channel(load_id); channel != nullptr) {
+        std::cout<<"CANCEL_2"<<std::endl;
         channel->cancel();
     }
 }

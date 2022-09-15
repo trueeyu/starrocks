@@ -289,6 +289,8 @@ public:
 
     Status init(const TDataSink& sink) override;
 
+    void cancel() override;
+
     Status prepare(RuntimeState* state) override;
 
     Status open(RuntimeState* state) override;

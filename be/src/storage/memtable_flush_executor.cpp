@@ -63,8 +63,16 @@ Status FlushToken::submit(std::unique_ptr<vectorized::MemTable> memtable) {
     return _flush_token->submit(std::move(task));
 }
 
+void FlushToken::cancel2() {
+    set_status(Status::Cancelled("use canceled"));
+}
+
 void FlushToken::cancel() {
+    std::cout<<"FlushToken::cancel_1: "<<_id<<std::endl;
+    set_status(Status::Cancelled("use canceled"));
+    std::cout<<"FlushToken::cancel_2: "<<_id<<std::endl;
     _flush_token->shutdown();
+    std::cout<<"FlushToken::cancel_3: "<<_id<<std::endl;
 }
 
 Status FlushToken::wait() {
@@ -75,11 +83,19 @@ Status FlushToken::wait() {
 
 void FlushToken::_flush_memtable(vectorized::MemTable* memtable) {
     // If previous flush has failed, return directly
-    if (!status().ok()) return;
+    if (!status().ok()) {
+        std::cout<<"FlushToke::_flush_memtable cancel: "<<_id<<":"<<memtable->tablet_id()<<std::endl;
+        return;
+    } else {
+        std::cout<<"FlushToke::_flush_memtable success: "<<_id<<":"<<memtable->tablet_id()<<std::endl;
+    }
 
     MonotonicStopWatch timer;
     timer.start();
     set_status(memtable->flush());
+    std::cout<<"BEFORE_SLEEP"<<std::endl;
+    sleep(10);
+    std::cout<<"END_SLEEP"<<std::endl;
     _stats.flush_time_ns += timer.elapsed_time();
     _stats.flush_count++;
     _stats.flush_size_bytes += memtable->memory_usage();

@@ -7,10 +7,10 @@
 #include "gutil/macros.h"
 #include "storage/rowset/rowset_writer.h"
 #include "storage/tablet.h"
+#include "storage/memtable_flush_executor.h"
 
 namespace starrocks {
 
-class FlushToken;
 class MemTracker;
 class Schema;
 class StorageEngine;
@@ -112,7 +112,13 @@ private:
     void _reset_mem_table();
 
     State _get_state() { return _state.load(std::memory_order_acquire); }
-    void _set_state(State state) { _state.store(state, std::memory_order_release); }
+    void _set_state(State state) {
+        if (state == kAborted) {
+            std::cout<<"STATUS:"<<state<<std::endl;
+            _flush_token->cancel2();
+        }
+        _state.store(state, std::memory_order_release);
+    }
 
     std::atomic<State> _state;
     DeltaWriterOptions _opt;

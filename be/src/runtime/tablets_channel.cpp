@@ -201,6 +201,10 @@ void TabletsChannel::add_chunk(brpc::Controller* cntl, const PTabletWriterAddChu
     response->set_wait_lock_time_us(0); // We didn't measure the lock wait time, just give the caller a fake time
 
     if (close_channel) {
+        std::cout << "CLOSE_CHANNEL" << std::endl;
+    }
+
+    if (close_channel) {
         _load_channel->remove_tablets_channel(_index_id);
 
         // persist txn.

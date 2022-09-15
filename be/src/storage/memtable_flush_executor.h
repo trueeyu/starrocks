@@ -60,13 +60,17 @@ std::ostream& operator<<(std::ostream& os, const FlushStatistic& stat);
 class FlushToken {
 public:
     explicit FlushToken(std::unique_ptr<ThreadPoolToken> flush_pool_token)
-            : _flush_token(std::move(flush_pool_token)), _status() {}
+            : _flush_token(std::move(flush_pool_token)), _status() {
+        _id = rand();
+    }
 
     Status submit(std::unique_ptr<vectorized::MemTable> mem_table);
 
     // error has happpens, so we cancel this token
     // And remove all tasks in the queue.
     void cancel();
+
+    void cancel2();
 
     // wait all tasks in token to be completed.
     Status wait();
@@ -98,6 +102,7 @@ private:
     Status _status;
 
     FlushStatistic _stats;
+    int _id;
 };
 
 // MemTableFlushExecutor is responsible for flushing memtables to disk.

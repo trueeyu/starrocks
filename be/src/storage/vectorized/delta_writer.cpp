@@ -244,7 +244,10 @@ Status DeltaWriter::close() {
 
 Status DeltaWriter::_flush_memtable_async() {
     RETURN_IF_ERROR(_mem_table->finalize());
-    return _flush_token->submit(std::move(_mem_table));
+    std::cout<<"DeltaWriter::flush_1:"<<_mem_table->tablet_id()<<std::endl;
+    Status st = _flush_token->submit(std::move(_mem_table));
+    std::cout<<"DeltaWriter::flush_2:"<<_tablet->tablet_id()<<std::endl;
+    return st;
 }
 
 Status DeltaWriter::_flush_memtable() {
