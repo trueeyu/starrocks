@@ -21,8 +21,6 @@
 
 #include "storage/rowset/ordinal_page_index.h"
 
-#include <bthread/sys_futex.h>
-
 #include "common/logging.h"
 #include "fs/fs.h"
 #include "storage/key_coder.h"
@@ -67,30 +65,46 @@ OrdinalIndexReader::OrdinalIndexReader() {
 }
 
 OrdinalIndexReader::~OrdinalIndexReader() {
-    MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->ordinal_index_mem_tracker(), _mem_usage());
+    if (_is_large) {
+        MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->ordinal_index_mem_tracker(), _mem_usage<ordinal_t>());
+    } else {
+        MEM_TRACKER_SAFE_RELEASE(ExecEnv::GetInstance()->ordinal_index_mem_tracker(), _mem_usage<uint32_t>());
+    }
 }
 
 StatusOr<bool> OrdinalIndexReader::load(FileSystem* fs, const std::string& filename, const OrdinalIndexPB& meta,
                                         ordinal_t num_values, bool use_page_cache, bool kept_in_memory) {
     return success_once(_load_once, [&]() {
-        Status st = _do_load(fs, filename, meta, num_values, use_page_cache, kept_in_memory);
-        if (st.ok()) {
-            MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->ordinal_index_mem_tracker(),
-                                     _mem_usage() - sizeof(OrdinalIndexReader))
+        Status st;
+        if (_is_large) {
+            st = _do_load<ordinal_t>(fs, filename, meta, num_values, use_page_cache, kept_in_memory);
+            if (st.ok()) {
+                MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->ordinal_index_mem_tracker(),
+                                         _mem_usage<ordinal_t>() - sizeof(OrdinalIndexReader))
+            } else {
+                _reset<ordinal_t>();
+            }
         } else {
-            _reset();
+            st = _do_load<uint32_t>(fs, filename, meta, num_values, use_page_cache, kept_in_memory);
+            if (st.ok()) {
+                MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->ordinal_index_mem_tracker(),
+                                         _mem_usage<uint32_t>() - sizeof(OrdinalIndexReader))
+            } else {
+                _reset<uint32_t>();
+            }
         }
         return st;
     });
 }
 
+template <typename T>
 Status OrdinalIndexReader::_do_load(FileSystem* fs, const std::string& filename, const OrdinalIndexPB& meta,
-                                    ordinal_t num_values, bool use_page_cache, bool kept_in_memory) {
+                                    T num_values, bool use_page_cache, bool kept_in_memory) {
     if (meta.root_page().is_root_data_page()) {
         // only one data page, no index page
         _num_pages = 1;
-        _ordinals.push_back(0);
-        _ordinals.push_back(num_values);
+        std::get<std::vector<T>>(_ordinals).push_back(0);
+        std::get<std::vector<T>>(_ordinals).push_back(num_values);
         _pages.emplace_back(meta.root_page().root_page());
         return Status::OK();
     }
@@ -117,7 +131,7 @@ Status OrdinalIndexReader::_do_load(FileSystem* fs, const std::string& filename,
     RETURN_IF_ERROR(reader.parse(body, footer.index_page_footer()));
 
     _num_pages = reader.count();
-    _ordinals.resize(_num_pages + 1);
+    std::get<std::vector<T>>(_ordinals).resize(_num_pages + 1);
     _pages.resize(_num_pages);
     for (int i = 0; i < _num_pages; i++) {
         Slice key = reader.get_key(i);
@@ -125,35 +139,45 @@ Status OrdinalIndexReader::_do_load(FileSystem* fs, const std::string& filename,
         RETURN_IF_ERROR(KeyCoderTraits<OLAP_FIELD_TYPE_UNSIGNED_BIGINT>::decode_ascending(&key, sizeof(ordinal_t),
                                                                                           (uint8_t*)&ordinal, nullptr));
 
-        _ordinals[i] = ordinal;
+        std::get<std::vector<T>>(_ordinals)[i] = ordinal;
         _pages[i] = reader.get_value(i);
     }
-    _ordinals[_num_pages] = num_values;
+    std::get<std::vector<T>>(_ordinals)[_num_pages] = num_values;
     return Status::OK();
 }
 
+template <typename T>
 void OrdinalIndexReader::_reset() {
     _num_pages = 0;
-    std::vector<ordinal_t>{}.swap(_ordinals);
+    std::vector<T>{}.swap(std::get<std::vector<T>>(_ordinals));
     std::vector<PagePointer>{}.swap(_pages);
 }
 
 OrdinalPageIndexIterator OrdinalIndexReader::seek_at_or_before(ordinal_t ordinal) {
+    if (_is_large) {
+        _seek_at_or_before<ordinal_t>(ordinal);
+    } else {
+        _seek_at_or_before<uint32_t>(ordinal);
+    }
+}
+
+template <typename T>
+OrdinalPageIndexIterator OrdinalIndexReader::_seek_at_or_before(T ordinal) {
     int32_t left = 0;
     int32_t right = _num_pages - 1;
     while (left < right) {
         int32_t mid = (left + right + 1) / 2;
 
-        if (_ordinals[mid] < ordinal) {
+        if (std::get<std::vector<T>>(_ordinals)[mid] < ordinal) {
             left = mid;
-        } else if (_ordinals[mid] > ordinal) {
+        } else if (std::get<std::vector<T>>(_ordinals)[mid] > ordinal) {
             right = mid - 1;
         } else {
             left = mid;
             break;
         }
     }
-    if (_ordinals[left] > ordinal) {
+    if (std::get<std::vector<T>>(_ordinals)[left] > ordinal) {
         return {this, _num_pages};
     }
     return {this, left};

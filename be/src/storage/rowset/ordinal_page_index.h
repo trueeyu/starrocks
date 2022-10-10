@@ -24,6 +24,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <variant>
 
 #include "common/status.h"
 #include "gutil/macros.h"
@@ -65,6 +66,9 @@ class OrdinalPageIndexIterator;
 
 class OrdinalIndexReader {
 public:
+    using NormalOrdinalVector = std::vector<uint32_t>;
+    using LargeOrdinalVector = std::vector<ordinal_t>;
+
     OrdinalIndexReader();
     ~OrdinalIndexReader();
 
@@ -87,7 +91,13 @@ public:
     OrdinalPageIndexIterator end();
 
     // REQUIRES: the index data has been successfully `load()`ed into memory.
-    ordinal_t get_first_ordinal(int page_index) const { return _ordinals[page_index]; }
+    ordinal_t get_first_ordinal(int page_index) const {
+        if (_is_large) {
+            return std::get<std::vector<ordinal_t>>(_ordinals)[page_index];
+        } else {
+            return std::get<std::vector<uint32_t>>(_ordinals)[page_index];
+        }
+    }
 
     // REQUIRES: the index data has been successfully `load()`ed into memory.
     ordinal_t get_last_ordinal(int page_index) const { return get_first_ordinal(page_index + 1) - 1; }
@@ -97,29 +107,46 @@ public:
     int32_t num_data_pages() const { return _num_pages; }
 
     // REQUIRES: the index data has been successfully `load()`ed into memory.
-    size_t num_rows() const { return _ordinals.back() - _ordinals.front(); }
+    size_t num_rows() const {
+        if (_is_large) {
+            return std::get<std::vector<ordinal_t>>(_ordinals).back() -
+                   std::get<std::vector<ordinal_t>>(_ordinals).front();
+        } else {
+            return std::get<std::vector<uint32_t>>(_ordinals).back() -
+                   std::get<std::vector<uint32_t>>(_ordinals).front();
+        }
+    }
 
     bool loaded() const { return invoked(_load_once); }
 
 private:
     friend OrdinalPageIndexIterator;
 
+    template <typename T>
+    OrdinalPageIndexIterator _seek_at_or_before(T ordinal);
+
+    template <typename T>
     void _reset();
 
+    template <typename T>
     size_t _mem_usage() const {
-        return sizeof(OrdinalIndexReader) + _ordinals.size() * sizeof(ordinal_t) + _pages.size() * sizeof(PagePointer);
+        return sizeof(OrdinalIndexReader) + std::get<std::vector<T>>(_ordinals).size() * sizeof(T) +
+               _pages.size() * sizeof(PagePointer);
     }
 
-    Status _do_load(FileSystem* fs, const std::string& filename, const OrdinalIndexPB& meta, ordinal_t num_values,
+    template <typename T>
+    Status _do_load(FileSystem* fs, const std::string& filename, const OrdinalIndexPB& meta, T num_values,
                     bool use_page_cache, bool kept_in_memory);
 
     OnceFlag _load_once;
     // valid after load
     int _num_pages = 0;
     // _ordinals[i] = first ordinal of the i-th data page,
-    std::vector<ordinal_t> _ordinals;
+    std::variant<NormalOrdinalVector, LargeOrdinalVector> _ordinals;
+    //std::vector<ordinal_t> _ordinals;
     // _pages[i] = page pointer to the i-th data page
     std::vector<PagePointer> _pages;
+    bool _is_large = true;
 };
 
 class OrdinalPageIndexIterator {
