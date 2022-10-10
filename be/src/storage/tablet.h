@@ -67,13 +67,11 @@ class Tablet : public BaseTablet {
 public:
     static TabletSharedPtr create_tablet_from_meta(const TabletMetaSharedPtr& tablet_meta, DataDir* data_dir = nullptr);
 
+    Tablet() = delete;
     Tablet(const TabletMetaSharedPtr& tablet_meta, DataDir* data_dir);
 
     Tablet(const Tablet&) = delete;
     const Tablet& operator=(const Tablet&) = delete;
-
-    // for ut
-    Tablet();
 
     ~Tablet() override;
 

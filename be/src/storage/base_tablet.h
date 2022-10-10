@@ -37,6 +37,9 @@ class DataDir;
 // storage engine evolves.
 class BaseTablet : public std::enable_shared_from_this<BaseTablet> {
 public:
+    BaseTablet(const BaseTablet&) = delete;
+    const BaseTablet& operator=(const BaseTablet&) = delete;
+
     BaseTablet(const TabletMetaSharedPtr& tablet_meta, DataDir* data_dir);
     // for ut
     BaseTablet() = default;
@@ -68,22 +71,20 @@ public:
     Status set_tablet_state(TabletState state);
 
     // Property encapsulated in TabletMeta
-    const TabletMetaSharedPtr tablet_meta();
-
-    void set_tablet_meta(const TabletMetaSharedPtr& tablet_meta) { _tablet_meta = tablet_meta; }
+    TabletMetaSharedPtr tablet_meta();
 
     TabletUid tablet_uid() const;
     int64_t belonged_table_id() const;
     // Returns a string can be used to uniquely identify a tablet.
     // The result string will often be printed to the log.
-    const std::string full_name() const;
+    std::string full_name() const;
     int64_t partition_id() const;
     int64_t tablet_id() const;
     int32_t schema_hash() const;
     int16_t shard_id();
-    const int64_t creation_time() const;
+    int64_t creation_time() const;
     void set_creation_time(int64_t creation_time);
-    bool equal(int64_t tablet_id, int32_t schema_hash);
+    bool equal(int64_t tablet_id, int32_t schema_hash) const;
 
     // properties encapsulated in TabletSchema
     const TabletSchema& tablet_schema() const;
@@ -93,15 +94,11 @@ protected:
 
     void _gen_tablet_path();
 
-    TabletState _state;
+    TabletState _state = TABLET_NOTREADY;
     TabletMetaSharedPtr _tablet_meta;
 
-    DataDir* _data_dir;
+    DataDir* _data_dir = nullptr;
     std::string _tablet_path; // TODO: remove this variable for less memory occupation
-
-private:
-    BaseTablet(const BaseTablet&) = delete;
-    const BaseTablet& operator=(const BaseTablet&) = delete;
 };
 
 inline DataDir* BaseTablet::data_dir() const {
@@ -112,7 +109,7 @@ inline const std::string& BaseTablet::schema_hash_path() const {
     return _tablet_path;
 }
 
-inline const TabletMetaSharedPtr BaseTablet::tablet_meta() {
+inline TabletMetaSharedPtr BaseTablet::tablet_meta() {
     return _tablet_meta;
 }
 
@@ -124,7 +121,7 @@ inline int64_t BaseTablet::belonged_table_id() const {
     return _tablet_meta->table_id();
 }
 
-inline const std::string BaseTablet::full_name() const {
+inline std::string BaseTablet::full_name() const {
     std::stringstream ss;
     ss << _tablet_meta->tablet_id() << "." << _tablet_meta->schema_hash() << "."
        << _tablet_meta->tablet_uid().to_string();
@@ -147,7 +144,7 @@ inline int16_t BaseTablet::shard_id() {
     return _tablet_meta->shard_id();
 }
 
-inline const int64_t BaseTablet::creation_time() const {
+inline int64_t BaseTablet::creation_time() const {
     return _tablet_meta->creation_time();
 }
 
@@ -155,7 +152,7 @@ inline void BaseTablet::set_creation_time(int64_t creation_time) {
     _tablet_meta->set_creation_time(creation_time);
 }
 
-inline bool BaseTablet::equal(int64_t id, int32_t hash) {
+inline bool BaseTablet::equal(int64_t id, int32_t hash) const {
     return tablet_id() == id && schema_hash() == hash;
 }
 

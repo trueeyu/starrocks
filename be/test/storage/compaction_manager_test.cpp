@@ -21,11 +21,9 @@ TEST(CompactionManagerTest, test_candidates) {
     std::vector<TabletSharedPtr> tablets;
     DataDir data_dir("./data_dir");
     for (int i = 0; i <= 10; i++) {
-        TabletSharedPtr tablet = std::make_shared<Tablet>();
         TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
         tablet_meta->set_tablet_id(i);
-        tablet->set_tablet_meta(tablet_meta);
-        tablet->set_data_dir(&data_dir);
+        TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, &data_dir);
         std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
         compaction_context->tablet = tablet;
         // for i == 9 and i == 10, compaction scores are equal
