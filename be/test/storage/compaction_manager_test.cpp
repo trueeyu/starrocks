@@ -86,11 +86,9 @@ TEST(CompactionManagerTest, test_compaction_tasks) {
     config::max_compaction_concurrency = 2;
     config::cumulative_compaction_num_threads_per_disk = config::max_compaction_concurrency;
     for (int i = 0; i < config::max_compaction_concurrency + 1; i++) {
-        TabletSharedPtr tablet = std::make_shared<Tablet>();
         TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
         tablet_meta->set_tablet_id(i);
-        tablet->set_tablet_meta(tablet_meta);
-        tablet->set_data_dir(&data_dir);
+        TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, &data_dir);
         std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
         compaction_context->tablet = tablet;
         compaction_context->chosen_compaction_type = CUMULATIVE_COMPACTION;
