@@ -19,10 +19,9 @@ namespace starrocks {
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_need_compaction) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 
@@ -82,10 +81,9 @@ TEST(BaseAndCumulativeCompactionPolicyTest, test_need_compaction) {
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_create_cumulative_compaction_with_recent_rowsets) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 
@@ -135,10 +133,9 @@ TEST(BaseAndCumulativeCompactionPolicyTest, test_create_cumulative_compaction_wi
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_create_cumulative_compaction_with_missed_versions) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 
@@ -188,10 +185,9 @@ TEST(BaseAndCumulativeCompactionPolicyTest, test_create_cumulative_compaction_wi
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_create_base_compaction_with_empty_base_rowset) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 
@@ -235,10 +231,9 @@ TEST(BaseAndCumulativeCompactionPolicyTest, test_create_base_compaction_with_emp
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_create_base_compaction_with_missed_versions) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 
@@ -285,10 +280,9 @@ TEST(BaseAndCumulativeCompactionPolicyTest, test_create_base_compaction_with_mis
 
 // NOLINTNEXTLINE
 TEST(BaseAndCumulativeCompactionPolicyTest, test_create_base_compaction_without_base_rowset) {
-    TabletSharedPtr tablet = std::make_shared<Tablet>();
     TabletMetaSharedPtr tablet_meta = std::make_shared<TabletMeta>();
     tablet_meta->set_tablet_id(100);
-    tablet->set_tablet_meta(tablet_meta);
+    TabletSharedPtr tablet = std::make_shared<Tablet>(tablet_meta, nullptr);
     std::unique_ptr<CompactionContext> compaction_context = std::make_unique<CompactionContext>();
     compaction_context->tablet = tablet;
 

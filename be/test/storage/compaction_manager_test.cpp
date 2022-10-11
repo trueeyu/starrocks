@@ -17,6 +17,7 @@
 
 namespace starrocks {
 
+// NOLINTNEXTLINE
 TEST(CompactionManagerTest, test_candidates) {
     std::vector<TabletSharedPtr> tablets;
     DataDir data_dir("./data_dir");
@@ -71,13 +72,15 @@ TEST(CompactionManagerTest, test_candidates) {
 }
 
 class MockCompactionTask : public CompactionTask {
+public:
     MockCompactionTask() : CompactionTask(HORIZONTAL_COMPACTION) {}
 
-    ~MockCompactionTask() = default;
+    ~MockCompactionTask() override = default;
 
     Status run_impl() override { return Status::OK(); }
 };
 
+// NOLINTNEXTLINE
 TEST(CompactionManagerTest, test_compaction_tasks) {
     std::vector<TabletSharedPtr> tablets;
     std::vector<std::shared_ptr<MockCompactionTask>> tasks;
@@ -151,6 +154,7 @@ TEST(CompactionManagerTest, test_compaction_tasks) {
     }
 }
 
+// NOLINTNEXTLINE
 TEST(CompactionManagerTest, test_next_compaction_task_id) {
     uint64_t start_task_id = StorageEngine::instance()->compaction_manager()->next_compaction_task_id();
     ASSERT_LT(0, start_task_id);
