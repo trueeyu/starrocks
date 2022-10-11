@@ -146,7 +146,7 @@ Status TabletUpdates::_load_from_pb(const TabletUpdatesPB& tablet_updates_pb) {
                 auto rowset_meta = std::make_shared<RowsetMeta>(rowset_meta_data, &parse_ok);
                 CHECK(parse_ok) << "Corrupted rowset meta";
                 RowsetSharedPtr rowset;
-                st = RowsetFactory::create_rowset(&_tablet.tablet_schema(), _tablet.schema_hash_path(), rowset_meta,
+                st = RowsetFactory::create_rowset(&_tablet.tablet_schema(), &_tablet.schema_hash_path(), rowset_meta,
                                                   &rowset);
                 if (st.ok()) {
                     _pending_commits.emplace(version, rowset);
@@ -169,7 +169,7 @@ Status TabletUpdates::_load_from_pb(const TabletUpdatesPB& tablet_updates_pb) {
     RETURN_IF_ERROR(TabletMetaManager::rowset_iterate(
             _tablet.data_dir(), _tablet.tablet_id(), [&](const RowsetMetaSharedPtr& rowset_meta) -> bool {
                 RowsetSharedPtr rowset;
-                st = RowsetFactory::create_rowset(&_tablet.tablet_schema(), _tablet.schema_hash_path(), rowset_meta,
+                st = RowsetFactory::create_rowset(&_tablet.tablet_schema(), &_tablet.schema_hash_path(), rowset_meta,
                                                   &rowset);
                 if (st.ok()) {
                     _rowsets[rowset_meta->get_rowset_seg_id()] = std::move(rowset);
@@ -1124,7 +1124,7 @@ Status TabletUpdates::_do_compaction(std::unique_ptr<CompactionInfo>* pinfo) {
     context.tablet_id = _tablet.tablet_id();
     context.partition_id = _tablet.partition_id();
     context.tablet_schema_hash = _tablet.schema_hash();
-    context.rowset_path_prefix = _tablet.schema_hash_path();
+    context.rowset_path_prefix = &_tablet.schema_hash_path();
     context.tablet_schema = &_tablet.tablet_schema();
     context.rowset_state = COMMITTED;
     context.segments_overlap = NONOVERLAPPING;
@@ -2410,7 +2410,7 @@ Status TabletUpdates::convert_from(const std::shared_ptr<Tablet>& base_tablet, i
         writer_context.tablet_id = _tablet.tablet_id();
         writer_context.partition_id = _tablet.partition_id();
         writer_context.tablet_schema_hash = _tablet.schema_hash();
-        writer_context.rowset_path_prefix = _tablet.schema_hash_path();
+        writer_context.rowset_path_prefix = &_tablet.schema_hash_path();
         writer_context.tablet_schema = &_tablet.tablet_schema();
         writer_context.rowset_state = VISIBLE;
         writer_context.version = src_rowset->version();
@@ -2688,7 +2688,7 @@ Status TabletUpdates::load_snapshot(const SnapshotMeta& snapshot_meta) {
             if (rowset_meta->tablet_id() != _tablet.tablet_id()) {
                 return Status::InternalError("mismatched tablet id");
             }
-            RETURN_IF_ERROR(RowsetFactory::create_rowset(&_tablet.tablet_schema(), _tablet.schema_hash_path(),
+            RETURN_IF_ERROR(RowsetFactory::create_rowset(&_tablet.tablet_schema(), &_tablet.schema_hash_path(),
                                                          rowset_meta, &rowset));
             if (rowset->start_version() != rowset->end_version()) {
                 return Status::InternalError("mismatched start and end version");
@@ -2756,7 +2756,7 @@ Status TabletUpdates::load_snapshot(const SnapshotMeta& snapshot_meta) {
                     std::max<uint32_t>(new_next_rowset_id, new_id + std::max(1L, rowset_meta_pb.num_segments()));
             rowset_meta->set_rowset_seg_id(new_id);
             RowsetSharedPtr* rowset = &new_rowsets[new_id];
-            RETURN_IF_ERROR(RowsetFactory::create_rowset(&_tablet.tablet_schema(), _tablet.schema_hash_path(),
+            RETURN_IF_ERROR(RowsetFactory::create_rowset(&_tablet.tablet_schema(), &_tablet.schema_hash_path(),
                                                          rowset_meta, rowset));
             VLOG(2) << "add a new rowset " << tablet_id << "@" << new_id << "@" << rowset_meta->rowset_id();
         }

@@ -193,7 +193,7 @@ Status DeltaWriter::_init() {
     writer_context.tablet_id = _opt.tablet_id;
     writer_context.partition_id = _opt.partition_id;
     writer_context.tablet_schema_hash = _opt.schema_hash;
-    writer_context.rowset_path_prefix = _tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &_tablet->schema_hash_path();
     writer_context.rowset_state = PREPARED;
     writer_context.txn_id = _opt.txn_id;
     writer_context.load_id = _opt.load_id;

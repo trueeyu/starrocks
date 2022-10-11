@@ -42,7 +42,7 @@ public:
     RowsetWriterContext(const RowsetWriterContext&) = default;
     RowsetWriterContext& operator=(const RowsetWriterContext&) = default;
 
-    std::string rowset_path_prefix;
+    const std::string* rowset_path_prefix = nullptr;
 
     const TabletSchema* tablet_schema = nullptr;
     std::shared_ptr<TabletSchema> partial_update_tablet_schema = nullptr;

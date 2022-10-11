@@ -121,16 +121,16 @@ private:
 
 class Rowset : public std::enable_shared_from_this<Rowset> {
 public:
-    Rowset(const TabletSchema* schema, std::string rowset_path, RowsetMetaSharedPtr rowset_meta);
+    Rowset(const TabletSchema* schema, const std::string* rowset_path, RowsetMetaSharedPtr rowset_meta);
     Rowset() = delete;
     Rowset(const Rowset&) = delete;
     const Rowset& operator=(const Rowset&) = delete;
 
     virtual ~Rowset();
 
-    static std::shared_ptr<Rowset> create(const TabletSchema* schema, std::string rowset_path,
+    static std::shared_ptr<Rowset> create(const TabletSchema* schema, const std::string* rowset_path,
                                           RowsetMetaSharedPtr rowset_meta) {
-        return std::make_shared<Rowset>(schema, std::move(rowset_path), std::move(rowset_meta));
+        return std::make_shared<Rowset>(schema, rowset_path, std::move(rowset_meta));
     }
 
     // Open all segment files in this rowset and load necessary metadata.
@@ -245,7 +245,7 @@ public:
     // return an unique identifier string for this rowset
     std::string unique_id() const { return _rowset_path + "/" + rowset_id().to_string(); }
 
-    std::string rowset_path() const { return _rowset_path; }
+    std::string rowset_path() const { return *_rowset_path; }
 
     bool need_delete_file() const { return _need_delete_file; }
 
@@ -321,7 +321,7 @@ protected:
     virtual void make_visible_extra(Version version) {}
 
     const TabletSchema* _schema;
-    std::string _rowset_path;
+    const std::string* _rowset_path = nullptr;
     RowsetMetaSharedPtr _rowset_meta;
 
     // mutex lock for load/close api because it is costly

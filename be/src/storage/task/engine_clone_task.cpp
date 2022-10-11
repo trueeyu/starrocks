@@ -624,7 +624,7 @@ Status EngineCloneTask::_finish_clone(Tablet* tablet, const string& clone_dir, i
         }
 
         std::set<string> local_files;
-        std::string tablet_dir = tablet->schema_hash_path();
+        const std::string& tablet_dir = tablet->schema_hash_path();
         res = fs::list_dirs_files(tablet_dir, nullptr, &local_files);
         if (!res.ok()) {
             LOG(WARNING) << "Fail to list tablet directory " << tablet_dir << ": " << res;
@@ -792,7 +792,7 @@ Status EngineCloneTask::_clone_full_data(Tablet* tablet, TabletMeta* cloned_tabl
     // but some rowset is useless, so that remove them here
     for (auto& rs_meta_ptr : rs_metas_found_in_src) {
         RowsetSharedPtr rowset_to_remove;
-        if (auto s = RowsetFactory::create_rowset(&(cloned_tablet_meta->tablet_schema()), tablet->schema_hash_path(),
+        if (auto s = RowsetFactory::create_rowset(&(cloned_tablet_meta->tablet_schema()), &tablet->schema_hash_path(),
                                                   rs_meta_ptr, &rowset_to_remove);
             !s.ok()) {
             LOG(WARNING) << "failed to init rowset to remove: " << rs_meta_ptr->rowset_id().to_string();

@@ -607,7 +607,6 @@ AgentStatus move_dir(TTabletId tablet_id, TSchemaHash schema_hash, const std::st
         return STARROCKS_TASK_REQUEST_ERROR;
     }
 
-    std::string dest_tablet_dir = tablet->schema_hash_path();
     SnapshotLoader loader(exec_env, job_id, tablet_id);
     Status status = loader.move(src, tablet, overwrite);
 

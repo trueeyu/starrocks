@@ -214,7 +214,7 @@ Status SnapshotManager::_rename_rowset_id(const RowsetMetaPB& rs_meta_pb, const 
     // TODO use factory to obtain RowsetMeta when SnapshotManager::convert_rowset_ids supports beta rowset
     auto rowset_meta = std::make_shared<RowsetMeta>(rs_meta_pb);
     RowsetSharedPtr org_rowset;
-    if (!RowsetFactory::create_rowset(&tablet_schema, new_path, rowset_meta, &org_rowset).ok()) {
+    if (!RowsetFactory::create_rowset(&tablet_schema, &new_path, rowset_meta, &org_rowset).ok()) {
         return Status::RuntimeError("fail to create rowset");
     }
     // do not use cache to load index
@@ -227,7 +227,7 @@ Status SnapshotManager::_rename_rowset_id(const RowsetMetaPB& rs_meta_pb, const 
     context.tablet_id = org_rowset_meta->tablet_id();
     context.partition_id = org_rowset_meta->partition_id();
     context.tablet_schema_hash = org_rowset_meta->tablet_schema_hash();
-    context.rowset_path_prefix = new_path;
+    context.rowset_path_prefix = &new_path;
     context.tablet_schema = &tablet_schema;
     context.rowset_state = org_rowset_meta->rowset_state();
     context.version = org_rowset_meta->version();
@@ -520,7 +520,7 @@ Status SnapshotManager::make_snapshot_on_tablet_meta(const TabletSharedPtr& tabl
     for (const auto& snapshot_rowset : snapshot_rowsets) {
         snapshot_rowset_metas.emplace_back(snapshot_rowset->rowset_meta());
     }
-    std::string meta_path = tablet->schema_hash_path();
+    const std::string& meta_path = tablet->schema_hash_path();
     (void)fs::remove_all(meta_path);
     RETURN_IF_ERROR(fs::create_directories(meta_path));
     auto st = make_snapshot_on_tablet_meta(SNAPSHOT_TYPE_FULL, meta_path, tablet, snapshot_rowset_metas,

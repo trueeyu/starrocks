@@ -424,7 +424,7 @@ Status SnapshotLoader::download(const std::map<std::string, std::string>& src_to
 //
 // MUST hold tablet's header lock, push lock, cumulative lock and base compaction lock
 Status SnapshotLoader::move(const std::string& snapshot_path, const TabletSharedPtr& tablet, bool overwrite) {
-    std::string tablet_path = tablet->schema_hash_path();
+    const std::string& tablet_path = tablet->schema_hash_path();
     std::string store_path = tablet->data_dir()->path();
     LOG(INFO) << "begin to move snapshot files. from: " << snapshot_path << ", to: " << tablet_path
               << ", store: " << store_path << ", job: " << _job_id << ", task id: " << _task_id;
