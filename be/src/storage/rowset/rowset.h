@@ -122,6 +122,7 @@ private:
 class Rowset : public std::enable_shared_from_this<Rowset> {
 public:
     Rowset(const TabletSchema* schema, std::string rowset_path, RowsetMetaSharedPtr rowset_meta);
+    Rowset() = delete;
     Rowset(const Rowset&) = delete;
     const Rowset& operator=(const Rowset&) = delete;
 

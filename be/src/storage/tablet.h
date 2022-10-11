@@ -118,7 +118,7 @@ public:
     Status add_inc_rowset(const RowsetSharedPtr& rowset, int64_t version);
     void delete_expired_inc_rowsets();
 
-    /// Delete stale rowset by timing. This delete policy uses now() munis
+    /// Delete stale rowset by timing. Thiset_compaction_contexts delete policy uses now() munis
     /// config::tablet_rowset_expired_stale_sweep_time_sec to compute the deadline of expired rowset
     /// to delete.  When rowset is deleted, it will be added to StorageEngine unused map and record
     /// need to delete flag.
