@@ -27,7 +27,13 @@ TEST(CompactionContextTest, test_rowset_comparator) {
     base_rowset_meta_pb->set_start_version(0);
     base_rowset_meta_pb->set_end_version(9);
     RowsetMetaSharedPtr base_rowset_meta = std::make_shared<RowsetMeta>(base_rowset_meta_pb);
-    RowsetSharedPtr base_rowset = std::make_shared<Rowset>(tablet_schema.get(), "./rowset_0", base_rowset_meta);
+
+    std::vector<std::string> rowset_path_prefixs;
+    for (int i = 0; i <= 120; i++) {
+        rowset_path_prefixs.emplace_back("./rowset" + std::to_string(i));
+    }
+    RowsetSharedPtr base_rowset =
+            std::make_shared<Rowset>(tablet_schema.get(), &rowset_path_prefixs[0], base_rowset_meta);
     rowsets.emplace_back(std::move(base_rowset));
 
     for (int i = 1; i <= 10; i++) {
@@ -36,8 +42,7 @@ TEST(CompactionContextTest, test_rowset_comparator) {
         rowset_meta_pb->set_start_version(i * 10);
         rowset_meta_pb->set_end_version((i + 1) * 10 - 1);
         RowsetMetaSharedPtr rowset_meta = std::make_shared<RowsetMeta>(rowset_meta_pb);
-        RowsetSharedPtr rowset =
-                std::make_shared<Rowset>(tablet_schema.get(), "./rowset" + std::to_string(i), rowset_meta);
+        RowsetSharedPtr rowset = std::make_shared<Rowset>(tablet_schema.get(), &rowset_path_prefixs[i], rowset_meta);
         rowsets.emplace_back(std::move(rowset));
     }
 
@@ -47,8 +52,7 @@ TEST(CompactionContextTest, test_rowset_comparator) {
         rowset_meta_pb->set_start_version(i);
         rowset_meta_pb->set_end_version(i);
         RowsetMetaSharedPtr rowset_meta = std::make_shared<RowsetMeta>(rowset_meta_pb);
-        RowsetSharedPtr rowset =
-                std::make_shared<Rowset>(tablet_schema.get(), "./rowset" + std::to_string(i), rowset_meta);
+        RowsetSharedPtr rowset = std::make_shared<Rowset>(tablet_schema.get(), &rowset_path_prefixs[i], rowset_meta);
         rowsets.emplace_back(std::move(rowset));
     }
 

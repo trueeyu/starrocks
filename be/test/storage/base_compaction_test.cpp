@@ -36,7 +36,7 @@ public:
         rowset_writer_context->tablet_id = 12345;
         rowset_writer_context->tablet_schema_hash = 1111;
         rowset_writer_context->partition_id = 10;
-        rowset_writer_context->rowset_path_prefix = config::storage_root_path + "/data/0/12345/1111";
+        rowset_writer_context->rowset_path_prefix = &_schema_hash_path;
         rowset_writer_context->rowset_state = VISIBLE;
         rowset_writer_context->tablet_schema = _tablet_schema.get();
         rowset_writer_context->version.first = 0;
@@ -206,7 +206,6 @@ public:
         starrocks::EngineOptions options;
         options.store_paths = paths;
         if (_engine == nullptr) {
-            _origin_engine = StorageEngine::instance();
             Status s = starrocks::StorageEngine::open(options, &_engine);
             ASSERT_TRUE(s.ok()) << s.to_string();
         }
@@ -228,7 +227,6 @@ public:
 
 protected:
     StorageEngine* _engine = nullptr;
-    StorageEngine* _origin_engine = nullptr;
     std::unique_ptr<TabletSchema> _tablet_schema;
     std::string _schema_hash_path;
     std::unique_ptr<MemTracker> _compaction_mem_tracker;

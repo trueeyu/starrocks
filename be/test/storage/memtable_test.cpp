@@ -195,7 +195,7 @@ public:
         writer_context.tablet_id = rand() % 1000000;
         writer_context.tablet_schema_hash = 1111;
         writer_context.partition_id = 10;
-        writer_context.rowset_path_prefix = _root_path;
+        writer_context.rowset_path_prefix = &_root_path;
         writer_context.rowset_state = VISIBLE;
         writer_context.tablet_schema = _schema.get();
         writer_context.version.first = 10;

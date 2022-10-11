@@ -77,7 +77,7 @@ protected:
         writer_context.tablet_uid = tablet->tablet_uid();
         writer_context.tablet_id = tablet->tablet_id();
         writer_context.tablet_schema_hash = tablet->schema_hash();
-        writer_context.rowset_path_prefix = tablet->schema_hash_path();
+        writer_context.rowset_path_prefix = &tablet->schema_hash_path();
         writer_context.tablet_schema = &(tablet->tablet_schema());
         writer_context.rowset_state = VISIBLE;
         writer_context.version = Version(3, 3);
@@ -435,7 +435,7 @@ TEST_F(SchemaChangeTest, convert_from) {
     writer_context.tablet_uid = new_tablet->tablet_uid();
     writer_context.tablet_id = new_tablet->tablet_id();
     writer_context.tablet_schema_hash = new_tablet->schema_hash();
-    writer_context.rowset_path_prefix = new_tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &new_tablet->schema_hash_path();
     writer_context.tablet_schema = &(new_tablet->tablet_schema());
     writer_context.rowset_state = VISIBLE;
     writer_context.version = Version(3, 3);
@@ -511,7 +511,7 @@ TEST_F(SchemaChangeTest, schema_change_with_sorting) {
     writer_context.tablet_uid = new_tablet->tablet_uid();
     writer_context.tablet_id = new_tablet->tablet_id();
     writer_context.tablet_schema_hash = new_tablet->schema_hash();
-    writer_context.rowset_path_prefix = new_tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &new_tablet->schema_hash_path();
     writer_context.tablet_schema = &(new_tablet->tablet_schema());
     writer_context.rowset_state = VISIBLE;
     writer_context.version = Version(3, 3);
@@ -566,7 +566,7 @@ TEST_F(SchemaChangeTest, schema_change_with_directing_v2) {
     writer_context.tablet_uid = new_tablet->tablet_uid();
     writer_context.tablet_id = new_tablet->tablet_id();
     writer_context.tablet_schema_hash = new_tablet->schema_hash();
-    writer_context.rowset_path_prefix = new_tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &new_tablet->schema_hash_path();
     writer_context.tablet_schema = &(new_tablet->tablet_schema());
     writer_context.rowset_state = VISIBLE;
     writer_context.version = Version(3, 3);
@@ -635,7 +635,7 @@ TEST_F(SchemaChangeTest, schema_change_with_sorting_v2) {
     writer_context.tablet_uid = new_tablet->tablet_uid();
     writer_context.tablet_id = new_tablet->tablet_id();
     writer_context.tablet_schema_hash = new_tablet->schema_hash();
-    writer_context.rowset_path_prefix = new_tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &new_tablet->schema_hash_path();
     writer_context.tablet_schema = &(new_tablet->tablet_schema());
     writer_context.rowset_state = VISIBLE;
     writer_context.version = Version(3, 3);
@@ -699,7 +699,7 @@ TEST_F(SchemaChangeTest, schema_change_with_agg_key_reorder) {
     writer_context.tablet_uid = new_tablet->tablet_uid();
     writer_context.tablet_id = new_tablet->tablet_id();
     writer_context.tablet_schema_hash = new_tablet->schema_hash();
-    writer_context.rowset_path_prefix = new_tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &new_tablet->schema_hash_path();
     writer_context.tablet_schema = &(new_tablet->tablet_schema());
     writer_context.rowset_state = VISIBLE;
     writer_context.version = Version(3, 3);

@@ -93,7 +93,7 @@ public:
         rowset_writer_context->tablet_id = 12345;
         rowset_writer_context->tablet_schema_hash = 1111;
         rowset_writer_context->partition_id = 10;
-        rowset_writer_context->rowset_path_prefix = config::storage_root_path + "/data/0/12345/1111";
+        rowset_writer_context->rowset_path_prefix = &_rowset_path_prefix;
         rowset_writer_context->rowset_state = VISIBLE;
         rowset_writer_context->tablet_schema = _tablet_schema.get();
         rowset_writer_context->version.first = version;
@@ -227,6 +227,7 @@ public:
 
         _rowset_id = 10000;
         _version = 0;
+        _rowset_path_prefix = config::storage_root_path + "/data/0/12345/1111";
     }
 
     void TearDown() override {
@@ -245,6 +246,7 @@ protected:
 
     int64_t _rowset_id;
     int64_t _version;
+    std::string _rowset_path_prefix;
 };
 
 TEST_F(CumulativeCompactionTest, test_init_succeeded) {

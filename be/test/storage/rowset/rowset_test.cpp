@@ -81,6 +81,8 @@ protected:
         Status s = starrocks::StorageEngine::open(options, &k_engine);
         ASSERT_TRUE(s.ok()) << s.to_string();
 
+        _rowset_path_prefix = config::storage_root_path + "/data/rowset_test";
+
         const std::string rowset_dir = config::storage_root_path + "/data/rowset_test";
         ASSERT_TRUE(fs::create_directories(rowset_dir).ok());
         ASSERT_TRUE(fs::create_directories(config::storage_root_path + "/data/rowset_test_seg").ok());
@@ -194,7 +196,7 @@ protected:
         rowset_writer_context->tablet_id = tablet_id;
         rowset_writer_context->tablet_schema_hash = 1111;
         rowset_writer_context->partition_id = 10;
-        rowset_writer_context->rowset_path_prefix = config::storage_root_path + "/data/rowset_test";
+        rowset_writer_context->rowset_path_prefix = &_rowset_path_prefix;
         rowset_writer_context->rowset_state = VISIBLE;
         rowset_writer_context->tablet_schema = tablet_schema;
         rowset_writer_context->version.first = 0;
@@ -210,7 +212,7 @@ protected:
         rowset_writer_context->tablet_id = tablet_id;
         rowset_writer_context->tablet_schema_hash = 1111;
         rowset_writer_context->partition_id = 10;
-        rowset_writer_context->rowset_path_prefix = config::storage_root_path + "/data/rowset_test";
+        rowset_writer_context->rowset_path_prefix = &_rowset_path_prefix;
         rowset_writer_context->rowset_state = VISIBLE;
         rowset_writer_context->partial_update_tablet_schema = partial_schema;
         rowset_writer_context->tablet_schema = partial_schema.get();
@@ -221,6 +223,7 @@ protected:
 
 private:
     std::unique_ptr<MemTracker> _page_cache_mem_tracker = nullptr;
+    std::string _rowset_path_prefix;
 };
 
 static vectorized::ChunkIteratorPtr create_tablet_iterator(vectorized::TabletReader& reader,
@@ -310,7 +313,7 @@ TEST_F(RowsetTest, FinalMergeTest) {
             ASSIGN_OR_ABORT(seg_options.fs, FileSystem::CreateSharedFromString("posix://"));
             seg_options.stats = &_stats;
             std::string segment_file =
-                    Rowset::segment_file_path(writer_context.rowset_path_prefix, writer_context.rowset_id, seg_id);
+                    Rowset::segment_file_path(*writer_context.rowset_path_prefix, writer_context.rowset_id, seg_id);
             auto segment = *Segment::open(seg_options.fs, segment_file, 0, &tablet->tablet_schema());
             ASSERT_NE(segment->num_rows(), 0);
             auto res = segment->new_iterator(schema, seg_options);
@@ -462,7 +465,7 @@ TEST_F(RowsetTest, FinalMergeVerticalTest) {
             seg_options.stats = &_stats;
 
             std::string segment_file =
-                    Rowset::segment_file_path(writer_context.rowset_path_prefix, writer_context.rowset_id, seg_id);
+                    Rowset::segment_file_path(*writer_context.rowset_path_prefix, writer_context.rowset_id, seg_id);
             auto segment = *Segment::open(seg_options.fs, segment_file, 0, &tablet->tablet_schema());
 
             ASSERT_NE(segment->num_rows(), 0);
@@ -604,7 +607,7 @@ TEST_F(RowsetTest, FinalMergeVerticalPartialTest) {
     std::shared_ptr<TabletSchema> partial_schema = TabletSchema::create(tablet->tablet_schema(), column_indexes);
     create_partial_rowset_writer_context(12345, column_indexes, partial_schema, &writer_context);
     writer_context.segments_overlap = OVERLAP_UNKNOWN;
-    writer_context.rowset_path_prefix = tablet->schema_hash_path();
+    writer_context.rowset_path_prefix = &tablet->schema_hash_path();
 
     std::unique_ptr<RowsetWriter> rowset_writer;
     ASSERT_TRUE(RowsetFactory::create_rowset_writer(writer_context, &rowset_writer).ok());
@@ -808,7 +811,8 @@ TEST_F(RowsetTest, SegmentWriteTest) {
     EXPECT_EQ(count, num_rows);
 
     std::unique_ptr<RowsetWriter> segment_rowset_writer;
-    writer_context.rowset_path_prefix = config::storage_root_path + "/data/rowset_test_seg";
+    std::string rowset_path_prefix = config::storage_root_path + "/data/rowset_test_seg";
+    writer_context.rowset_path_prefix = &rowset_path_prefix;
     ASSERT_TRUE(RowsetFactory::create_rowset_writer(writer_context, &segment_rowset_writer).ok());
 
     std::shared_ptr<FileSystem> fs = FileSystem::CreateSharedFromString(rowset->rowset_path()).value();

@@ -47,9 +47,9 @@
 
 namespace starrocks {
 
-Rowset::Rowset(const TabletSchema* schema, std::string rowset_path, RowsetMetaSharedPtr rowset_meta)
+Rowset::Rowset(const TabletSchema* schema, const std::string* rowset_path, RowsetMetaSharedPtr rowset_meta)
         : _schema(schema),
-          _rowset_path(std::move(rowset_path)),
+          _rowset_path(rowset_path),
           _rowset_meta(std::move(rowset_meta)),
           _refs_by_reader(0) {
     MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), _mem_usage());
@@ -129,11 +129,11 @@ Status Rowset::init() {
 // use partial_rowset_footer to indicate the segment footer position and size
 // if partial_rowset_footer is nullptr, the segment_footer is at the end of the segment_file
 Status Rowset::do_load() {
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(_rowset_path));
+    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(*_rowset_path));
     _segments.clear();
     size_t footer_size_hint = 16 * 1024;
     for (int seg_id = 0; seg_id < num_segments(); ++seg_id) {
-        std::string seg_path = segment_file_path(_rowset_path, rowset_id(), seg_id);
+        std::string seg_path = segment_file_path(*_rowset_path, rowset_id(), seg_id);
         auto res = Segment::open(fs, seg_path, seg_id, _schema, &footer_size_hint,
                                  rowset_meta()->partial_rowset_footer(seg_id));
         if (!res.ok()) {
@@ -149,11 +149,11 @@ Status Rowset::do_load() {
 // this function is only used for partial update so far
 // make sure segment_footer is in the end of segment_file before call this function
 Status Rowset::reload() {
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(_rowset_path));
+    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(*_rowset_path));
     _segments.clear();
     size_t footer_size_hint = 16 * 1024;
     for (int seg_id = 0; seg_id < num_segments(); ++seg_id) {
-        std::string seg_path = segment_file_path(_rowset_path, rowset_id(), seg_id);
+        std::string seg_path = segment_file_path(*_rowset_path, rowset_id(), seg_id);
         auto res = Segment::open(fs, seg_path, seg_id, _schema, &footer_size_hint);
         if (!res.ok()) {
             LOG(WARNING) << "Fail to open " << seg_path << ": " << res.status();
@@ -205,20 +205,20 @@ Status Rowset::remove() {
     VLOG(1) << "Removing files in rowset id=" << unique_id() << " version=" << start_version() << "-" << end_version()
             << " tablet_id=" << _rowset_meta->tablet_id();
     Status result;
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(_rowset_path));
+    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(*_rowset_path));
     auto merge_status = [&](const Status& st) {
         if (result.ok() && !st.ok() && !st.is_not_found()) result = st;
     };
 
     for (int i = 0, sz = num_segments(); i < sz; ++i) {
-        std::string path = segment_file_path(_rowset_path, rowset_id(), i);
+        std::string path = segment_file_path(*_rowset_path, rowset_id(), i);
         VLOG(1) << "Deleting " << path;
         auto st = fs->delete_file(path);
         LOG_IF(WARNING, !st.ok()) << "Fail to delete " << path << ": " << st;
         merge_status(st);
     }
     for (int i = 0, sz = num_delete_files(); i < sz; ++i) {
-        std::string path = segment_del_file_path(_rowset_path, rowset_id(), i);
+        std::string path = segment_del_file_path(*_rowset_path, rowset_id(), i);
         VLOG(1) << "Deleting " << path;
         auto st = fs->delete_file(path);
         LOG_IF(WARNING, !st.ok()) << "Fail to delete " << path << ": " << st;
@@ -230,14 +230,14 @@ Status Rowset::remove() {
 Status Rowset::link_files_to(const std::string& dir, RowsetId new_rowset_id) {
     for (int i = 0; i < num_segments(); ++i) {
         std::string dst_link_path = segment_file_path(dir, new_rowset_id, i);
-        std::string src_file_path = segment_file_path(_rowset_path, rowset_id(), i);
+        std::string src_file_path = segment_file_path(*_rowset_path, rowset_id(), i);
         if (link(src_file_path.c_str(), dst_link_path.c_str()) != 0) {
             PLOG(WARNING) << "Fail to link " << src_file_path << " to " << dst_link_path;
             return Status::RuntimeError("Fail to link segment data file");
         }
     }
     for (int i = 0; i < num_delete_files(); ++i) {
-        std::string src_file_path = segment_del_file_path(_rowset_path, rowset_id(), i);
+        std::string src_file_path = segment_del_file_path(*_rowset_path, rowset_id(), i);
         std::string dst_link_path = segment_del_file_path(dir, new_rowset_id, i);
         if (link(src_file_path.c_str(), dst_link_path.c_str()) != 0) {
             PLOG(WARNING) << "Fail to link " << src_file_path << " to " << dst_link_path;
@@ -254,7 +254,7 @@ Status Rowset::copy_files_to(const std::string& dir) {
             LOG(WARNING) << "Path already exist: " << dst_path;
             return Status::AlreadyExist(fmt::format("Path already exist: {}", dst_path));
         }
-        std::string src_path = segment_file_path(_rowset_path, rowset_id(), i);
+        std::string src_path = segment_file_path(*_rowset_path, rowset_id(), i);
         if (!fs::copy_file(src_path, dst_path).ok()) {
             LOG(WARNING) << "Error to copy file. src:" << src_path << ", dst:" << dst_path << ", errno=" << Errno::no();
             return Status::IOError(fmt::format("Error to copy file. src: {}, dst: {}, error:{} ", src_path, dst_path,
@@ -262,7 +262,7 @@ Status Rowset::copy_files_to(const std::string& dir) {
         }
     }
     for (int i = 0; i < num_delete_files(); ++i) {
-        std::string src_path = segment_del_file_path(_rowset_path, rowset_id(), i);
+        std::string src_path = segment_del_file_path(*_rowset_path, rowset_id(), i);
         if (fs::path_exist(src_path)) {
             std::string dst_path = segment_del_file_path(dir, rowset_id(), i);
             if (fs::path_exist(dst_path)) {
@@ -335,7 +335,7 @@ Status Rowset::get_segment_iterators(const vectorized::Schema& schema, const Row
     RETURN_IF_ERROR(load());
 
     vectorized::SegmentReadOptions seg_options;
-    ASSIGN_OR_RETURN(seg_options.fs, FileSystem::CreateSharedFromString(_rowset_path));
+    ASSIGN_OR_RETURN(seg_options.fs, FileSystem::CreateSharedFromString(*_rowset_path));
     seg_options.stats = options.stats;
     seg_options.ranges = options.ranges;
     seg_options.predicates = options.predicates;
@@ -422,7 +422,7 @@ StatusOr<std::vector<vectorized::ChunkIteratorPtr>> Rowset::get_segment_iterator
     RETURN_IF_ERROR(load());
 
     vectorized::SegmentReadOptions seg_options;
-    ASSIGN_OR_RETURN(seg_options.fs, FileSystem::CreateSharedFromString(_rowset_path));
+    ASSIGN_OR_RETURN(seg_options.fs, FileSystem::CreateSharedFromString(*_rowset_path));
     seg_options.stats = stats;
     seg_options.is_primary_keys = meta != nullptr;
     seg_options.tablet_id = rowset_meta()->tablet_id();

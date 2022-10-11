@@ -243,9 +243,9 @@ public:
     static std::string segment_del_file_path(const std::string& segment_dir, const RowsetId& rowset_id, int segment_id);
 
     // return an unique identifier string for this rowset
-    std::string unique_id() const { return _rowset_path + "/" + rowset_id().to_string(); }
+    std::string unique_id() const { return *_rowset_path + "/" + rowset_id().to_string(); }
 
-    std::string rowset_path() const { return *_rowset_path; }
+    const std::string& rowset_path() const { return *_rowset_path; }
 
     bool need_delete_file() const { return _need_delete_file; }
 
@@ -332,7 +332,7 @@ protected:
     RowsetStateMachine _rowset_state_machine;
 
 private:
-    int64_t _mem_usage() const { return sizeof(Rowset) + _rowset_path.length(); }
+    int64_t _mem_usage() const { return sizeof(Rowset); }
 
     std::vector<SegmentSharedPtr> _segments;
 };

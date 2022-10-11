@@ -55,7 +55,7 @@ public:
         writer_context.tablet_id = tablet->tablet_id();
         writer_context.tablet_schema_hash = tablet->schema_hash();
         writer_context.partition_id = 0;
-        writer_context.rowset_path_prefix = tablet->schema_hash_path();
+        writer_context.rowset_path_prefix = &tablet->schema_hash_path();
         writer_context.rowset_state = COMMITTED;
         writer_context.tablet_schema = &tablet->tablet_schema();
         writer_context.version.first = 0;
@@ -107,7 +107,7 @@ public:
         writer_context.tablet_id = tablet->tablet_id();
         writer_context.tablet_schema_hash = tablet->schema_hash();
         writer_context.partition_id = 0;
-        writer_context.rowset_path_prefix = tablet->schema_hash_path();
+        writer_context.rowset_path_prefix = &tablet->schema_hash_path();
         writer_context.rowset_state = COMMITTED;
         writer_context.partial_update_tablet_schema = partial_schema;
         writer_context.referenced_column_ids = column_indexes;
@@ -142,7 +142,7 @@ public:
         writer_context.tablet_id = tablet->tablet_id();
         writer_context.tablet_schema_hash = tablet->schema_hash();
         writer_context.partition_id = 0;
-        writer_context.rowset_path_prefix = tablet->schema_hash_path();
+        writer_context.rowset_path_prefix = &tablet->schema_hash_path();
         writer_context.rowset_state = COMMITTED;
         writer_context.tablet_schema = &tablet->tablet_schema();
         writer_context.version.first = 0;
