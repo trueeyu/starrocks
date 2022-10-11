@@ -788,7 +788,7 @@ void TabletUpdates::_apply_rowset_commit(const EditVersionInfo& version_info) {
             Substitute("$0_$1", tablet_id, rowset->rowset_id().to_string()));
     state_entry->update_expire_time(MonotonicMillis() + manager->get_cache_expire_ms());
     auto& state = state_entry->value();
-    auto st = state.load(&_tablet, rowset.get());
+    auto st = state.load(&_tablet, rowset);
     manager->update_state_cache().update_object_size(state_entry, state.memory_usage());
     if (!st.ok()) {
         manager->update_state_cache().remove(state_entry);

@@ -119,7 +119,7 @@ private:
     RowsetState _rowset_state{ROWSET_UNLOADED};
 };
 
-class Rowset : public std::enable_shared_from_this<Rowset> {
+class Rowset {
 public:
     Rowset(const TabletSchema* schema, const std::string* rowset_path, RowsetMetaSharedPtr rowset_meta);
     Rowset() = delete;
@@ -334,6 +334,21 @@ protected:
 private:
     int64_t _mem_usage() const { return sizeof(Rowset); }
 
+    std::vector<SegmentSharedPtr> _segments;
+};
+
+class Rowset2 {
+public:
+    const TabletSchema* _schema;
+    const std::string* _rowset_path = nullptr;
+    RowsetMetaSharedPtr _rowset_meta;
+
+    // mutex lock for load/close api because it is costly
+    std::mutex _lock;
+    bool _need_delete_file = false;
+    // variable to indicate how many rowset readers owned this rowset
+    std::atomic<uint64_t> _refs_by_reader;
+    RowsetStateMachine _rowset_state_machine;
     std::vector<SegmentSharedPtr> _segments;
 };
 

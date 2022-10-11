@@ -376,7 +376,7 @@ Status DeltaWriter::commit() {
 
     _cur_rowset->set_schema(&_tablet->tablet_schema());
     if (_tablet->keys_type() == KeysType::PRIMARY_KEYS) {
-        auto st = _storage_engine->update_manager()->on_rowset_finished(_tablet.get(), _cur_rowset.get());
+        auto st = _storage_engine->update_manager()->on_rowset_finished(_tablet.get(), _cur_rowset);
         if (!st.ok()) {
             _set_state(kAborted);
             return st;

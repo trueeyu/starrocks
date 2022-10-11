@@ -25,7 +25,7 @@ public:
     RowsetUpdateState();
     ~RowsetUpdateState();
 
-    Status load(Tablet* tablet, Rowset* rowset);
+    Status load(Tablet* tablet, const std::shared_ptr<Rowset>& rowset);
 
     Status apply(Tablet* tablet, Rowset* rowset, uint32_t rowset_id, EditVersion latest_applied_version,
                  const PrimaryIndex& index);
@@ -47,7 +47,7 @@ public:
     }
 
 private:
-    Status _do_load(Tablet* tablet, Rowset* rowset);
+    Status _do_load(Tablet* tablet, const std::shared_ptr<Rowset>& rowset);
 
     Status _prepare_partial_update_states(Tablet* tablet, Rowset* rowset);
 

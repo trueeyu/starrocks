@@ -20,14 +20,14 @@ const double COMPACTION_SCORE_THRESHOLD = 0.999;
 
 // rowsets here can never overlap
 struct RowsetComparator {
-    bool operator()(const Rowset* left, const Rowset* right) const {
+    bool operator()(const std::shared_ptr<Rowset>& left, const std::shared_ptr<Rowset>& right) const {
         return left->start_version() < right->start_version();
     }
 };
 
 struct CompactionContext {
     // sort rowsets by version
-    std::set<Rowset*, RowsetComparator> rowset_levels[LEVEL_NUMBER];
+    std::set<std::shared_ptr<Rowset>, RowsetComparator> rowset_levels[LEVEL_NUMBER];
     double cumulative_score = 0;
     double base_score = 0;
     TabletSharedPtr tablet;

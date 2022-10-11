@@ -46,7 +46,7 @@ public:
 
     Status set_cached_del_vec(const TabletSegmentId& tsid, const DelVectorPtr& delvec);
 
-    Status on_rowset_finished(Tablet* tablet, Rowset* rowset);
+    Status on_rowset_finished(Tablet* tablet, const std::shared_ptr<Rowset>& rowset);
 
     void on_rowset_cancel(Tablet* tablet, Rowset* rowset);
 

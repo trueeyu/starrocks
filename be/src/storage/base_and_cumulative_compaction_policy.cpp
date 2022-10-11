@@ -66,7 +66,7 @@ void BaseAndCumulativeCompactionPolicy::_pick_cumulative_rowsets(bool* has_delet
             *has_delete_version = true;
             break;
         }
-        rowsets->emplace_back(rowset->shared_from_this());
+        rowsets->emplace_back(rowset);
         *rowsets_compaction_score += rowset->rowset_meta()->get_compaction_score();
         if (*rowsets_compaction_score >= config::max_cumulative_compaction_num_singleton_deltas) {
             VLOG(2) << "cumulative compaction rowsets_compaction_score:" << *rowsets_compaction_score
@@ -142,16 +142,16 @@ void BaseAndCumulativeCompactionPolicy::_pick_base_rowsets(std::vector<RowsetSha
     size_t input_size = 0;
     size_t rowsets_compaction_score = 0;
     // add the base rowset to input_rowsets
-    Rowset* base_rowset = *_compaction_context->rowset_levels[2].begin();
+    auto base_rowset = *_compaction_context->rowset_levels[2].begin();
     if (base_rowset == nullptr) {
         return;
     }
-    rowsets->push_back(base_rowset->shared_from_this());
+    rowsets->push_back(base_rowset);
     rowsets_compaction_score += base_rowset->rowset_meta()->get_compaction_score();
     input_rows_num += base_rowset->num_rows();
     input_size += base_rowset->data_disk_size();
     // add level-1 rowsets
-    for (auto rowset : _compaction_context->rowset_levels[1]) {
+    for (auto& rowset : _compaction_context->rowset_levels[1]) {
         rowsets_compaction_score += rowset->rowset_meta()->get_compaction_score();
         if (rowsets_compaction_score >= config::max_base_compaction_num_singleton_deltas) {
             VLOG(2) << "base compaction rowsets_compaction_score:" << rowsets_compaction_score
@@ -235,7 +235,7 @@ double BaseAndCumulativeCompactionPolicy::_get_base_compaction_score() {
     if (_compaction_context->rowset_levels[2].size() > 0) {
         DCHECK(_compaction_context->rowset_levels[2].size() == 1)
                 << "invalid rowset size. " << _compaction_context->rowset_levels[2].size();
-        Rowset* base_rowset = *_compaction_context->rowset_levels[2].begin();
+        auto& base_rowset = *_compaction_context->rowset_levels[2].begin();
         if (base_rowset->data_disk_size() > 0) {
             double size_ratio = static_cast<double>(level_1_rowsets_size) / base_rowset->data_disk_size();
             if (size_ratio >= config::base_cumulative_delta_ratio) {

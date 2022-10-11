@@ -27,7 +27,7 @@ RowsetUpdateState::~RowsetUpdateState() {
     }
 }
 
-Status RowsetUpdateState::load(Tablet* tablet, Rowset* rowset) {
+Status RowsetUpdateState::load(Tablet* tablet, const std::shared_ptr<Rowset>& rowset) {
     if (UNLIKELY(!_status.ok())) {
         return _status;
     }
@@ -45,7 +45,7 @@ Status RowsetUpdateState::load(Tablet* tablet, Rowset* rowset) {
     return _status;
 }
 
-Status RowsetUpdateState::_do_load(Tablet* tablet, Rowset* rowset) {
+Status RowsetUpdateState::_do_load(Tablet* tablet, const std::shared_ptr<Rowset>& rowset) {
     auto span = Tracer::Instance().start_trace_txn_tablet("rowset_update_state_load", rowset->txn_id(),
                                                           tablet->tablet_id());
     _tablet_id = tablet->tablet_id();
@@ -75,7 +75,7 @@ Status RowsetUpdateState::_do_load(Tablet* tablet, Rowset* rowset) {
         _deletes.emplace_back(std::move(col));
     }
 
-    RowsetReleaseGuard guard(rowset->shared_from_this());
+    RowsetReleaseGuard guard(rowset);
     OlapReaderStatistics stats;
     auto res = rowset->get_segment_iterators2(pkey_schema, nullptr, 0, &stats);
     if (!res.ok()) {
@@ -120,7 +120,7 @@ Status RowsetUpdateState::_do_load(Tablet* tablet, Rowset* rowset) {
     if (!rowset->rowset_meta()->get_meta_pb().has_txn_meta() || rowset->num_segments() == 0) {
         return Status::OK();
     }
-    return _prepare_partial_update_states(tablet, rowset);
+    return _prepare_partial_update_states(tablet, rowset.get());
 }
 
 struct RowidSortEntry {

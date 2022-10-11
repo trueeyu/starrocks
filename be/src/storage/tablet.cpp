@@ -1170,13 +1170,13 @@ std::unique_ptr<CompactionContext> Tablet::_get_compaction_context() {
     for (auto& it : _rs_version_map) {
         if (it.second->start_version() == it.second->end_version()) {
             // level 0, for cumulative compaction
-            compaction_context->rowset_levels[0].insert(it.second.get());
+            compaction_context->rowset_levels[0].insert(it.second);
         } else if (it.second->start_version() != 0) {
             // level 1, for base compaction
-            compaction_context->rowset_levels[1].insert(it.second.get());
+            compaction_context->rowset_levels[1].insert(it.second);
         } else {
             // level 2, base rowset
-            compaction_context->rowset_levels[2].insert(it.second.get());
+            compaction_context->rowset_levels[2].insert(it.second);
         }
     }
     compaction_context->tablet = std::static_pointer_cast<Tablet>(shared_from_this());
@@ -1189,7 +1189,7 @@ std::unique_ptr<CompactionContext> Tablet::_get_compaction_context() {
     for (auto iter = cumulative_candidate_rowsets.begin(); iter != cumulative_candidate_rowsets.end();) {
         if (version_for_delete_predicate((*iter)->version())) {
             // move 'delete' or 'compacted' rowset to level 1
-            Rowset* rowset = *iter;
+            auto& rowset = *iter;
             iter = cumulative_candidate_rowsets.erase(iter);
             base_candidate_rowsets.insert(rowset);
             VLOG(2) << "move delete rowset:" << rowset->version() << " from level 0 to level 1";
@@ -1205,7 +1205,7 @@ std::unique_ptr<CompactionContext> Tablet::_get_compaction_context() {
             if (!version_for_delete_predicate(next_rowset->version())) {
                 break;
             }
-            Rowset* rowset = *iter;
+            auto& rowset = *iter;
             iter = cumulative_candidate_rowsets.erase(iter);
             base_candidate_rowsets.insert(rowset);
             VLOG(2) << "move leading nonoverlapping singleton rowset:" << rowset->version()

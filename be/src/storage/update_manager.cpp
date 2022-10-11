@@ -244,7 +244,7 @@ Status UpdateManager::set_cached_del_vec(const TabletSegmentId& tsid, const DelV
     return Status::OK();
 }
 
-Status UpdateManager::on_rowset_finished(Tablet* tablet, Rowset* rowset) {
+Status UpdateManager::on_rowset_finished(Tablet* tablet, const std::shared_ptr<Rowset>& rowset) {
     if (!rowset->has_data_files() || tablet->tablet_state() == TABLET_NOTREADY) {
         // if rowset is empty or tablet is in schemachange, we can skip preparing updatestates and pre-loading primary index
         return Status::OK();

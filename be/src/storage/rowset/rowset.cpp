@@ -48,10 +48,22 @@
 namespace starrocks {
 
 Rowset::Rowset(const TabletSchema* schema, const std::string* rowset_path, RowsetMetaSharedPtr rowset_meta)
-        : _schema(schema),
-          _rowset_path(rowset_path),
-          _rowset_meta(std::move(rowset_meta)),
-          _refs_by_reader(0) {
+        : _schema(schema), _rowset_path(rowset_path), _rowset_meta(std::move(rowset_meta)), _refs_by_reader(0) {
+    static int64_t g_rowset_size_1 = 0;
+    static int64_t g_rowset_size_2 = 0;
+    static int64_t g_rowset_size_3 = 0;
+    static int64_t g_rowset_count = 0;
+    g_rowset_size_1 += sizeof(Rowset);
+    g_rowset_size_2 += _rowset_meta->get_meta_pb().SpaceUsedLong();
+    g_rowset_size_3 += sizeof(_rowset_meta->get_meta_pb());
+    g_rowset_count++;
+    if (g_rowset_count % 100 == 0) {
+        std::cout << "SIZE:" << g_rowset_size_1 << ":" << g_rowset_size_2 << ":" << g_rowset_size_3 << ":"
+                  << g_rowset_count << std::endl;
+        std::cout << "LXH:" << sizeof(Rowset) << ":" << sizeof(Rowset2) << std::endl;
+        std::cout << "LXH2:" << sizeof(_rowset_meta) << ":" << sizeof(_lock) << ":" << sizeof(_refs_by_reader) << ":"
+                  << sizeof(_rowset_state_machine) << std::endl;
+    }
     MEM_TRACKER_SAFE_CONSUME(ExecEnv::GetInstance()->rowset_metadata_mem_tracker(), _mem_usage());
 }
 
