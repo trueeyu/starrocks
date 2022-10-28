@@ -23,6 +23,7 @@ Status ConjunctivePredicates::evaluate(const Chunk* chunk, uint8_t* selection, u
     DCHECK_LE(to, chunk->num_rows());
     if (!_vec_preds.empty()) {
         const ColumnPredicate* pred = _vec_preds[0];
+        LOG(ERROR) << "LXH_DELETE: " << _vec_preds.size() << ":" << pred->debug_string();
         const Column* col = chunk->get_column_by_id(pred->column_id()).get();
         RETURN_IF_ERROR(pred->evaluate(col, selection, from, to));
         for (size_t i = 1; i < _vec_preds.size(); i++) {
