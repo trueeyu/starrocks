@@ -17,7 +17,7 @@
 #include "util/percentile_value.h"
 #include "util/phmap/phmap.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 NullColumnPtr ColumnHelper::one_size_not_null_column = NullColumn::create(1, 0);
 
@@ -379,4 +379,4 @@ vectorized::ChunkPtr ChunkSlice::cutoff(size_t required_rows) {
     }
     return res;
 }
-} // namespace starrocks::vectorized
+} // namespace starrocks

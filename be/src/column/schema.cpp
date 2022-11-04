@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <utility>
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 #ifdef BE_TEST
 
@@ -224,4 +224,4 @@ void Schema::convert_to(Schema* new_schema, const std::vector<FieldType>& new_ty
     }
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

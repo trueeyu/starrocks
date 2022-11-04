@@ -6,7 +6,7 @@
 #include "util/hash_util.hpp"
 #include "util/mysql_row_buffer.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 void JsonColumn::append_datum(const Datum& datum) {
     append(datum.get<JsonValue*>());
@@ -58,4 +58,4 @@ ColumnPtr JsonColumn::clone_shared() const {
     return BaseClass::clone_shared();
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

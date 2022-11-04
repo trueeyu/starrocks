@@ -13,7 +13,7 @@
 #include "simd/simd.h"
 #include "util/coding.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 Chunk::Chunk() {
     _slot_id_to_index.reserve(4);
@@ -415,4 +415,4 @@ bool Chunk::has_const_column() const {
     return false;
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

@@ -16,8 +16,6 @@
 
 namespace starrocks {
 
-namespace vectorized {
-
 template <bool B, typename T>
 struct cond {
     static constexpr bool value = B;
@@ -393,5 +391,4 @@ struct RunTimeTypeLimits<TYPE_JSON> {
     static value_type max_value() { return JsonValue{vpack::Slice::maxKeySlice()}; }
 };
 
-} // namespace vectorized
 } // namespace starrocks

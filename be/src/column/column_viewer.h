@@ -6,8 +6,6 @@
 #include "column/vectorized_fwd.h"
 
 namespace starrocks {
-namespace vectorized {
-
 /**
  * Wrap a column, support :
  *      1.column type auto conversion.
@@ -56,5 +54,4 @@ private:
     const size_t _null_mask;
 };
 
-} // namespace vectorized
 } // namespace starrocks

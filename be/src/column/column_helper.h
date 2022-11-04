@@ -24,7 +24,7 @@ namespace starrocks {
 struct TypeDescriptor;
 }
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 class ColumnHelper {
 public:
@@ -423,4 +423,4 @@ struct ChunkSlice {
     void reset(vectorized::ChunkUniquePtr input);
 };
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

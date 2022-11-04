@@ -10,8 +10,6 @@
 #include "util/raw_container.h"
 
 namespace starrocks {
-namespace vectorized {
-
 template <PrimitiveType Type>
 class ColumnBuilder {
 public:
@@ -191,5 +189,4 @@ public:
 
 private:
 };
-} // namespace vectorized
 } // namespace starrocks

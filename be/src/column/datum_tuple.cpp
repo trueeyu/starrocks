@@ -4,7 +4,7 @@
 
 #include "column/schema.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 int DatumTuple::compare(const Schema& schema, const DatumTuple& rhs) const {
     CHECK_EQ(_datums.size(), schema.num_fields());
@@ -18,4 +18,4 @@ int DatumTuple::compare(const Schema& schema, const DatumTuple& rhs) const {
     return 0;
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

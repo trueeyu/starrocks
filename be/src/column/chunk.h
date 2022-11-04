@@ -16,8 +16,6 @@
 
 namespace starrocks {
 class ChunkPB;
-namespace vectorized {
-
 class DatumTuple;
 
 class Chunk {
@@ -242,7 +240,9 @@ public:
         return false;
     }
 
-    query_cache::owner_info& owner_info() { return _owner_info; }
+    query_cache::owner_info& owner_info() {
+        return _owner_info;
+    }
 
 private:
     void rebuild_cid_index();
@@ -303,5 +303,4 @@ inline ColumnPtr& Chunk::get_tuple_column_by_id(TupleId tuple_id) {
     return _columns[_tuple_id_to_index[tuple_id]];
 }
 
-} // namespace vectorized
 } // namespace starrocks

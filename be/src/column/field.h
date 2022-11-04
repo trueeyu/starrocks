@@ -12,7 +12,7 @@
 #include "storage/types.h"
 #include "util/c_string.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 class Datum;
 
@@ -225,4 +225,4 @@ inline std::string Field::to_string() const {
     return ss.str();
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

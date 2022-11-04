@@ -10,7 +10,7 @@
 #include "util/percentile_value.h"
 #include "util/phmap/phmap.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 template <typename T>
 size_t ObjectColumn<T>::byte_size(size_t from, size_t size) const {
@@ -301,4 +301,4 @@ template class ObjectColumn<BitmapValue>;
 template class ObjectColumn<PercentileValue>;
 template class ObjectColumn<JsonValue>;
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

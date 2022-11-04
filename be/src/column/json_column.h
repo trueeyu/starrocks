@@ -7,7 +7,7 @@
 #include "column/vectorized_fwd.h"
 #include "util/json.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 // JsonColumn column for JSON type
 // format_version 1: store each JSON in binary encoding individually
@@ -37,4 +37,4 @@ public:
 private:
 };
 
-} // namespace starrocks::vectorized
+} // namespace starrocks

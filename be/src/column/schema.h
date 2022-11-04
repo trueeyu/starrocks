@@ -9,7 +9,7 @@
 #include "column/vectorized_fwd.h"
 #include "gen_cpp/olap_file.pb.h"
 
-namespace starrocks::vectorized {
+namespace starrocks {
 
 // TODO: move constructor and move assignment
 class Schema {
@@ -38,13 +38,21 @@ public:
     // we must make sure another shema is read only!!!
     Schema& operator=(const Schema& other);
 
-    size_t num_fields() const { return _fields.size(); }
+    size_t num_fields() const {
+        return _fields.size();
+    }
 
-    size_t num_key_fields() const { return _num_keys; }
+    size_t num_key_fields() const {
+        return _num_keys;
+    }
 
-    const std::vector<ColumnId> sort_key_idxes() const { return _sort_key_idxes; }
+    const std::vector<ColumnId> sort_key_idxes() const {
+        return _sort_key_idxes;
+    }
 
-    void reserve(size_t size) { _fields.reserve(size); }
+    void reserve(size_t size) {
+        _fields.reserve(size);
+    }
 
     void append(const FieldPtr& field);
     void insert(size_t idx, const FieldPtr& field);
@@ -59,7 +67,9 @@ public:
     }
 
     const FieldPtr& field(size_t idx) const;
-    const Fields& fields() const { return _fields; }
+    const Fields& fields() const {
+        return _fields;
+    }
 
     std::vector<std::string> field_names() const;
 
@@ -70,7 +80,9 @@ public:
 
     void convert_to(Schema* new_schema, const std::vector<FieldType>& new_types) const;
 
-    KeysType keys_type() const { return static_cast<KeysType>(_keys_type); }
+    KeysType keys_type() const {
+        return static_cast<KeysType>(_keys_type);
+    }
 
 private:
     void _build_index_map(const Fields& fields);
@@ -112,4 +124,4 @@ inline std::ostream& operator<<(std::ostream& os, const Schema& schema) {
     return os;
 }
 
-} // namespace starrocks::vectorized
+} // namespace starrocks
