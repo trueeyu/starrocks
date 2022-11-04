@@ -45,8 +45,6 @@ public:
     explicit Field(const TabletColumn& column)
             : _name(column.name()),
               _type_info(get_type_info(column)),
-              _key_coder(get_key_coder(column.type())),
-              _index_size(column.index_length()),
               _length(column.length()),
               _is_nullable(column.is_nullable()) {
         DCHECK(column.type() != OLAP_FIELD_TYPE_DECIMAL32 && column.type() != OLAP_FIELD_TYPE_DECIMAL64 &&
@@ -56,8 +54,6 @@ public:
     Field(const TabletColumn& column, std::shared_ptr<TypeInfo>&& type_info)
             : _name(column.name()),
               _type_info(type_info),
-              _key_coder(get_key_coder(column.type())),
-              _index_size(column.index_length()),
               _length(column.length()),
               _is_nullable(column.is_nullable()) {}
 
@@ -73,8 +69,6 @@ public:
 
     size_t size() const { return _type_info->size(); }
     int32_t length() const { return _length; }
-    size_t field_size() const { return size() + 1; }
-    size_t index_size() const { return _index_size; }
     const std::string& name() const { return _name; }
 
     virtual void set_to_max(char* buf) const { return _type_info->set_to_max(buf); }
@@ -83,16 +77,6 @@ public:
     // This function allocate memory from pool, other than allocate_memory
     // reserve memory from continuous memory.
     virtual char* allocate_value(MemPool* pool) const { return (char*)pool->allocate(_type_info->size()); }
-
-    virtual char* allocate_memory(char* cell_ptr, char* variable_ptr) const { return variable_ptr; }
-
-    virtual size_t get_variable_len() const { return 0; }
-
-    virtual Field* clone() const {
-        std::unique_ptr<Field> local = std::make_unique<Field>();
-        this->clone(local.get());
-        return local.release();
-    }
 
     // Test if these two cell is equal with each other
     template <typename LhsCellType, typename RhsCellType>
@@ -116,79 +100,6 @@ public:
     //      1 means left bigger than right
     int compare(const void* left, const void* right) const { return _type_info->cmp(left, right); }
 
-    // Compare two types of cell.
-    // This function differs compare in that this function compare cell which
-    // will consider the condition which cell may be NULL. While compare only
-    // compare column content without considering NULL condition.
-    // Only compare column content, without considering NULL condition.
-    // RETURNS:
-    //      0 means equal,
-    //      -1 means left less than rigth,
-    //      1 means left bigger than right
-    template <typename LhsCellType, typename RhsCellType>
-    int compare_cell(const LhsCellType& lhs, const RhsCellType& rhs) const {
-        bool l_null = lhs.is_null();
-        bool r_null = rhs.is_null();
-        if (l_null != r_null) {
-            return l_null ? -1 : 1;
-        }
-        return l_null ? 0 : _type_info->cmp(lhs.cell_ptr(), rhs.cell_ptr());
-    }
-
-    // Copy source cell's content to destination cell directly.
-    // For string type, this function assume that destination has
-    // enough space and copy source content into destination without
-    // memory allocation.
-    template <typename DstCellType, typename SrcCellType>
-    void direct_copy(DstCellType* dst, const SrcCellType& src, MemPool* pool = nullptr) const {
-        bool is_null = src.is_null();
-        dst->set_is_null(is_null);
-        if (is_null) {
-            return;
-        }
-        return _type_info->direct_copy(dst->mutable_cell_ptr(), src.cell_ptr(), pool);
-    }
-
-    // deep copy source cell' content to destination cell.
-    // For string type, this will allocate data form pool,
-    // and copy srouce's conetent.
-    template <typename DstCellType, typename SrcCellType>
-    void copy_object(DstCellType* dst, const SrcCellType& src, MemPool* pool) const {
-        bool is_null = src.is_null();
-        dst->set_is_null(is_null);
-        if (is_null) {
-            return;
-        }
-        _type_info->copy_object(dst->mutable_cell_ptr(), src.cell_ptr(), pool);
-    }
-
-    // deep copy source cell' content to destination cell.
-    // For string type, this will allocate data form pool,
-    // and copy srouce's conetent.
-    template <typename DstCellType, typename SrcCellType>
-    void deep_copy(DstCellType* dst, const SrcCellType& src, MemPool* pool) const {
-        bool is_null = src.is_null();
-        dst->set_is_null(is_null);
-        if (is_null) {
-            return;
-        }
-        _type_info->deep_copy(dst->mutable_cell_ptr(), src.cell_ptr(), pool);
-    }
-
-    // deep copy field content from `src` to `dst` without null-byte
-    void deep_copy_content(char* dst, const char* src, MemPool* mem_pool) const {
-        _type_info->deep_copy(dst, src, mem_pool);
-    }
-
-    // shallow copy field content from `src` to `dst` without null-byte.
-    // for string like type, shallow copy only copies Slice, not the actual data pointed by slice.
-    void shallow_copy_content(char* dst, const char* src) const { _type_info->shallow_copy(dst, src); }
-
-    //convert and copy field from src to desc
-    Status convert_from(char* dest, const char* src, const TypeInfoPtr& src_type, MemPool* mem_pool) const {
-        return _type_info->convert_from(dest, src, src_type, mem_pool);
-    }
-
     // used by init scan key stored in string format
     // value_string should end with '\0'
     Status from_string(char* buf, const std::string& value_string) const {
@@ -209,27 +120,9 @@ public:
         return ss.str();
     }
 
-    template <typename CellType>
-    uint32_t hash_code(const CellType& cell, uint32_t seed) const;
-
     FieldType type() const { return _type_info->type(); }
     const TypeInfoPtr& type_info() const { return _type_info; }
     bool is_nullable() const { return _is_nullable; }
-
-    // similar to `full_encode_ascending`, but only encode part (the first `index_size` bytes) of the value.
-    // only applicable to string type
-    void encode_ascending(const void* value, std::string* buf) const {
-        _key_coder->encode_ascending(value, _index_size, buf);
-    }
-
-    // encode the provided `value` into `buf`.
-    void full_encode_ascending(const void* value, std::string* buf) const {
-        _key_coder->full_encode_ascending(value, buf);
-    }
-
-    Status decode_ascending(Slice* encoded_key, uint8_t* cell_ptr, MemPool* pool) const {
-        return _key_coder->decode_ascending(encoded_key, _index_size, cell_ptr, pool);
-    }
 
     std::string to_zone_map_string(const char* value) const {
         switch (type()) {
@@ -246,22 +139,9 @@ public:
 
     Field* get_sub_field(int i) { return _sub_fields[i].get(); }
 
-    Status convert_to(FieldType type, std::unique_ptr<Field>* output) const {
-        std::unique_ptr<Field> new_field(clone());
-        new_field->_type_info = get_type_info(type);
-        new_field->_key_coder = get_key_coder(type);
-
-        // TODO(zc): we only support fixed length type now.
-        new_field->_index_size = static_cast<uint16_t>(new_field->_type_info->size());
-
-        *output = std::move(new_field);
-        return Status::OK();
-    }
-
     virtual std::string debug_string() const {
         std::stringstream ss;
-        ss << "(type=" << _type_info->type() << ",index_size=" << _index_size << ",is_nullable=" << _is_nullable
-           << ",length=" << _length << ")";
+        ss << "(type=" << _type_info->type() << ", is_nullable=" << _is_nullable << ",length=" << _length << ")";
         return ss.str();
     }
 
@@ -276,57 +156,17 @@ protected:
         return type_value;
     }
 
-    void clone(Field* other) const {
-        other->_type_info = this->_type_info;
-        other->_key_coder = this->_key_coder;
-        other->_name = this->_name;
-        other->_index_size = this->_index_size;
-        other->_is_nullable = this->_is_nullable;
-        other->_sub_fields.clear();
-        for (const auto& f : _sub_fields) {
-            Field* item = f->clone();
-            other->add_sub_field(std::unique_ptr<Field>(item));
-        }
-    }
-
     std::string _name;
     TypeInfoPtr _type_info;
-    const KeyCoder* _key_coder;
-    uint16_t _index_size;
     uint32_t _length;
     bool _is_nullable;
     std::vector<std::unique_ptr<Field>> _sub_fields;
 };
 
-template <typename CellType>
-uint32_t Field::hash_code(const CellType& cell, uint32_t seed) const {
-    bool is_null = cell.is_null();
-    if (is_null) {
-        return HashUtil::hash(&is_null, sizeof(is_null), seed);
-    }
-    return _type_info->hash_code(cell.cell_ptr(), seed);
-}
-
 class CharField : public Field {
 public:
     explicit CharField() {}
     explicit CharField(const TabletColumn& column) : Field(column) {}
-
-    size_t get_variable_len() const override { return _length; }
-
-    char* allocate_memory(char* cell_ptr, char* variable_ptr) const override {
-        auto slice = (Slice*)cell_ptr;
-        slice->data = variable_ptr;
-        slice->size = _length;
-        variable_ptr += slice->size;
-        return variable_ptr;
-    }
-
-    CharField* clone() const override {
-        std::unique_ptr<CharField> local = std::make_unique<CharField>();
-        Field::clone(local.get());
-        return local.release();
-    }
 
     char* allocate_value(MemPool* pool) const override { return Field::allocate_string_value(pool); }
 
@@ -342,23 +182,6 @@ public:
     explicit VarcharField() {}
     explicit VarcharField(const TabletColumn& column) : Field(column) {}
 
-    size_t get_variable_len() const override { return _length - OLAP_STRING_MAX_BYTES; }
-
-    // minus OLAP_STRING_MAX_BYTES here just for being compatible with old storage format
-    char* allocate_memory(char* cell_ptr, char* variable_ptr) const override {
-        auto slice = (Slice*)cell_ptr;
-        slice->data = variable_ptr;
-        slice->size = _length - OLAP_STRING_MAX_BYTES;
-        variable_ptr += slice->size;
-        return variable_ptr;
-    }
-
-    VarcharField* clone() const override {
-        std::unique_ptr<VarcharField> local = std::make_unique<VarcharField>();
-        Field::clone(local.get());
-        return local.release();
-    }
-
     char* allocate_value(MemPool* pool) const override { return Field::allocate_string_value(pool); }
 
     void set_to_max(char* ch) const override {
@@ -372,54 +195,18 @@ class BitmapAggField : public Field {
 public:
     explicit BitmapAggField() {}
     explicit BitmapAggField(const TabletColumn& column) : Field(column) {}
-
-    char* allocate_memory(char* cell_ptr, char* variable_ptr) const override {
-        auto slice = (Slice*)cell_ptr;
-        slice->data = nullptr;
-        return variable_ptr;
-    }
-
-    BitmapAggField* clone() const override {
-        std::unique_ptr<BitmapAggField> local = std::make_unique<BitmapAggField>();
-        Field::clone(local.get());
-        return local.release();
-    }
 };
 
 class HllAggField : public Field {
 public:
     explicit HllAggField() {}
     explicit HllAggField(const TabletColumn& column) : Field(column) {}
-
-    char* allocate_memory(char* cell_ptr, char* variable_ptr) const override {
-        auto slice = (Slice*)cell_ptr;
-        slice->data = nullptr;
-        return variable_ptr;
-    }
-
-    HllAggField* clone() const override {
-        std::unique_ptr<HllAggField> local = std::make_unique<HllAggField>();
-        Field::clone(local.get());
-        return local.release();
-    }
 };
 
 class PercentileAggField : public Field {
 public:
     PercentileAggField() {}
     explicit PercentileAggField(const TabletColumn& column) : Field(column) {}
-
-    char* allocate_memory(char* cell_ptr, char* variable_ptr) const override {
-        auto slice = (Slice*)cell_ptr;
-        slice->data = nullptr;
-        return variable_ptr;
-    }
-
-    PercentileAggField* clone() const override {
-        std::unique_ptr<PercentileAggField> local = std::make_unique<PercentileAggField>();
-        Field::clone(local.get());
-        return local.release();
-    }
 };
 
 class FieldFactory {
