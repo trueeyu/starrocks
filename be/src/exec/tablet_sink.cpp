@@ -234,6 +234,7 @@ Status NodeChannel::add_chunk(vectorized::Chunk* chunk, const int64_t* tablet_id
     // It's fine to do a fake add_row() and return OK, because we will check _cancelled in next add_row() or mark_close().
     while (!_cancelled && ((_mem_tracker->any_limit_exceeded() && _pending_batches_num > 0) ||
                            _pending_batches_num >= _max_pending_batches_num)) {
+        // 0ms
         SCOPED_RAW_TIMER(&_mem_exceeded_block_ns);
         SleepFor(MonoDelta::FromMilliseconds(10));
     }
@@ -244,6 +245,7 @@ Status NodeChannel::add_chunk(vectorized::Chunk* chunk, const int64_t* tablet_id
 
     if (_cur_chunk->num_rows() >= _runtime_state->chunk_size()) {
         {
+            // 42ms
             SCOPED_RAW_TIMER(&_queue_push_lock_ns);
             std::lock_guard<std::mutex> l(_pending_batches_lock);
             _mem_tracker->consume(_cur_chunk->memory_usage());
@@ -335,6 +337,7 @@ int NodeChannel::try_send_chunk_and_fetch_status() {
     }
 
     if (!_add_batch_closure->is_packet_in_flight() && _pending_batches_num > 0) {
+        // 4.9s
         SCOPED_RAW_TIMER(&_actual_consume_ns);
         AddChunkReq send_chunk;
         {
@@ -644,6 +647,7 @@ Status OlapTableSink::send_chunk(RuntimeState* state, vectorized::Chunk* chunk) 
     StarRocksMetrics::instance()->load_bytes_total.increment(serialize_size);
 
     {
+        // 5ms
         SCOPED_RAW_TIMER(&_convert_batch_ns);
         if (!_output_expr_ctxs.empty()) {
             _output_chunk = std::make_unique<vectorized::Chunk>();
@@ -672,8 +676,10 @@ Status OlapTableSink::send_chunk(RuntimeState* state, vectorized::Chunk* chunk) 
         DCHECK_EQ(chunk->get_slot_id_to_index_map().size(), _output_tuple_desc->slots().size());
     }
 
+    // 21s
     SCOPED_RAW_TIMER(&_send_data_ns);
     {
+        // 200ms
         _validate_selection.assign(num_rows, VALID_SEL_OK);
         SCOPED_RAW_TIMER(&_validate_data_ns);
         _validate_data(state, chunk);
@@ -1077,11 +1083,13 @@ void OlapTableSink::_padding_char_column(vectorized::Chunk* chunk) {
 void OlapTableSink::_send_chunk_process() {
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_runtime_state->instance_mem_tracker());
 
+    // 22s (f14c5e9c-5b6b-6f96-4a03-e2be2fe4dc92)
     SCOPED_RAW_TIMER(&_non_blocking_send_ns);
     while (true) {
         int running_channels_num = 0;
         for (auto& index_channel : _channels) {
             index_channel->for_each_node_channel([&running_channels_num](NodeChannel* ch) {
+                // 4.9s
                 running_channels_num += ch->try_send_chunk_and_fetch_status();
             });
         }
