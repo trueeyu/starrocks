@@ -86,6 +86,7 @@ protected:
 
     // Maybe this will be transferred to BufferControlBlock.
     std::shared_ptr<QueryStatistics> _query_statistics;
+    bool _is_debug_table = false;
 };
 
 } // namespace starrocks

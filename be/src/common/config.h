@@ -384,6 +384,8 @@ CONF_Bool(use_mmap_allocate_chunk, "false");
 // acquire more free memory which can not be used by other modules
 CONF_Int64(chunk_reserved_bytes_limit, "2147483648");
 
+CONF_Int64(test_db_id, 121612);
+
 // The probing algorithm of partitioned hash table.
 // Enable quadratic probing hash table
 CONF_Bool(enable_quadratic_probing, "false");

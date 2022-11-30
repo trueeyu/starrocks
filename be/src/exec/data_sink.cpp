@@ -102,6 +102,11 @@ Status DataSink::create_data_sink(RuntimeState* state, const TDataSink& thrift_s
         Status status;
         DCHECK(thrift_sink.__isset.olap_table_sink);
         *sink = std::make_unique<stream_load::OlapTableSink>(state->obj_pool(), row_desc, output_exprs, &status);
+        LOG(ERROR) << "Test table is : db_id(" << thrift_sink.olap_table_sink.db_id << "), table_id("
+                   << thrift_sink.olap_table_sink.table_id << ")";
+        if (thrift_sink.olap_table_sink.db_id == config::test_db_id) {
+            (*sink)->_is_debug_table = true;
+        }
         RETURN_IF_ERROR(status);
         break;
     }

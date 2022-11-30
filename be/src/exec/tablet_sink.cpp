@@ -222,6 +222,9 @@ Status NodeChannel::open_wait() {
 
 Status NodeChannel::add_chunk(vectorized::Chunk* chunk, const int64_t* tablet_ids, const uint32_t* indexes,
                               uint32_t from, uint32_t size) {
+    // TODO: lxh
+    return Status::OK();
+
     // If add_row() when _eos_is_produced==true, there must be sth wrong, we can only mark this channel as failed.
     if (_cancelled | _eos_is_produced) {
         return _err_st;
@@ -778,6 +781,9 @@ Status OlapTableSink::_send_chunk_by_node(vectorized::Chunk* chunk, IndexChannel
 
 Status OlapTableSink::close(RuntimeState* state, Status close_status) {
     Status status = close_status;
+    if (_is_debug_table) {
+        status = Status::InternalError("lxh close failed");
+    }
     if (status.ok()) {
         // only if status is ok can we call this _profile->total_time_counter().
         // if status is not ok, this sink may not be prepared, so that _profile is null
