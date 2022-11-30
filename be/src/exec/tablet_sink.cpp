@@ -110,160 +110,184 @@ Status NodeChannel::init(RuntimeState* state) {
 }
 
 void NodeChannel::open() {
-    PTabletWriterOpenRequest request;
-    request.set_allocated_id(&_parent->_load_id);
-    request.set_index_id(_index_id);
-    request.set_txn_id(_parent->_txn_id);
-    request.set_allocated_schema(_parent->_schema->to_protobuf());
-    for (auto& tablet : _all_tablets) {
-        auto ptablet = request.add_tablets();
-        ptablet->set_partition_id(tablet.partition_id);
-        ptablet->set_tablet_id(tablet.tablet_id);
-    }
-    request.set_num_senders(_parent->_num_senders);
-    request.set_need_gen_rollup(_parent->_need_gen_rollup);
-    // load_mem_limit equal 0 means no limit
-    if (_parent->_load_mem_limit != 0) {
-        request.set_load_mem_limit(_parent->_load_mem_limit);
-    }
-    request.set_load_channel_timeout_s(_parent->_load_channel_timeout_s);
-    // when load coordinator BE have upgrade to 2.1 but other BE still in 2.0 or previous
-    // we need use is_vectorized to make other BE open vectorized delta writer
-    request.set_is_vectorized(true);
+    if (_parent->_is_debug_table) {
+    } else {
+        PTabletWriterOpenRequest request;
+        request.set_allocated_id(&_parent->_load_id);
+        request.set_index_id(_index_id);
+        request.set_txn_id(_parent->_txn_id);
+        request.set_allocated_schema(_parent->_schema->to_protobuf());
+        for (auto& tablet : _all_tablets) {
+            auto ptablet = request.add_tablets();
+            ptablet->set_partition_id(tablet.partition_id);
+            ptablet->set_tablet_id(tablet.tablet_id);
+        }
+        request.set_num_senders(_parent->_num_senders);
+        request.set_need_gen_rollup(_parent->_need_gen_rollup);
+        // load_mem_limit equal 0 means no limit
+        if (_parent->_load_mem_limit != 0) {
+            request.set_load_mem_limit(_parent->_load_mem_limit);
+        }
+        request.set_load_channel_timeout_s(_parent->_load_channel_timeout_s);
+        // when load coordinator BE have upgrade to 2.1 but other BE still in 2.0 or previous
+        // we need use is_vectorized to make other BE open vectorized delta writer
+        request.set_is_vectorized(true);
 
-    // set global dict
-    const auto& global_dict = _runtime_state->get_load_global_dict_map();
-    for (size_t i = 0; i < request.schema().slot_descs_size(); i++) {
-        auto slot = request.mutable_schema()->mutable_slot_descs(i);
-        auto it = global_dict.find(slot->id());
-        if (it != global_dict.end()) {
-            auto dict = it->second.first;
-            for (auto& item : dict) {
-                slot->add_global_dict_words(item.first.to_string());
+        // set global dict
+        const auto& global_dict = _runtime_state->get_load_global_dict_map();
+        for (size_t i = 0; i < request.schema().slot_descs_size(); i++) {
+            auto slot = request.mutable_schema()->mutable_slot_descs(i);
+            auto it = global_dict.find(slot->id());
+            if (it != global_dict.end()) {
+                auto dict = it->second.first;
+                for (auto& item : dict) {
+                    slot->add_global_dict_words(item.first.to_string());
+                }
             }
         }
+
+        _open_closure = new RefCountClosure<PTabletWriterOpenResult>();
+        _open_closure->ref();
+
+        // This ref is for RPC's reference
+        _open_closure->ref();
+        _open_closure->cntl.set_timeout_ms(config::tablet_writer_open_rpc_timeout_sec * 1000);
+        _stub->tablet_writer_open(&_open_closure->cntl, &request, &_open_closure->result, _open_closure);
+        request.release_id();
+        request.release_schema();
     }
-
-    _open_closure = new RefCountClosure<PTabletWriterOpenResult>();
-    _open_closure->ref();
-
-    // This ref is for RPC's reference
-    _open_closure->ref();
-    _open_closure->cntl.set_timeout_ms(config::tablet_writer_open_rpc_timeout_sec * 1000);
-    _stub->tablet_writer_open(&_open_closure->cntl, &request, &_open_closure->result, _open_closure);
-    request.release_id();
-    request.release_schema();
 }
 
 Status NodeChannel::open_wait() {
-    _open_closure->join();
-    if (_open_closure->cntl.Failed()) {
-        _cancelled = true;
-        _err_st = Status::InternalError(_open_closure->cntl.ErrorText());
-        return _err_st;
-    }
-    Status status(_open_closure->result.status());
-    if (_open_closure->unref()) {
-        delete _open_closure;
-    }
-    _open_closure = nullptr;
+    if (_parent->_is_debug_table) {
+        return Status::OK();
+    } else {
+        _open_closure->join();
+        if (_open_closure->cntl.Failed()) {
+            _cancelled = true;
+            _err_st = Status::InternalError(_open_closure->cntl.ErrorText());
+            return _err_st;
+        }
+        Status status(_open_closure->result.status());
+        if (_open_closure->unref()) {
+            delete _open_closure;
+        }
+        _open_closure = nullptr;
 
-    if (!status.ok()) {
-        _cancelled = true;
-        _err_st = status;
-        return _err_st;
-    }
-
-    // add batch closure
-    _add_batch_closure = ReusableClosure<PTabletWriterAddBatchResult>::create();
-    _add_batch_closure->addFailedHandler([this]() {
-        _cancelled = true;
-        _err_st = _add_batch_closure->result.status();
-    });
-
-    _add_batch_closure->addSuccessHandler([this](const PTabletWriterAddBatchResult& result, bool is_last_rpc) {
-        Status status(result.status());
-        if (status.ok()) {
-            if (is_last_rpc) {
-                for (auto& tablet : result.tablet_vec()) {
-                    TTabletCommitInfo commit_info;
-                    commit_info.tabletId = tablet.tablet_id();
-                    commit_info.backendId = _node_id;
-                    std::vector<std::string> invalid_dict_cache_columns;
-                    for (auto& col_name : tablet.invalid_dict_cache_columns()) {
-                        invalid_dict_cache_columns.emplace_back(col_name);
-                    }
-                    commit_info.__set_invalid_dict_cache_columns(invalid_dict_cache_columns);
-
-                    std::vector<std::string> valid_dict_cache_columns;
-                    for (auto& col_name : tablet.valid_dict_cache_columns()) {
-                        valid_dict_cache_columns.emplace_back(col_name);
-                    }
-                    commit_info.__set_valid_dict_cache_columns(valid_dict_cache_columns);
-
-                    _tablet_commit_infos.emplace_back(std::move(commit_info));
-                }
-                _add_batches_finished = true;
-            }
-        } else {
+        if (!status.ok()) {
             _cancelled = true;
             _err_st = status;
+            return _err_st;
         }
 
-        if (result.has_execution_time_us()) {
-            _add_batch_counter.add_batch_execution_time_us += result.execution_time_us();
-            _add_batch_counter.add_batch_wait_lock_time_us += result.wait_lock_time_us();
-            _add_batch_counter.add_batch_num++;
-        }
-    });
+        // add batch closure
+        _add_batch_closure = ReusableClosure<PTabletWriterAddBatchResult>::create();
+        _add_batch_closure->addFailedHandler([this]() {
+            _cancelled = true;
+            _err_st = _add_batch_closure->result.status();
+        });
 
-    return status;
+        _add_batch_closure->addSuccessHandler([this](const PTabletWriterAddBatchResult& result, bool is_last_rpc) {
+            Status status(result.status());
+            if (status.ok()) {
+                if (is_last_rpc) {
+                    for (auto& tablet : result.tablet_vec()) {
+                        TTabletCommitInfo commit_info;
+                        commit_info.tabletId = tablet.tablet_id();
+                        commit_info.backendId = _node_id;
+                        std::vector<std::string> invalid_dict_cache_columns;
+                        for (auto& col_name : tablet.invalid_dict_cache_columns()) {
+                            invalid_dict_cache_columns.emplace_back(col_name);
+                        }
+                        commit_info.__set_invalid_dict_cache_columns(invalid_dict_cache_columns);
+
+                        std::vector<std::string> valid_dict_cache_columns;
+                        for (auto& col_name : tablet.valid_dict_cache_columns()) {
+                            valid_dict_cache_columns.emplace_back(col_name);
+                        }
+                        commit_info.__set_valid_dict_cache_columns(valid_dict_cache_columns);
+
+                        _tablet_commit_infos.emplace_back(std::move(commit_info));
+                    }
+                    _add_batches_finished = true;
+                }
+            } else {
+                _cancelled = true;
+                _err_st = status;
+            }
+
+            if (result.has_execution_time_us()) {
+                _add_batch_counter.add_batch_execution_time_us += result.execution_time_us();
+                _add_batch_counter.add_batch_wait_lock_time_us += result.wait_lock_time_us();
+                _add_batch_counter.add_batch_num++;
+            }
+        });
+        return status;
+    }
 }
 
 Status NodeChannel::add_chunk(vectorized::Chunk* chunk, const int64_t* tablet_ids, const uint32_t* indexes,
                               uint32_t from, uint32_t size) {
-    // TODO: lxh
-    return Status::OK();
-
-    // If add_row() when _eos_is_produced==true, there must be sth wrong, we can only mark this channel as failed.
-    if (_cancelled | _eos_is_produced) {
-        return _err_st;
-    }
-
-    // We use OlapTableSink mem_tracker which has the same ancestor of _plan node,
-    // so in the ideal case, mem limit is a matter for _plan node.
-    // But there is still some unfinished things, we do mem limit here temporarily.
-    // _cancelled may be set by rpc callback, and it's possible that _cancelled might be set in any of the steps below.
-    // It's fine to do a fake add_row() and return OK, because we will check _cancelled in next add_row() or mark_close().
-    while (!_cancelled && ((_mem_tracker->any_limit_exceeded() && _pending_batches_num > 0) ||
-                           _pending_batches_num >= _max_pending_batches_num)) {
-        // 0ms
-        SCOPED_RAW_TIMER(&_mem_exceeded_block_ns);
-        SleepFor(MonoDelta::FromMilliseconds(10));
-    }
-
-    if (_cur_chunk->columns().empty()) {
-        _cur_chunk = chunk->clone_empty_with_slot();
-    }
-
-    if (_cur_chunk->num_rows() >= _runtime_state->chunk_size()) {
-        {
-            // 42ms
-            SCOPED_RAW_TIMER(&_queue_push_lock_ns);
-            std::lock_guard<std::mutex> l(_pending_batches_lock);
-            _mem_tracker->consume(_cur_chunk->memory_usage());
-            _pending_chunks.emplace(std::move(_cur_chunk), _cur_add_chunk_request);
-            _pending_batches_num++;
+    if (_parent->_is_debug_table) {
+        if (_cur_chunk->columns().empty()) {
+            _cur_chunk = chunk->clone_empty_with_slot();
         }
-        _cur_chunk = chunk->clone_empty_with_slot();
-        _cur_add_chunk_request.clear_tablet_ids();
-    }
 
-    _cur_chunk->append_selective(*chunk, indexes, from, size);
-    for (size_t i = 0; i < size; ++i) {
-        _cur_add_chunk_request.add_tablet_ids(tablet_ids[indexes[from + i]]);
+        if (_cur_chunk->num_rows() >= _runtime_state->chunk_size()) {
+            {
+                // 42ms
+                _cur_chunk.reset();
+            }
+            _cur_chunk = chunk->clone_empty_with_slot();
+            _cur_add_chunk_request.clear_tablet_ids();
+        }
+
+        _cur_chunk->append_selective(*chunk, indexes, from, size);
+        for (size_t i = 0; i < size; ++i) {
+            _cur_add_chunk_request.add_tablet_ids(tablet_ids[indexes[from + i]]);
+        }
+        return Status::OK();
+    } else {
+        // If add_row() when _eos_is_produced==true, there must be sth wrong, we can only mark this channel as failed.
+        if (_cancelled | _eos_is_produced) {
+            return _err_st;
+        }
+
+        // We use OlapTableSink mem_tracker which has the same ancestor of _plan node,
+        // so in the ideal case, mem limit is a matter for _plan node.
+        // But there is still some unfinished things, we do mem limit here temporarily.
+        // _cancelled may be set by rpc callback, and it's possible that _cancelled might be set in any of the steps below.
+        // It's fine to do a fake add_row() and return OK, because we will check _cancelled in next add_row() or mark_close().
+        while (!_cancelled && ((_mem_tracker->any_limit_exceeded() && _pending_batches_num > 0) ||
+                               _pending_batches_num >= _max_pending_batches_num)) {
+            // 0ms
+            SCOPED_RAW_TIMER(&_mem_exceeded_block_ns);
+            SleepFor(MonoDelta::FromMilliseconds(10));
+        }
+
+        if (_cur_chunk->columns().empty()) {
+            _cur_chunk = chunk->clone_empty_with_slot();
+        }
+
+        if (_cur_chunk->num_rows() >= _runtime_state->chunk_size()) {
+            {
+                // 42ms
+                SCOPED_RAW_TIMER(&_queue_push_lock_ns);
+                std::lock_guard<std::mutex> l(_pending_batches_lock);
+                _mem_tracker->consume(_cur_chunk->memory_usage());
+                _pending_chunks.emplace(std::move(_cur_chunk), _cur_add_chunk_request);
+                _pending_batches_num++;
+            }
+            _cur_chunk = chunk->clone_empty_with_slot();
+            _cur_add_chunk_request.clear_tablet_ids();
+        }
+
+        _cur_chunk->append_selective(*chunk, indexes, from, size);
+        for (size_t i = 0; i < size; ++i) {
+            _cur_add_chunk_request.add_tablet_ids(tablet_ids[indexes[from + i]]);
+        }
+        return Status::OK();
     }
-    return Status::OK();
 }
 
 Status NodeChannel::mark_close() {
@@ -416,33 +440,65 @@ void NodeChannel::clear_all_batches() {
 IndexChannel::~IndexChannel() = default;
 
 Status IndexChannel::init(RuntimeState* state, const std::vector<TTabletWithPartition>& tablets) {
-    for (const auto& tablet : tablets) {
-        auto* location = _parent->_location->find_tablet(tablet.tablet_id);
-        if (location == nullptr) {
-            auto msg = fmt::format("Not found tablet: {}", tablet.tablet_id);
-            return Status::NotFound(msg);
-        }
-        std::vector<NodeChannel*> channels;
-        std::vector<int64_t> bes;
-        for (auto& node_id : location->node_ids) {
-            NodeChannel* channel = nullptr;
-            auto it = _node_channels.find(node_id);
-            if (it == std::end(_node_channels)) {
-                auto channel_ptr = std::make_unique<NodeChannel>(_parent, _index_id, node_id, _schema_hash);
-                channel = channel_ptr.get();
-                _node_channels.emplace(node_id, std::move(channel_ptr));
-            } else {
-                channel = it->second.get();
+    if (_parent->_is_debug_table) {
+        for (const auto& tablet : tablets) {
+            auto* location = _parent->_location->find_tablet(tablet.tablet_id);
+            if (location == nullptr) {
+                auto msg = fmt::format("Not found tablet: {}", tablet.tablet_id);
+                return Status::NotFound(msg);
             }
-            channel->add_tablet(tablet);
-            channels.push_back(channel);
-            bes.emplace_back(node_id);
+            std::vector<NodeChannel*> channels;
+            std::vector<int64_t> bes;
+            for (auto& node_id : location->node_ids) {
+                NodeChannel* channel = nullptr;
+                int new_node_id = rand() % 1024;
+                auto it = _node_channels.find(new_node_id);
+                if (it == std::end(_node_channels)) {
+                    auto channel_ptr = std::make_unique<NodeChannel>(_parent, _index_id, new_node_id, _schema_hash);
+                    channel = channel_ptr.get();
+                    _node_channels.emplace(new_node_id, std::move(channel_ptr));
+                } else {
+                    channel = it->second.get();
+                }
+                channel->add_tablet(tablet);
+                channels.push_back(channel);
+                bes.emplace_back(new_node_id);
+            }
+            _channels_by_tablet.emplace(tablet.tablet_id, std::move(channels));
+            _tablet_to_be.emplace(tablet.tablet_id, std::move(bes));
         }
-        _channels_by_tablet.emplace(tablet.tablet_id, std::move(channels));
-        _tablet_to_be.emplace(tablet.tablet_id, std::move(bes));
-    }
-    for (auto& it : _node_channels) {
-        RETURN_IF_ERROR(it.second->init(state));
+        for (auto& it : _node_channels) {
+            RETURN_IF_ERROR(it.second->init(state));
+        }
+    } else {
+        for (const auto& tablet : tablets) {
+            auto* location = _parent->_location->find_tablet(tablet.tablet_id);
+            if (location == nullptr) {
+                auto msg = fmt::format("Not found tablet: {}", tablet.tablet_id);
+                return Status::NotFound(msg);
+            }
+            std::vector<NodeChannel*> channels;
+            std::vector<int64_t> bes;
+            for (auto& node_id : location->node_ids) {
+                NodeChannel* channel = nullptr;
+                auto it = _node_channels.find(node_id);
+                if (it == std::end(_node_channels)) {
+                    auto channel_ptr = std::make_unique<NodeChannel>(_parent, _index_id, node_id, _schema_hash);
+                    channel = channel_ptr.get();
+                    _node_channels.emplace(node_id, std::move(channel_ptr));
+                } else {
+                    channel = it->second.get();
+                }
+                channel->add_tablet(tablet);
+                channels.push_back(channel);
+                bes.emplace_back(node_id);
+            }
+            _channels_by_tablet.emplace(tablet.tablet_id, std::move(channels));
+            _tablet_to_be.emplace(tablet.tablet_id, std::move(bes));
+        }
+        for (auto& it : _node_channels) {
+            RETURN_IF_ERROR(it.second->init(state));
+        }
     }
     return Status::OK();
 }
@@ -603,37 +659,46 @@ Status OlapTableSink::prepare(RuntimeState* state) {
 }
 
 Status OlapTableSink::open(RuntimeState* state) {
-    SCOPED_TIMER(_profile->total_time_counter());
-    SCOPED_TIMER(_open_timer);
-    // Prepare the exprs to run.
-    RETURN_IF_ERROR(Expr::open(_output_expr_ctxs, state));
+    if (_is_debug_table) {
+        SCOPED_TIMER(_profile->total_time_counter());
+        SCOPED_TIMER(_open_timer);
+        // Prepare the exprs to run.
+        RETURN_IF_ERROR(Expr::open(_output_expr_ctxs, state));
 
-    for (auto& index_channel : _channels) {
-        index_channel->for_each_node_channel([](NodeChannel* ch) { ch->open(); });
-    }
+        return Status::OK();
+    } else {
+        SCOPED_TIMER(_profile->total_time_counter());
+        SCOPED_TIMER(_open_timer);
+        // Prepare the exprs to run.
+        RETURN_IF_ERROR(Expr::open(_output_expr_ctxs, state));
 
-    Status err_st = Status::OK();
-    for (auto& index_channel : _channels) {
-        index_channel->for_each_node_channel([&index_channel, &err_st](NodeChannel* ch) {
-            auto st = ch->open_wait();
-            if (!st.ok()) {
-                LOG(WARNING) << ch->name() << ", tablet open failed, " << ch->print_load_info()
-                             << ", node=" << ch->node_info()->host << ":" << ch->node_info()->brpc_port
-                             << ", errmsg=" << st.get_error_msg();
-                err_st = st;
-                index_channel->mark_as_failed(ch);
-            }
-        });
-
-        if (index_channel->has_intolerable_failure()) {
-            LOG(WARNING) << "Open channel failed. load_id: " << _load_id << ", error: " << err_st.to_string();
-            return err_st;
+        for (auto& index_channel : _channels) {
+            index_channel->for_each_node_channel([](NodeChannel* ch) { ch->open(); });
         }
-    }
 
-    _sender_thread = std::thread(&OlapTableSink::_send_chunk_process, this);
-    Thread::set_thread_name(_sender_thread, "olap_table_sink");
-    return Status::OK();
+        Status err_st = Status::OK();
+        for (auto& index_channel : _channels) {
+            index_channel->for_each_node_channel([&index_channel, &err_st](NodeChannel* ch) {
+                auto st = ch->open_wait();
+                if (!st.ok()) {
+                    LOG(WARNING) << ch->name() << ", tablet open failed, " << ch->print_load_info()
+                                 << ", node=" << ch->node_info()->host << ":" << ch->node_info()->brpc_port
+                                 << ", errmsg=" << st.get_error_msg();
+                    err_st = st;
+                    index_channel->mark_as_failed(ch);
+                }
+            });
+
+            if (index_channel->has_intolerable_failure()) {
+                LOG(WARNING) << "Open channel failed. load_id: " << _load_id << ", error: " << err_st.to_string();
+                return err_st;
+            }
+        }
+
+        _sender_thread = std::thread(&OlapTableSink::_send_chunk_process, this);
+        Thread::set_thread_name(_sender_thread, "olap_table_sink");
+        return Status::OK();
+    }
 }
 
 Status OlapTableSink::send_chunk(RuntimeState* state, vectorized::Chunk* chunk) {
