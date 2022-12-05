@@ -1,13 +1,9 @@
 // This file is licensed under the Elastic License 2.0. Copyright 2021-present, StarRocks Inc.
 
 #include <benchmark/benchmark.h>
-#include <gperftools/heap-profiler.h>
-#include <gperftools/profiler.h>
-#include <gtest/gtest.h>
 #include <testutil/assert.h>
 
 #include <memory>
-#include <random>
 
 #include "column/chunk.h"
 #include "column/column_helper.h"
@@ -24,19 +20,23 @@ public:
     void SetUp() {}
     void TearDown() {}
 
+    IegPerf(int type) : _type(type) {}
+
     void init_types();
     void init_src_chunks();
     void init_dest_chunks();
     ChunkPtr init_dest_chunk();
     ColumnPtr init_src_column(const TypeDescriptor& type);
+    ColumnPtr init_dest_column(const TypeDescriptor& type);
     void do_hash(const ColumnPtr& col);
     void do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
     void do_bench(benchmark::State& state);
 
 private:
-    int _column_count = 100;
+    int _type = 0;
+    int _column_count = 400;
     int _chunk_count = 400;
-    int _node_count = 100;
+    int _node_count = 140;
     int _chunk_size = 4096;
     std::vector<TypeDescriptor> _types;
     std::vector<ChunkPtr> _src_chunks;
@@ -47,18 +47,47 @@ private:
 
 void IegPerf::init_types() {
     _types.resize(_column_count);
-    for (int i = 0; i < _column_count; i++) {
-        _types[i] = TypeDescriptor(TYPE_INT);
+    if (_type == 0) {
+        for (int i = 0; i < _column_count; i++) {
+            _types[i] = TypeDescriptor(TYPE_INT);
+        }
+    } else {
+        for (int i = 0; i < _column_count; i++) {
+            _types[i] = TypeDescriptor::create_varchar_type(1024);
+        }
     }
 }
 
 ColumnPtr IegPerf::init_src_column(const TypeDescriptor& type) {
+    if (type.is_string_type()) {
+        auto c1 = ColumnHelper::create_column(type, true);
+        c1->reserve(_chunk_size);
+        auto* nullable_col = down_cast<NullableColumn*>(c1.get());
+        auto* int_col = down_cast<BinaryColumn*>(nullable_col->data_column().get());
+        for (int k = 0; k < _chunk_size; k++) {
+            int_col->append_string("str123456789123456789" + std::to_string(rand()));
+        }
+        return c1;
+    } else {
+        auto c1 = ColumnHelper::create_column(type, true);
+        c1->resize(_chunk_size);
+        auto* nullable_col = down_cast<NullableColumn*>(c1.get());
+        auto* int_col = down_cast<Int32Column*>(nullable_col->data_column().get());
+        for (int k = 0; k < _chunk_size; k++) {
+            int_col->get_data()[k] = rand();
+        }
+        return c1;
+    }
+}
+
+ColumnPtr IegPerf::init_dest_column(const TypeDescriptor& type) {
     auto c1 = ColumnHelper::create_column(type, true);
-    c1->resize(_chunk_size);
-    auto* nullable_col = down_cast<NullableColumn*>(c1.get());
-    auto* int_col = down_cast<Int32Column*>(nullable_col->data_column().get());
-    for (int k = 0; k < _chunk_size; k++) {
-        int_col->get_data()[k] = rand();
+    if (c1->is_binary()) {
+        auto* nullable_column = down_cast<NullableColumn*>(c1.get());
+        auto* binary_column = down_cast<BinaryColumn*>(nullable_column->data_column().get());
+        binary_column->reserve(_chunk_size);
+    } else {
+        c1->reserve(_chunk_size);
     }
     return c1;
 }
@@ -86,7 +115,7 @@ void IegPerf::init_dest_chunks() {
 ChunkPtr IegPerf::init_dest_chunk() {
     auto chunk = std::make_unique<Chunk>();
     for (int i = 0; i < _column_count; i++) {
-        auto col = init_src_column(_types[i]);
+        auto col = init_dest_column(_types[i]);
         chunk->append_column(col, i);
     }
     return chunk;
@@ -97,7 +126,7 @@ void IegPerf::do_hash(const ColumnPtr& col) {
 
     col->crc32_hash(&_shuffle_idxs[0], 0, _chunk_size);
     for (int i = 0; i < _chunk_size; i++) {
-        _shuffle_idxs[i] = _shuffle_idxs[i] % 100;
+        _shuffle_idxs[i] = _shuffle_idxs[i] % _node_count;
     }
 }
 
@@ -111,9 +140,6 @@ void IegPerf::do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx) 
 }
 
 void IegPerf::do_bench(benchmark::State& state) {
-    IegPerf suite;
-    suite.SetUp();
-
     init_types();
     init_src_chunks();
     init_dest_chunks();
@@ -134,23 +160,20 @@ void IegPerf::do_bench(benchmark::State& state) {
         }
     }
     state.PauseTiming();
-
-    suite.TearDown();
 }
 
 static void bench_func(benchmark::State& state) {
-    IegPerf perf;
+    auto arg1 = state.range(0);
+
+    IegPerf perf(arg1);
     perf.do_bench(state);
 }
 
 static void process_args(benchmark::internal::Benchmark* b) {
-    // num_chunks
-    for (int i = 0; i <= 1; i++) {
-        b->Args({i, i});
-    }
+    b->Args({0, 0});
+    b->Args({1, 1});
 }
 
-// Full sort
 BENCHMARK(bench_func)->Apply(process_args);
 
 } // namespace starrocks::vectorized
