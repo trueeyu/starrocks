@@ -65,7 +65,7 @@ ColumnPtr IegPerf::init_src_column(const TypeDescriptor& type) {
         auto* nullable_col = down_cast<NullableColumn*>(c1.get());
         auto* int_col = down_cast<BinaryColumn*>(nullable_col->data_column().get());
         for (int k = 0; k < _chunk_size; k++) {
-            int_col->append_string("str123456789123456789" + std::to_string(rand()));
+            int_col->append_string("str123" + std::to_string(rand()));
         }
         return c1;
     } else {
@@ -83,9 +83,10 @@ ColumnPtr IegPerf::init_src_column(const TypeDescriptor& type) {
 ColumnPtr IegPerf::init_dest_column(const TypeDescriptor& type) {
     auto c1 = ColumnHelper::create_column(type, true);
     if (c1->is_binary()) {
-        auto* nullable_column = down_cast<NullableColumn*>(c1.get());
-        auto* binary_column = down_cast<BinaryColumn*>(nullable_column->data_column().get());
-        binary_column->reserve(_chunk_size);
+        //auto* nullable_column = down_cast<NullableColumn*>(c1.get());
+        //auto* binary_column = down_cast<BinaryColumn*>(nullable_column->data_column().get());
+        c1->reserve(_chunk_size);
+        //binary_column->reserve(_chunk_size, 30 * 4096);
     } else {
         c1->reserve(_chunk_size);
     }
