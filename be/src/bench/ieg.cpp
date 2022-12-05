@@ -21,20 +21,16 @@ namespace starrocks::vectorized {
 
 class IegPerf {
 public:
-    void SetUp() {
-        config::vector_chunk_size = 4096;
-
-        init_types();
-    }
-
+    void SetUp() {}
     void TearDown() {}
 
     void init_types();
     void init_src_chunks();
+    void init_dest_chunks();
+    ChunkPtr init_dest_chunk();
     ColumnPtr init_src_column(const TypeDescriptor& type);
-    void do_hash(const Int32Column& col, std::vector<uint32_t>* idxs);
-    void do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, std::vector<uint32_t>& idxs,
-                           std::vector<uint32_t>& node_idxs, int idx);
+    void do_hash(const ColumnPtr& col);
+    void do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
     void do_bench(benchmark::State& state);
 
 private:
@@ -44,6 +40,9 @@ private:
     int _chunk_size = 4096;
     std::vector<TypeDescriptor> _types;
     std::vector<ChunkPtr> _src_chunks;
+    std::vector<ChunkPtr> _dest_chunks;
+    std::vector<uint32_t> _shuffle_idxs;
+    std::vector<uint32_t> _select_idxs;
 };
 
 void IegPerf::init_types() {
@@ -61,6 +60,7 @@ ColumnPtr IegPerf::init_src_column(const TypeDescriptor& type) {
     for (int k = 0; k < _chunk_size; k++) {
         int_col->get_data()[k] = rand();
     }
+    return c1;
 }
 
 void IegPerf::init_src_chunks() {
@@ -70,77 +70,66 @@ void IegPerf::init_src_chunks() {
 
     for (int i = 0; i < _chunk_count; i++) {
         for (int j = 0; j < _column_count; j++) {
-            auto col = init_src_column(_types[i]);
+            auto col = init_src_column(_types[j]);
             _src_chunks[i]->append_column(col, j);
         }
     }
 }
 
-void IegPerf::do_hash(const Int32Column& col, std::vector<uint32_t>* idxs) {
-    col.crc32_hash(&(*idxs)[0], 0, _chunk_size);
-    for (int i = 0; i < _chunk_size; i++) {
-        (*idxs)[i] = (*idxs)[i] % 100;
+void IegPerf::init_dest_chunks() {
+    _dest_chunks.resize(_node_count);
+    for (int i = 0; i < _node_count; i++) {
+        _dest_chunks[i] = nullptr;
     }
 }
 
-void IegPerf::do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, std::vector<uint32_t>& idxs,
-                         std::vector<uint32_t>& node_idxs, int be_idx) {
-    for (int i = 0; i < idxs.size(); i++) {
-        if (idxs[i] == be_idx) {
-            node_idxs.emplace_back(i);
+ChunkPtr IegPerf::init_dest_chunk() {
+    auto chunk = std::make_unique<Chunk>();
+    for (int i = 0; i < _column_count; i++) {
+        auto col = init_src_column(_types[i]);
+        chunk->append_column(col, i);
+    }
+    return chunk;
+}
+
+void IegPerf::do_hash(const ColumnPtr& col) {
+    _shuffle_idxs.resize(_chunk_size);
+
+    col->crc32_hash(&_shuffle_idxs[0], 0, _chunk_size);
+    for (int i = 0; i < _chunk_size; i++) {
+        _shuffle_idxs[i] = _shuffle_idxs[i] % 100;
+    }
+}
+
+void IegPerf::do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx) {
+    for (int i = 0; i < _shuffle_idxs.size(); i++) {
+        if (_shuffle_idxs[i] == be_idx) {
+            _select_idxs.emplace_back(i);
         }
     }
-    dest_chunk.append_selective(src_chunk, node_idxs.data(), 0, node_idxs.size());
+    dest_chunk.append_selective(src_chunk, _select_idxs.data(), 0, _select_idxs.size());
 }
 
 void IegPerf::do_bench(benchmark::State& state) {
     IegPerf suite;
     suite.SetUp();
 
+    init_types();
     init_src_chunks();
-
-    std::vector<ChunkPtr> chunks;
-    for (int i = 0; i < _chunk_count; i++) {
-        chunks.emplace_back(std::make_unique<Chunk>());
-    }
-
-    for (int i = 0; i < _chunk_count; i++) {
-        for (int j = 0; j < _column_count; j++) {
-            auto c1 = ColumnHelper::create_column(_types[j], true);
-            c1->resize(config::vector_chunk_size);
-            auto* nullable_col = down_cast<NullableColumn*>(c1.get());
-            auto* int_col = down_cast<Int32Column*>(nullable_col->data_column().get());
-            for (int k = 0; k < config::vector_chunk_size; k++) {
-                int_col->get_data()[k] = rand();
-            }
-            chunks[i]->append_column(c1, j);
-        }
-    }
+    init_dest_chunks();
 
     state.ResumeTiming();
-    std::vector<ChunkPtr> dest_chunk;
-    dest_chunk.resize(_node_count);
 
-    for (int i = 0; i < _node_count; i++) {
-        dest_chunk[i] = nullptr;
-    }
-
-    std::vector<uint32_t> idxs;
-    idxs.resize(config::vector_chunk_size);
-    std::vector<uint32_t> select_idxs;
-    select_idxs.reserve(config::vector_chunk_size);
     for (int i = 0; i < _chunk_count; i++) {
-        auto* nullable_col = down_cast<NullableColumn*>(chunks[i]->columns()[i].get());
-        auto* int_col = down_cast<Int32Column*>(nullable_col->data_column().get());
-        do_hash(*int_col, &idxs);
-        select_idxs.resize(0);
+        do_hash(_src_chunks[i]->columns()[0]);
         for (int j = 0; j < _node_count; j++) {
-            if (dest_chunk[j] == nullptr) {
-                dest_chunk[j] = std::make_unique<Chunk>();
+            _select_idxs.resize(0);
+            if (_dest_chunks[j] == nullptr) {
+                _dest_chunks[j] = init_dest_chunk();
             }
-            do_shuffle(*chunks[i], *dest_chunk[j], idxs, select_idxs, j);
-            if (dest_chunk[j]->num_rows() >= config::vector_chunk_size) {
-                dest_chunk[j].reset();
+            do_shuffle(*_src_chunks[i], *_dest_chunks[j], j);
+            if (_dest_chunks[j]->num_rows() >= _chunk_size) {
+                _dest_chunks[j].reset();
             }
         }
     }
