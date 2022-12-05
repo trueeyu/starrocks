@@ -146,6 +146,8 @@ void IegPerf::do_bench(benchmark::State& state) {
     init_dest_chunks();
 
     state.ResumeTiming();
+    std::time_t t1 = std::time(0);
+    std::cout<<"T1:"<<t1<<std::endl;
 
     for (int i = 0; i < _chunk_count; i++) {
         do_hash(_src_chunks[i]->columns()[0]);
@@ -160,6 +162,8 @@ void IegPerf::do_bench(benchmark::State& state) {
             }
         }
     }
+    std::time_t t2 = std::time(0);
+    std::cout<<"T2:"<<t2<<std::endl;
     state.PauseTiming();
 }
 
