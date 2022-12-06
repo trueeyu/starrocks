@@ -30,6 +30,7 @@ public:
     ColumnPtr init_dest_column(const TypeDescriptor& type);
     void do_hash(const ColumnPtr& col);
     void do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
+    void do_shuffle2(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
     void do_bench(benchmark::State& state);
 
 private:
@@ -43,6 +44,7 @@ private:
     std::vector<ChunkPtr> _dest_chunks;
     std::vector<uint32_t> _shuffle_idxs;
     std::vector<uint32_t> _select_idxs;
+    std::vector<uint8_t> _select_idxs2;
 };
 
 void IegPerf::init_types() {
@@ -140,13 +142,25 @@ void IegPerf::do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx) 
     dest_chunk.append_selective(src_chunk, _select_idxs.data(), 0, _select_idxs.size());
 }
 
+void IegPerf::do_shuffle2(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx) {
+    _select_idxs2.resize(_chunk_size);
+    for (int i = 0; i < _shuffle_idxs.size(); i++) {
+        if (_shuffle_idxs[i] == be_idx) {
+            _select_idxs2[i] = 1;
+        } else {
+            _select_idxs2[i] = 0;
+        }
+    }
+    dest_chunk.append_selective(src_chunk, _select_idxs2);
+}
+
 void IegPerf::do_bench(benchmark::State& state) {
     init_types();
     init_src_chunks();
     init_dest_chunks();
 
     state.ResumeTiming();
-    std::time_t t1 = std::time(0);
+    std::time_t t1 = std::time(nullptr);
     std::cout<<"T1:"<<t1<<std::endl;
 
     for (int i = 0; i < _chunk_count; i++) {
@@ -157,12 +171,13 @@ void IegPerf::do_bench(benchmark::State& state) {
                 _dest_chunks[j] = init_dest_chunk();
             }
             do_shuffle(*_src_chunks[i], *_dest_chunks[j], j);
+            //do_shuffle2(*_src_chunks[i], *_dest_chunks[j], j);
             if (_dest_chunks[j]->num_rows() >= _chunk_size) {
                 _dest_chunks[j].reset();
             }
         }
     }
-    std::time_t t2 = std::time(0);
+    std::time_t t2 = std::time(nullptr);
     std::cout<<"T2:"<<t2<<std::endl;
     state.PauseTiming();
 }

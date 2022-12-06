@@ -240,6 +240,12 @@ void Chunk::append_selective(const Chunk& src, const uint32_t* indexes, uint32_t
     }
 }
 
+void Chunk::append_selective(const Chunk& src, const std::vector<uint8_t>& idxs) {
+    for (size_t i = 0; i < _columns.size(); i++) {
+        _columns[i]->append_selective(*src.columns()[i].get(), idxs);
+    }
+}
+
 void Chunk::rolling_append_selective(Chunk& src, const uint32_t* indexes, uint32_t from, uint32_t size) {
     size_t num_columns = _columns.size();
     DCHECK_EQ(num_columns, src.columns().size());

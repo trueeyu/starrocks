@@ -11,6 +11,7 @@
 #include "gutil/bits.h"
 #include "gutil/casts.h"
 #include "gutil/strings/fastmem.h"
+#include "simd/simd.h"
 #include "util/hash_util.hpp"
 #include "util/mysql_row_buffer.h"
 #include "util/raw_container.h"
@@ -43,6 +44,41 @@ void BinaryColumnBase<T>::append(const Column& src, size_t offset, size_t count)
     for (size_t i = offset; i < offset + count; i++) {
         size_t l = b._offsets[i + 1] - b._offsets[i];
         _offsets.emplace_back(_offsets.back() + l);
+    }
+    _slices_cache = false;
+}
+
+template <typename T>
+void BinaryColumnBase<T>::append_selective(const Column& src, const std::vector<uint8_t>& idxs) {
+    const auto& src_column = down_cast<const BinaryColumnBase<T>&>(src);
+    const auto& src_offsets = src_column.get_offset();
+    const auto& src_bytes = src_column.get_bytes();
+
+    size_t cur_row_count = _offsets.size() - 1;
+    size_t cur_byte_size = _bytes.size();
+
+    size_t size = SIMD::count_nonzero(idxs);
+    _offsets.resize(cur_row_count + size + 1);
+    int tmp_idx = 0;
+    for (size_t i = 0; i < idxs.size(); i++) {
+        if (idxs[i] == 1) {
+            T str_size = src_offsets[i + 1] - src_offsets[i];
+            _offsets[cur_row_count + tmp_idx + 1] = _offsets[cur_row_count + tmp_idx] + str_size;
+            cur_byte_size += str_size;
+            tmp_idx++;
+        }
+    }
+    _bytes.resize(cur_byte_size);
+
+    auto* dest_bytes = _bytes.data();
+    tmp_idx = 0;
+    for (size_t i = 0; i < idxs.size(); i++) {
+        if (idxs[i] == 1) {
+            T str_size = src_offsets[i + 1] - src_offsets[i];
+            strings::memcpy_inlined(dest_bytes + _offsets[cur_row_count + tmp_idx], src_bytes.data() + src_offsets[i],
+                                    str_size);
+            tmp_idx++;
+        }
     }
     _slices_cache = false;
 }

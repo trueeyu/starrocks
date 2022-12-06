@@ -41,6 +41,21 @@ void FixedLengthColumnBase<T>::append_selective(const Column& src, const uint32_
 }
 
 template <typename T>
+void FixedLengthColumnBase<T>::append_selective(const Column& src, const std::vector<uint8_t>& idxs) {
+    const T* src_data = reinterpret_cast<const T*>(src.raw_data());
+    size_t size = SIMD::count_nonzero(idxs);
+    size_t orig_size = _data.size();
+    _data.resize(orig_size + size);
+    int tmp_idx = 0;
+    for (size_t i = 0; i < idxs.size(); i++) {
+        if (idxs[i] == 1) {
+            _data[orig_size + tmp_idx] = src_data[i];
+            tmp_idx++;
+        }
+    }
+}
+
+template <typename T>
 void FixedLengthColumnBase<T>::append_value_multiple_times(const Column& src, uint32_t index, uint32_t size) {
     const T* src_data = reinterpret_cast<const T*>(src.raw_data());
     size_t orig_size = _data.size();

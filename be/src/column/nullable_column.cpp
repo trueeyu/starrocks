@@ -94,6 +94,21 @@ void NullableColumn::append_selective(const Column& src, const uint32_t* indexes
     DCHECK_EQ(_null_column->size(), _data_column->size());
 }
 
+void NullableColumn::append_selective(const Column& src, const std::vector<uint8_t>& idxs) {
+    uint32_t orig_size = _null_column->size();
+    size_t tmp_size = SIMD::count_nonzero(idxs);
+
+    if (src.is_nullable()) {
+        const auto& src_column = down_cast<const NullableColumn&>(src);
+        _null_column->append_selective(*src_column._null_column, idxs);
+        _data_column->append_selective(*src_column._data_column, idxs);
+        _has_null = _has_null || SIMD::contain_nonzero(_null_column->get_data(), orig_size, tmp_size);
+    } else {
+        _null_column->resize(orig_size + tmp_size);
+        _data_column->append_selective(src, idxs);
+    }
+}
+
 void NullableColumn::append_value_multiple_times(const Column& src, uint32_t index, uint32_t size) {
     DCHECK_EQ(_null_column->size(), _data_column->size());
     uint32_t orig_size = _null_column->size();
