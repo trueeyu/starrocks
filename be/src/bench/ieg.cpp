@@ -32,6 +32,8 @@ public:
     void do_shuffle(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
     void do_shuffle2(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx);
     void do_bench(benchmark::State& state);
+    void bench_thread1();
+    void bench_thread2();
 
 private:
     int _type = 0;
@@ -154,18 +156,10 @@ void IegPerf::do_shuffle2(const Chunk& src_chunk, Chunk& dest_chunk, int be_idx)
     dest_chunk.append_selective(src_chunk, _select_idxs2);
 }
 
-void IegPerf::do_bench(benchmark::State& state) {
-    init_types();
-    init_src_chunks();
-    init_dest_chunks();
-
-    state.ResumeTiming();
-    std::time_t t1 = std::time(nullptr);
-    std::cout<<"T1:"<<t1<<std::endl;
-
+void IegPerf::bench_thread1() {
     for (int i = 0; i < _chunk_count; i++) {
         do_hash(_src_chunks[i]->columns()[0]);
-        for (int j = 0; j < _node_count; j++) {
+        for (int j = 0; j < 70; j++) {
             _select_idxs.resize(0);
             if (_dest_chunks[j] == nullptr) {
                 _dest_chunks[j] = init_dest_chunk();
@@ -177,6 +171,40 @@ void IegPerf::do_bench(benchmark::State& state) {
             }
         }
     }
+}
+
+void IegPerf::bench_thread2() {
+    for (int i = 0; i < _chunk_count; i++) {
+        do_hash(_src_chunks[i]->columns()[0]);
+        for (int j = 70; j < 140; j++) {
+            _select_idxs.resize(0);
+            if (_dest_chunks[j] == nullptr) {
+                _dest_chunks[j] = init_dest_chunk();
+            }
+            do_shuffle(*_src_chunks[i], *_dest_chunks[j], j);
+            //do_shuffle2(*_src_chunks[i], *_dest_chunks[j], j);
+            if (_dest_chunks[j]->num_rows() >= _chunk_size) {
+                _dest_chunks[j].reset();
+            }
+        }
+    }
+}
+
+void IegPerf::do_bench(benchmark::State& state) {
+    init_types();
+    init_src_chunks();
+    init_dest_chunks();
+
+    state.ResumeTiming();
+    std::time_t t1 = std::time(nullptr);
+    std::cout<<"T1:"<<t1<<std::endl;
+
+    auto _sender_thread1 = std::thread(&IegPerf::bench_thread1, this);
+    auto _sender_thread2 = std::thread(&IegPerf::bench_thread2, this);
+
+    _sender_thread1.join();
+    _sender_thread2.join();
+
     std::time_t t2 = std::time(nullptr);
     std::cout<<"T2:"<<t2<<std::endl;
     state.PauseTiming();
