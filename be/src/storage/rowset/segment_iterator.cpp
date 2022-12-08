@@ -1484,6 +1484,7 @@ Status SegmentIterator::_encode_to_global_id(ScanContext* ctx) {
 }
 
 Status SegmentIterator::_init_bitmap_index_iterators() {
+    SCOPED_RAW_TIMER(&_opts.stats->bitmap_index_load_timer);
     DCHECK_EQ(_predicate_columns, _opts.predicates.size());
     _bitmap_index_iterators.resize(ChunkHelper::max_column_id(_schema) + 1, nullptr);
     for (const auto& pair : _opts.predicates) {

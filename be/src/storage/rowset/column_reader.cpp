@@ -251,8 +251,13 @@ Status ColumnReader::_parse_zone_map(const ZoneMapPB& zm, vectorized::ZoneMapDet
 
 // prerequisite: at least one predicate in |predicates| support bloom filter.
 Status ColumnReader::bloom_filter(const std::vector<const vectorized::ColumnPredicate*>& predicates,
-                                  vectorized::SparseRange* row_ranges) {
-    RETURN_IF_ERROR(_load_bloom_filter_index());
+                                  vectorized::SparseRange* row_ranges, OlapReaderStatistics* stats) {
+    {
+        SCOPED_RAW_TIMER(&stats->bf_load_timer);
+        RETURN_IF_ERROR(_load_bloom_filter_index());
+    }
+
+    SCOPED_RAW_TIMER(&stats->bf_filter_timer);
     vectorized::SparseRange bf_row_ranges;
     std::unique_ptr<BloomFilterIndexIterator> bf_iter;
     RETURN_IF_ERROR(_bloom_filter_index->new_iterator(&bf_iter));

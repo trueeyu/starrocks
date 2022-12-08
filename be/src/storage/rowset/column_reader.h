@@ -151,7 +151,7 @@ public:
 
     // prerequisite: at least one predicate in |predicates| support bloom filter.
     Status bloom_filter(const std::vector<const ::starrocks::vectorized::ColumnPredicate*>& p,
-                        vectorized::SparseRange* ranges);
+                        vectorized::SparseRange* ranges, OlapReaderStatistics* stats);
 
     Status load_ordinal_index();
 

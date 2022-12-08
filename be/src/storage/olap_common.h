@@ -297,7 +297,6 @@ struct OlapReaderStatistics {
     int64_t segment_stats_filtered = 0;
     int64_t rows_key_range_filtered = 0;
     int64_t rows_stats_filtered = 0;
-    int64_t rows_bf_filtered = 0;
     int64_t rows_del_filtered = 0;
     int64_t del_filter_ns = 0;
 
@@ -306,8 +305,13 @@ struct OlapReaderStatistics {
     int64_t total_pages_num = 0;
     int64_t cached_pages_num = 0;
 
-    int64_t rows_bitmap_index_filtered = 0;
+    int64_t bitmap_index_load_timer = 0;
     int64_t bitmap_index_filter_timer = 0;
+    int64_t rows_bitmap_index_filtered = 0;
+
+    int64_t bf_load_timer = 0;
+    int64_t bf_filter_timer = 0;
+    int64_t rows_bf_filtered = 0;
 
     int64_t rows_del_vec_filtered = 0;
 

@@ -318,7 +318,7 @@ Status ScalarColumnIterator::get_row_ranges_by_bloom_filter(
         support = support | pred->support_bloom_filter();
     }
     RETURN_IF(!support, Status::OK());
-    RETURN_IF_ERROR(_reader->bloom_filter(predicates, row_ranges));
+    RETURN_IF_ERROR(_reader->bloom_filter(predicates, row_ranges, _opts.stats));
     return Status::OK();
 }
 
