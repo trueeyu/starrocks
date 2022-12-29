@@ -200,6 +200,7 @@ void ReplicateChannel::cancel() {
 
     closure->ref();
     closure->cntl.set_timeout_ms(_opt->timeout_ms);
+    LOG(ERROR) << "SEND CANCEL: "<<_opt->tablet_id;
     _stub->tablet_writer_cancel(&closure->cntl, &request, &closure->result, closure);
     request.release_id();
 

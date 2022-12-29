@@ -515,7 +515,9 @@ void DeltaWriter::abort(bool with_log) {
         _flush_token->shutdown();
     }
     if (_replicate_token != nullptr) {
+        LOG(ERROR) << "CANCEL START:"<<tablet()->tablet_id();
         _replicate_token->cancel();
+        LOG(ERROR) << "CANCEL END:"<<tablet()->tablet_id();
     }
     VLOG(1) << "Aborted delta writer. tablet_id: " << _tablet->tablet_id();
 }

@@ -76,6 +76,7 @@ Status SegmentFlushToken::submit(brpc::Controller* cntl, const PTabletWriterAddS
             tablet_info->set_node_id(writer->node_id());
         }
         st.to_protobuf(response->mutable_status());
+        sleep(10);
         done->Run();
     });
     if (submit_st.ok()) {
