@@ -65,10 +65,13 @@ CHECK_CXX_SOURCE_COMPILES("
     #ifdef __clang__
       #pragma clang diagnostic push
       #pragma clang diagnostic ignored \"-Wdeprecated\"
+      #pragma clang diagnostic ignored \"-Wc99-extensions\"
+      #pragma clang diagnostic ignored \"-Wunused-function\"
       #pragma clang diagnostic pop
    #elif defined(__GNUC__)
       #pragma GCC diagnostic push
       #pragma GCC diagnostic ignored \"-Wdeprecated\"
+      #pragma GCC diagnostic ignored \"-Wc99-extensions\"
       #pragma GCC diagnostic pop
    #elif defined(_MSC_VER)
       #pragma warning( push )

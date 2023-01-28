@@ -298,7 +298,7 @@ if [ ${BUILD_BE} -eq 1 ] ; then
                     -Dabsl_DIR=${STARLET_INSTALL_DIR}/third_party/lib/cmake/absl \
                     -DgRPC_DIR=${STARLET_INSTALL_DIR}/third_party/lib/cmake/grpc \
                     -Dprometheus-cpp_DIR=${STARLET_INSTALL_DIR}/third_party/lib/cmake/prometheus-cpp \
-                    -Dstarlet_DIR=${STARLET_INSTALL_DIR}/starlet_install/lib64/cmake ..
+                    -Dstarlet_DIR=${STARLET_INSTALL_DIR}/starlet_install/lib64/cmake -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=/home/disk2/lxh/abcd ..
     else
       ${CMAKE_CMD} -G "${CMAKE_GENERATOR}" \
                     -DSTARROCKS_THIRDPARTY=${STARROCKS_THIRDPARTY} \
@@ -311,7 +311,7 @@ if [ ${BUILD_BE} -eq 1 ] ; then
                     -DUSE_JEMALLOC=$USE_JEMALLOC \
                     -DWITH_BENCH=${WITH_BENCH} \
                     -DWITH_BLOCK_CACHE=${WITH_BLOCK_CACHE} \
-                    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON  ..
+                    -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_INCLUDE_WHAT_YOU_USE=include-what-you-use  ..
     fi
     time ${BUILD_SYSTEM} -j${PARALLEL}
     ${BUILD_SYSTEM} install

@@ -79,11 +79,11 @@ Slice ShortKeyIndexDecoderGroup::key(ssize_t ordinal) const {
 template <bool lower_bound>
 ShortKeyIndexGroupIterator ShortKeyIndexDecoderGroup::_seek(const Slice& key) const {
     auto comparator = [](const Slice& lhs, const Slice& rhs) { return lhs.compare(rhs) < 0; };
-    if constexpr (lower_bound) {
+    //if constexpr (lower_bound) {
         return std::lower_bound(begin(), end(), key, comparator);
-    } else {
-        return std::upper_bound(begin(), end(), key, comparator);
-    }
+    //} else {
+    //    return std::upper_bound(begin(), end(), key, comparator);
+    //}
 }
 
 void ShortKeyIndexDecoderGroup::_find_position(ssize_t ordinal, ssize_t* decoder_id,

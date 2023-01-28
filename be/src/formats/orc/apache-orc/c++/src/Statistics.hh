@@ -844,20 +844,6 @@ public:
 
     void update(int64_t value, int repetitions) {
         _stats.updateMinMax(value);
-
-        if (_stats.hasSum()) {
-            if (repetitions > 1) {
-                _stats.setHasSum(multiplyExact(value, repetitions, &value));
-            }
-
-            if (_stats.hasSum()) {
-                _stats.setHasSum(addExact(_stats.getSum(), value, &value));
-
-                if (_stats.hasSum()) {
-                    _stats.setSum(value);
-                }
-            }
-        }
     }
 
     void merge(const MutableColumnStatistics& other) override {
@@ -867,13 +853,6 @@ public:
 
         // update sum and check overflow
         _stats.setHasSum(_stats.hasSum() && intStats.hasSum());
-        if (_stats.hasSum()) {
-            int64_t value;
-            _stats.setHasSum(addExact(_stats.getSum(), intStats.getSum(), &value));
-            if (_stats.hasSum()) {
-                _stats.setSum(value);
-            }
-        }
     }
 
     void reset() override {

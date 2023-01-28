@@ -17,20 +17,23 @@
 
 cmake_minimum_required(VERSION 3.5.1)
 
+set(CMAKE_C_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang")
+set(CMAKE_CXX_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang++")
+
 # set CMAKE_C_COMPILER, this must set before project command
-if (DEFINED ENV{CC} AND DEFINED ENV{CXX})
-    set(CMAKE_C_COMPILER "$ENV{CC}")
-    set(CMAKE_CXX_COMPILER "$ENV{CXX}")
-elseif (DEFINED ENV{STARROCKS_GCC_HOME})
-    # prefer GCC
-    set(CMAKE_C_COMPILER "$ENV{STARROCKS_GCC_HOME}/bin/gcc")
-    set(CMAKE_CXX_COMPILER "$ENV{STARROCKS_GCC_HOME}/bin/g++")
-elseif (DEFINED ENV{STARROCKS_LLVM_HOME})
-    set(CMAKE_C_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang")
-    set(CMAKE_CXX_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang++")
-else()
-    message(FATAL_ERROR "STARROCKS_GCC_HOME environment variable is not set")
-endif()
+#if (DEFINED ENV{CC} AND DEFINED ENV{CXX})
+#    set(CMAKE_C_COMPILER "$ENV{CC}")
+#    set(CMAKE_CXX_COMPILER "$ENV{CXX}")
+#elseif (DEFINED ENV{STARROCKS_GCC_HOME})
+#    # prefer GCC
+#    set(CMAKE_C_COMPILER "$ENV{STARROCKS_GCC_HOME}/bin/gcc")
+#    set(CMAKE_CXX_COMPILER "$ENV{STARROCKS_GCC_HOME}/bin/g++")
+#elseif (DEFINED ENV{STARROCKS_LLVM_HOME})
+#    set(CMAKE_C_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang")
+#    set(CMAKE_CXX_COMPILER "$ENV{STARROCKS_LLVM_HOME}/bin/clang++")
+#else()
+#    message(FATAL_ERROR "STARROCKS_GCC_HOME environment variable is not set")
+#endif()
 
 project(starrocks CXX C)
 
@@ -404,7 +407,7 @@ set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-deprecated -Wno-vla -Wno-comment"
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-unused-parameter -Wno-documentation -Wno-weak-vtables")
-    set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-reserved-identifier -Wno-suggest-destructor-override")
+    #set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-reserved-identifier -Wno-suggest-destructor-override")
     set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-documentation-unknown-command -Wno-old-style-cast")
     set(CXX_COMMON_FLAGS "${CXX_COMMON_FLAGS} -Wno-c++20-designator -Wno-mismatched-tags")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL "14.0.0")
