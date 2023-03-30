@@ -204,13 +204,6 @@ void SystemMetrics::_install_memory_metrics(MetricRegistry* registry) {
     registry->register_metric("pageheap_free_bytes", &_memory_metrics->pageheap_free_bytes);
     registry->register_metric("pageheap_unmapped_bytes", &_memory_metrics->pageheap_unmapped_bytes);
 #else
-    registry->register_metric("jemalloc_allocated_bytes", &_memory_metrics->jemalloc_allocated_bytes);
-    registry->register_metric("jemalloc_active_bytes", &_memory_metrics->jemalloc_active_bytes);
-    registry->register_metric("jemalloc_metadata_bytes", &_memory_metrics->jemalloc_metadata_bytes);
-    registry->register_metric("jemalloc_metadata_thp", &_memory_metrics->jemalloc_metadata_thp);
-    registry->register_metric("jemalloc_resident_bytes", &_memory_metrics->jemalloc_resident_bytes);
-    registry->register_metric("jemalloc_mapped_bytes", &_memory_metrics->jemalloc_mapped_bytes);
-    registry->register_metric("jemalloc_retained_bytes", &_memory_metrics->jemalloc_mapped_bytes);
 #endif
 
     registry->register_metric("process_mem_bytes", &_memory_metrics->process_mem_bytes);
