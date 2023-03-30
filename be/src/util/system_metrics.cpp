@@ -248,28 +248,6 @@ void SystemMetrics::_update_memory_metrics() {
 #if defined(ADDRESS_SANITIZER) || defined(LEAK_SANITIZER) || defined(THREAD_SANITIZER)
     LOG(INFO) << "Memory tracking is not available with address sanitizer builds.";
 #elif defined(USE_JEMALLOC)
-    size_t sz = sizeof(size_t);
-    if (je_mallctl("stats.allocated", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_allocated_bytes.set_value(value);
-    }
-    if (je_mallctl("stats.active", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_active_bytes.set_value(value);
-    }
-    if (je_mallctl("stats.metadata", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_metadata_bytes.set_value(value);
-    }
-    if (je_mallctl("stats.metadata_thp", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_metadata_thp.set_value(value);
-    }
-    if (je_mallctl("stats.resident", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_resident_bytes.set_value(value);
-    }
-    if (je_mallctl("stats.mapped", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_mapped_bytes.set_value(value);
-    }
-    if (je_mallctl("stats.retained", &value, &sz, nullptr, 0) == 0) {
-        _memory_metrics->jemalloc_retained_bytes.set_value(value);
-    }
 #else
     MallocExtension* ext = MallocExtension::instance();
     (void)ext->GetNumericProperty("generic.current_allocated_bytes", &value);

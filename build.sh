@@ -104,7 +104,7 @@ if [[ -z ${USE_SSE4_2} ]]; then
     USE_SSE4_2=ON
 fi
 
-USE_JEMALLOC=OFF
+USE_JEMALLOC=ON
 
 HELP=0
 if [ $# == 1 ] ; then
