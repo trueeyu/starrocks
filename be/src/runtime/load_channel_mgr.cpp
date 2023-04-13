@@ -135,7 +135,7 @@ Status LoadChannelMgr::_start_bg_worker() {
 #endif
 
 #ifndef BE_TEST
-        uint32_t interval = 60;
+        uint32_t interval = 1;
 #else
         uint32_t interval = 1;
 #endif

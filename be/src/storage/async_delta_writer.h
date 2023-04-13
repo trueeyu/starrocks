@@ -82,6 +82,7 @@ private:
     std::unique_ptr<DeltaWriter> _writer;
     bthread::ExecutionQueueId<Task> _queue_id;
     std::atomic<bool> _closed;
+    int _cnt = 0;
 };
 
 class CommittedRowsetInfo {

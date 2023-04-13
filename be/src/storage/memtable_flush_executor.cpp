@@ -36,6 +36,11 @@ public:
     ~MemtableFlushTask() = default;
 
     void run() override {
+        LOG(ERROR) << "flush begin: " << _memtable->tablet_id() << std::endl;
+        sleep(60);
+        LOG(ERROR) << "flush end: " << _memtable->tablet_id() << std::endl;
+        LOG(ERROR) << "hah:" << _memtable->mem_tracker()->consumption() <<std::endl;
+        _memtable->mem_tracker()->release(10);
         SCOPED_THREAD_LOCAL_MEM_SETTER(_memtable->mem_tracker(), false);
 
         _flush_token->_stats.cur_flush_count++;

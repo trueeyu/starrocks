@@ -77,6 +77,8 @@ Status AsyncDeltaWriter::_init() {
 }
 
 void AsyncDeltaWriter::write(const AsyncDeltaWriterRequest& req, AsyncDeltaWriterCallback* cb) {
+    LOG(ERROR) << "LXH write: " << _cnt << ":" << _writer->tablet()->tablet_id() << std::endl;
+    _cnt++;
     DCHECK(cb != nullptr);
     Task task;
     task.chunk = req.chunk;
@@ -92,6 +94,7 @@ void AsyncDeltaWriter::write(const AsyncDeltaWriterRequest& req, AsyncDeltaWrite
 }
 
 void AsyncDeltaWriter::commit(AsyncDeltaWriterCallback* cb) {
+    LOG(ERROR) << "LXH commit: " << _writer->tablet()->tablet_id() << std::endl;
     DCHECK(cb != nullptr);
     Task task;
     task.chunk = nullptr;

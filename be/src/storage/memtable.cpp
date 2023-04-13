@@ -71,7 +71,9 @@ MemTable::MemTable(int64_t tablet_id, const Schema& schema, MemTableSink* sink, 
     }
 }
 
-MemTable::~MemTable() = default;
+MemTable::~MemTable() {
+    LOG(ERROR) << "destructor mem table: " << _tablet_id;
+}
 
 size_t MemTable::memory_usage() const {
     size_t size = 0;
@@ -150,7 +152,8 @@ bool MemTable::insert(const Chunk& chunk, const uint32_t* indexes, uint32_t from
         suggest_flush = true;
     }
 
-    return suggest_flush;
+    //return suggest_flush;
+    return true;
 }
 
 Status MemTable::finalize() {

@@ -205,6 +205,7 @@ Status DeltaWriter::write(const Chunk& chunk, const uint32_t* indexes, uint32_t 
     }
     auto state = _get_state();
     if (state != kWriting) {
+
         return Status::InternalError(
                 fmt::format("Fail to prepare. tablet_id: {}, state: {}", _opt.tablet_id, _state_name(state)));
     }
@@ -255,7 +256,12 @@ Status DeltaWriter::_flush_memtable_async() {
     if (_mem_table == nullptr) {
         return Status::OK();
     }
+    if (_cnt != 0) {
+        LOG(ERROR) << "flush memtable async error: " << _tablet->tablet_id();
+        return Status::InternalError("LXH...");
+    }
     RETURN_IF_ERROR(_mem_table->finalize());
+    _cnt++;
     return _flush_token->submit(std::move(_mem_table));
 }
 

@@ -131,6 +131,7 @@ private:
 
     std::unique_ptr<FlushToken> _flush_token;
     bool _with_rollback_log;
+    int _cnt = 0;
 };
 
 } // namespace vectorized

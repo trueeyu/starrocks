@@ -43,6 +43,7 @@ LocalTabletsChannel::~LocalTabletsChannel() {
     delete _row_desc;
     delete _schema;
     _mem_pool.reset();
+    LOG(ERROR) << "destruct LocalTabletsChannel";
 }
 
 Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params) {
