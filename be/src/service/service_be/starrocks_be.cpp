@@ -68,6 +68,7 @@ void start_be() {
         exit(1);
     }
 
+    /*
     // 3. Start HTTP service.
     std::unique_ptr<starrocks::HttpServiceBE> http_service = std::make_unique<starrocks::HttpServiceBE>(
             exec_env, starrocks::config::webserver_port, starrocks::config::webserver_num_workers);
@@ -78,13 +79,15 @@ void start_be() {
         exit(1);
     }
 
+    http_service.reset();
+    */
+
     while (!starrocks::k_starrocks_exit.load()) {
         sleep(10);
     }
 
     starrocks::wait_for_fragments_finish(exec_env, starrocks::config::loop_count_wait_fragments_finish);
 
-    http_service.reset();
 
     brpc_server.Stop(0);
     brpc_server.Join();
