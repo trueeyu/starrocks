@@ -183,8 +183,6 @@ public:
 
     bool bg_worker_stopped() { return _bg_worker_stopped.load(std::memory_order_consume); }
 
-    void compaction_check();
-
     // submit repair compaction tasks
     void submit_repair_compaction_tasks(const std::vector<std::pair<int64_t, std::vector<uint32_t>>>& tasks);
     std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>>
@@ -244,17 +242,10 @@ private:
     // delete tablet with io error process function
     void* _disk_stat_monitor_thread_callback(void* arg);
 
-    void* _tablet_checkpoint_callback(void* arg);
-
-    void* _adjust_pagecache_callback(void* arg);
-
-    void _start_clean_fd_cache();
     Status _perform_cumulative_compaction(DataDir* data_dir, std::pair<int32_t, int32_t> tablet_shards_range);
     Status _perform_base_compaction(DataDir* data_dir, std::pair<int32_t, int32_t> tablet_shards_range);
     Status _perform_update_compaction(DataDir* data_dir);
     void _start_disk_stat_monitor();
-
-    size_t _compaction_check_one_round();
 
 private:
     EngineOptions _options;
@@ -285,7 +276,6 @@ private:
     std::vector<std::pair<int64_t, std::vector<uint32_t>>> _repair_compaction_tasks;
     std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>> _executed_repair_compaction_tasks;
 
-    std::thread _compaction_checker_thread;
     std::mutex _checker_mutex;
     std::condition_variable _checker_cv;
 
@@ -312,8 +302,6 @@ private:
     std::unique_ptr<SegmentFlushExecutor> _segment_flush_executor;
 
     std::unique_ptr<UpdateManager> _update_manager;
-
-    std::unique_ptr<CompactionManager> _compaction_manager;
 
     StorageEngine(const StorageEngine&) = delete;
     const StorageEngine& operator=(const StorageEngine&) = delete;

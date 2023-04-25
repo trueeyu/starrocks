@@ -71,9 +71,6 @@ void UpdateConfigAction::handle(HttpRequest* req) {
                 StoragePageCache::instance()->set_capacity(cache_limit);
             }
         });
-        _config_callback.emplace("max_compaction_concurrency", [&]() {
-            StorageEngine::instance()->compaction_manager()->update_max_threads(config::max_compaction_concurrency);
-        });
         _config_callback.emplace("flush_thread_num_per_store", [&]() {
             const size_t dir_cnt = StorageEngine::instance()->get_stores().size();
             StorageEngine::instance()->memtable_flush_executor()->update_max_threads(

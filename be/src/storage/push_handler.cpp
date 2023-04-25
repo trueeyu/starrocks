@@ -149,7 +149,6 @@ Status PushHandler::_do_streaming_ingestion(TabletSharedPtr tablet, const TPushR
                          << ", txn_id: " << request.transaction_id;
             st = Status::InternalError("Fail to commit txn");
         }
-        StorageEngine::instance()->compaction_manager()->update_tablet_async(tablet_var.tablet);
     }
     return st;
 }

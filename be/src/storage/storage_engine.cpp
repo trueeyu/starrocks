@@ -528,9 +528,6 @@ void StorageEngine::stop() {
     }
 
     _checker_cv.notify_all();
-    if (_compaction_checker_thread.joinable()) {
-        _compaction_checker_thread.join();
-    }
 }
 
 void StorageEngine::clear_transaction_task(const TTransactionId transaction_id) {
@@ -564,53 +561,6 @@ void StorageEngine::clear_transaction_task(const TTransactionId transaction_id,
         }
     }
     LOG(INFO) << "Cleared transaction task txn_id: " << transaction_id;
-}
-
-void StorageEngine::_start_clean_fd_cache() {
-    VLOG(10) << "Cleaning file descriptor cache";
-    FdCache::Instance()->prune();
-    VLOG(10) << "Cleaned file descriptor cache";
-}
-
-void StorageEngine::compaction_check() {
-    int checker_one_round_sleep_time_s = 1800;
-    while (!bg_worker_stopped()) {
-        MonotonicStopWatch stop_watch;
-        stop_watch.start();
-        LOG(INFO) << "start to check compaction";
-        size_t num = _compaction_check_one_round();
-        stop_watch.stop();
-        LOG(INFO) << num << " tablets checked. time elapse:" << stop_watch.elapsed_time() / 1000000000 << " seconds."
-                  << " compaction checker will be scheduled again in " << checker_one_round_sleep_time_s << " seconds";
-        std::unique_lock<std::mutex> lk(_checker_mutex);
-        _checker_cv.wait_for(lk, std::chrono::seconds(checker_one_round_sleep_time_s),
-                             [this] { return bg_worker_stopped(); });
-    }
-}
-
-// Base compaction may be started by time(once every day now)
-// Compaction checker will check whether to schedule base compaction for tablets
-size_t StorageEngine::_compaction_check_one_round() {
-    size_t batch_size = 1000;
-    int batch_sleep_time_ms = 1000;
-    std::vector<TabletSharedPtr> tablets;
-    tablets.reserve(batch_size);
-    size_t tablets_num_checked = 0;
-    while (!bg_worker_stopped()) {
-        bool finished = _tablet_manager->get_next_batch_tablets(batch_size, &tablets);
-        for (auto& tablet : tablets) {
-            _compaction_manager->update_tablet(tablet);
-        }
-        tablets_num_checked += tablets.size();
-        tablets.clear();
-        if (finished) {
-            break;
-        }
-        std::unique_lock<std::mutex> lk(_checker_mutex);
-        _checker_cv.wait_for(lk, std::chrono::milliseconds(batch_sleep_time_ms),
-                             [this] { return bg_worker_stopped(); });
-    }
-    return tablets_num_checked;
 }
 
 Status StorageEngine::_perform_cumulative_compaction(DataDir* data_dir,

@@ -209,11 +209,6 @@ Status Tablet::revise_tablet_meta(const std::vector<RowsetMetaSharedPtr>& rowset
         _rs_version_map[version] = std::move(rowset);
     }
 
-    if (config::enable_event_based_compaction_framework) {
-        StorageEngine::instance()->compaction_manager()->update_tablet_async(
-                std::static_pointer_cast<Tablet>(shared_from_this()));
-    }
-
     // reconstruct from tablet meta
     _timestamped_version_tracker.construct_versioned_tracker(_tablet_meta->all_rs_metas());
 
@@ -298,12 +293,6 @@ void Tablet::modify_rowsets(const std::vector<RowsetSharedPtr>& to_add, const st
 
     _tablet_meta->modify_rs_metas(rs_metas_to_add, rs_metas_to_delete);
 
-    // must be put after modify_rs_metas
-    if (config::enable_event_based_compaction_framework) {
-        StorageEngine::instance()->compaction_manager()->update_tablet_async(
-                std::static_pointer_cast<Tablet>(shared_from_this()));
-    }
-
     // add rs_metas_to_delete to tracker
     _timestamped_version_tracker.add_stale_path_version(rs_metas_to_delete);
 }
@@ -375,10 +364,6 @@ Status Tablet::add_inc_rowset(const RowsetSharedPtr& rowset, int64_t version) {
     _inc_rs_version_map[rowset->version()] = rowset;
 
     _timestamped_version_tracker.add_version(rowset->version());
-    if (config::enable_event_based_compaction_framework) {
-        StorageEngine::instance()->compaction_manager()->update_tablet_async(
-                std::static_pointer_cast<Tablet>(shared_from_this()));
-    }
 
     // warm-up this rowset
     st = rowset->load();

@@ -150,19 +150,6 @@ Status CompactionAction::_handle_compaction(HttpRequest* req, std::string* json_
     if (compaction_type == to_string(CompactionType::CUMULATIVE_COMPACTION)) {
         StarRocksMetrics::instance()->cumulative_compaction_request_total.increment(1);
         if (config::enable_size_tiered_compaction_strategy) {
-            if (tablet->need_compaction()) {
-                auto compaction_task = tablet->create_compaction_task();
-                if (compaction_task != nullptr) {
-                    compaction_task->set_task_id(
-                            StorageEngine::instance()->compaction_manager()->next_compaction_task_id());
-                    compaction_task->start();
-                    if (compaction_task->compaction_task_state() != COMPACTION_SUCCESS) {
-                        return Status::InternalError(fmt::format("Failed to base compaction tablet={} err={}",
-                                                                 tablet->full_name(),
-                                                                 tablet->last_cumu_compaction_failure_status()));
-                    }
-                }
-            }
         } else {
             vectorized::CumulativeCompaction cumulative_compaction(mem_tracker, tablet);
 
@@ -183,21 +170,6 @@ Status CompactionAction::_handle_compaction(HttpRequest* req, std::string* json_
     } else if (compaction_type == to_string(CompactionType::BASE_COMPACTION)) {
         StarRocksMetrics::instance()->base_compaction_request_total.increment(1);
         if (config::enable_size_tiered_compaction_strategy) {
-            if (tablet->force_base_compaction()) {
-                auto compaction_task = tablet->create_compaction_task();
-                if (compaction_task != nullptr) {
-                    compaction_task->set_task_id(
-                            StorageEngine::instance()->compaction_manager()->next_compaction_task_id());
-                    compaction_task->start();
-                    if (compaction_task->compaction_task_state() != COMPACTION_SUCCESS) {
-                        return Status::InternalError(fmt::format("Failed to base compaction tablet={} task_id={}",
-                                                                 tablet->full_name(), compaction_task->task_id()));
-                    }
-                }
-            } else {
-                return Status::InternalError(
-                        fmt::format("Failed to base compaction tablet={} no need to do", tablet->full_name()));
-            }
         } else {
             vectorized::BaseCompaction base_compaction(mem_tracker, tablet);
 
@@ -315,8 +287,6 @@ void CompactionAction::handle(HttpRequest* req) {
     Status st;
     if (_type == CompactionActionType::SHOW_INFO) {
         st = _handle_show_compaction(req, &json_result);
-    } else if (_type == CompactionActionType::RUN_COMPACTION) {
-        st = _handle_compaction(req, &json_result);
     } else if (_type == CompactionActionType::SHOW_REPAIR) {
         st = _handle_show_repairs(req, &json_result);
     } else if (_type == CompactionActionType::SUBMIT_REPAIR) {
