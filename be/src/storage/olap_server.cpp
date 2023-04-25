@@ -193,16 +193,6 @@ Status StorageEngine::start_bg_threads() {
     _fd_cache_clean_thread = std::thread([this] { _fd_cache_clean_callback(nullptr); });
     Thread::set_thread_name(_fd_cache_clean_thread, "fd_cache_clean");
 
-    // path scan and gc thread
-    if (config::path_gc_check) {
-        for (auto data_dir : get_stores()) {
-            _path_scan_threads.emplace_back([this, data_dir] { _path_scan_thread_callback((void*)data_dir); });
-            _path_gc_threads.emplace_back([this, data_dir] { _path_gc_thread_callback((void*)data_dir); });
-            Thread::set_thread_name(_path_scan_threads.back(), "path_scan");
-            Thread::set_thread_name(_path_gc_threads.back(), "path_gc");
-        }
-    }
-
     if (!config::disable_storage_page_cache) {
         _adjust_cache_thread = std::thread([this] { _adjust_pagecache_callback(nullptr); });
         Thread::set_thread_name(_adjust_cache_thread, "adjust_cache");

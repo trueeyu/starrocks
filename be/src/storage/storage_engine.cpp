@@ -534,18 +534,6 @@ void StorageEngine::stop() {
     if (_adjust_cache_thread.joinable()) {
         _adjust_cache_thread.join();
     }
-    if (config::path_gc_check) {
-        for (auto& thread : _path_scan_threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
-        }
-        for (auto& thread : _path_gc_threads) {
-            if (thread.joinable()) {
-                thread.join();
-            }
-        }
-    }
 
     {
         std::lock_guard<std::mutex> l(_store_lock);
