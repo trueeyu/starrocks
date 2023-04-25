@@ -176,19 +176,6 @@ Status StorageEngine::start_bg_threads() {
         });
         Thread::set_thread_name(_update_compaction_threads.back(), "update_compact");
     }
-    _repair_compaction_thread = std::thread([this] { _repair_compaction_thread_callback(nullptr); });
-    Thread::set_thread_name(_repair_compaction_thread, "repair_compact");
-
-    // tablet checkpoint thread
-    for (auto data_dir : data_dirs) {
-        _tablet_checkpoint_threads.emplace_back([this, data_dir] { _tablet_checkpoint_callback((void*)data_dir); });
-        Thread::set_thread_name(_tablet_checkpoint_threads.back(), "tablet_check_pt");
-    }
-
-    if (!config::disable_storage_page_cache) {
-        _adjust_cache_thread = std::thread([this] { _adjust_pagecache_callback(nullptr); });
-        Thread::set_thread_name(_adjust_cache_thread, "adjust_cache");
-    }
 
     LOG(INFO) << "All backgroud threads of storage engine have started.";
     return Status::OK();
@@ -280,24 +267,6 @@ void* StorageEngine::_adjust_pagecache_callback(void* arg_this) {
             }
         }
     }
-    return nullptr;
-}
-
-void* StorageEngine::_fd_cache_clean_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        int32_t interval = config::file_descriptor_cache_clean_interval;
-        if (interval <= 0) {
-            LOG(WARNING) << "config of file descriptor clean interval is illegal: " << interval << "force set to 3600";
-            interval = 3600;
-        }
-        SLEEP_IN_BG_WORKER(interval);
-
-        _start_clean_fd_cache();
-    }
-
     return nullptr;
 }
 
@@ -446,63 +415,6 @@ std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>>
 StorageEngine::get_executed_repair_compaction_tasks() {
     std::lock_guard lg(_repair_compaction_tasks_lock);
     return _executed_repair_compaction_tasks;
-}
-
-void* StorageEngine::_garbage_sweeper_thread_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-    uint32_t max_interval = config::max_garbage_sweep_interval;
-    uint32_t min_interval = config::min_garbage_sweep_interval;
-
-    if (!(max_interval >= min_interval && min_interval > 0)) {
-        LOG(WARNING) << "garbage sweep interval config is illegal: max=" << max_interval << " min=" << min_interval;
-        min_interval = 1;
-        max_interval = max_interval >= min_interval ? max_interval : min_interval;
-        LOG(INFO) << "force reset garbage sweep interval. "
-                  << "max_interval=" << max_interval << ", min_interval=" << min_interval;
-    }
-
-    const double pi = 4 * std::atan(1);
-    double usage = 1.0;
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        usage *= 100.0;
-        // when disk usage is less than 60%, ratio is about 1;
-        // when disk usage is between [60%, 75%], ratio drops from 0.87 to 0.27;
-        // when disk usage is greater than 75%, ratio drops slowly.
-        // when disk usage =90%, ratio is about 0.0057
-        double ratio = (1.1 * (pi / 2 - std::atan(usage / 5 - 14)) - 0.28) / pi;
-        ratio = ratio > 0 ? ratio : 0;
-        uint32_t curr_interval = max_interval * ratio;
-        // when usage < 60%,curr_interval is about max_interval,
-        // when usage > 80%, curr_interval is close to min_interval
-        curr_interval = curr_interval > min_interval ? curr_interval : min_interval;
-
-        // For shutdown gracefully
-        std::cv_status cv_status = std::cv_status::no_timeout;
-        int64_t left_seconds = curr_interval;
-        while (!_bg_worker_stopped.load(std::memory_order_consume) && left_seconds > 0) {
-            std::unique_lock<std::mutex> lk(_trash_sweeper_mutex);
-            cv_status = _trash_sweeper_cv.wait_for(lk, std::chrono::seconds(1));
-            if (cv_status == std::cv_status::no_timeout) {
-                LOG(INFO) << "trash sweeper has been notified";
-                break;
-            }
-            --left_seconds;
-        }
-        if (_bg_worker_stopped.load(std::memory_order_consume)) {
-            break;
-        }
-        // start sweep, and get usage after sweep
-        Status res = _start_trash_sweep(&usage);
-        if (!res.ok()) {
-            LOG(WARNING) << "one or more errors occur when sweep trash."
-                            "see previous message for detail. err code="
-                         << res;
-        }
-    }
-
-    return nullptr;
 }
 
 void* StorageEngine::_disk_stat_monitor_thread_callback(void* arg) {

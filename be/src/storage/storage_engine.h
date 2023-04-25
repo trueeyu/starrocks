@@ -241,14 +241,8 @@ private:
     // repair compaction function
     void* _repair_compaction_thread_callback(void* arg);
 
-    // garbage sweep thread process function. clear snapshot and trash folder
-    void* _garbage_sweeper_thread_callback(void* arg);
-
     // delete tablet with io error process function
     void* _disk_stat_monitor_thread_callback(void* arg);
-
-    // clean file descriptors cache
-    void* _fd_cache_clean_callback(void* arg);
 
     void* _tablet_checkpoint_callback(void* arg);
 
@@ -258,7 +252,6 @@ private:
     Status _perform_cumulative_compaction(DataDir* data_dir, std::pair<int32_t, int32_t> tablet_shards_range);
     Status _perform_base_compaction(DataDir* data_dir, std::pair<int32_t, int32_t> tablet_shards_range);
     Status _perform_update_compaction(DataDir* data_dir);
-    Status _start_trash_sweep(double* usage);
     void _start_disk_stat_monitor();
 
     size_t _compaction_check_one_round();
@@ -288,16 +281,9 @@ private:
     std::vector<std::thread> _cumulative_compaction_threads;
     // threads to run update compaction
     std::vector<std::thread> _update_compaction_threads;
-    // thread to run repair compactions
-    std::thread _repair_compaction_thread;
     std::mutex _repair_compaction_tasks_lock;
     std::vector<std::pair<int64_t, std::vector<uint32_t>>> _repair_compaction_tasks;
     std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>> _executed_repair_compaction_tasks;
-    // threads to clean all file descriptor not actively in use
-    std::thread _fd_cache_clean_thread;
-    std::thread _adjust_cache_thread;
-    // threads to run tablet checkpoint
-    std::vector<std::thread> _tablet_checkpoint_threads;
 
     std::thread _compaction_checker_thread;
     std::mutex _checker_mutex;

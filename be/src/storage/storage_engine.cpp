@@ -517,17 +517,6 @@ void StorageEngine::stop() {
             thread.join();
         }
     }
-    if (_repair_compaction_thread.joinable()) {
-        _repair_compaction_thread.join();
-    }
-    for (auto& thread : _tablet_checkpoint_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    if (_adjust_cache_thread.joinable()) {
-        _adjust_cache_thread.join();
-    }
 
     {
         std::lock_guard<std::mutex> l(_store_lock);
@@ -745,63 +734,6 @@ Status StorageEngine::_perform_update_compaction(DataDir* data_dir) {
         return res;
     }
     return Status::OK();
-}
-
-Status StorageEngine::_start_trash_sweep(double* usage) {
-    LOG(INFO) << "start to sweep trash";
-    Status res = Status::OK();
-
-    const int32_t snapshot_expire = config::snapshot_expire_time_sec;
-    const int32_t trash_expire = config::trash_file_expire_time_sec;
-    const double guard_space = config::storage_flood_stage_usage_percent / 100.0;
-    std::vector<DataDirInfo> data_dir_infos;
-    RETURN_IF_ERROR(get_all_data_dir_info(&data_dir_infos, false));
-
-    time_t now = time(nullptr);
-    tm local_tm_now;
-    memset(&local_tm_now, 0, sizeof(tm));
-
-    if (localtime_r(&now, &local_tm_now) == nullptr) {
-        return Status::InternalError(fmt::format("Fail to localtime_r time: {}", now));
-    }
-    const time_t local_now = mktime(&local_tm_now);
-
-    for (DataDirInfo& info : data_dir_infos) {
-        if (!info.is_used) {
-            continue;
-        }
-
-        double curr_usage = (double)(info.disk_capacity - info.available) / info.disk_capacity;
-        *usage = *usage > curr_usage ? *usage : curr_usage;
-
-        Status curr_res = Status::OK();
-        std::string snapshot_path = info.path + SNAPSHOT_PREFIX;
-        curr_res = _do_sweep(snapshot_path, local_now, snapshot_expire);
-        if (!curr_res.ok()) {
-            LOG(WARNING) << "failed to sweep snapshot. path=" << snapshot_path << ", err_code=" << curr_res;
-            res = curr_res;
-        }
-
-        std::string trash_path = info.path + TRASH_PREFIX;
-        curr_res = _do_sweep(trash_path, local_now, curr_usage > guard_space ? 0 : trash_expire);
-        if (!curr_res.ok()) {
-            LOG(WARNING) << "failed to sweep trash. [path=%s" << trash_path << ", err_code=" << curr_res;
-            res = curr_res;
-        }
-    }
-
-    // clear expire incremental rowset, move deleted tablet to trash
-    (void)_tablet_manager->start_trash_sweep();
-
-    // clean rubbish transactions
-    _clean_unused_txns();
-
-    // clean unused rowset metas in KVStore
-    _clean_unused_rowset_metas();
-
-    do_manual_compact(false);
-
-    return res;
 }
 
 void StorageEngine::do_manual_compact(bool force_compact) {
