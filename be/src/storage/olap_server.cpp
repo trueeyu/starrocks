@@ -60,15 +60,6 @@ namespace starrocks {
 volatile uint32_t g_schema_change_active_threads = 0;
 
 Status StorageEngine::start_bg_threads() {
-    _update_cache_expire_thread = std::thread([this] { _update_cache_expire_thread_callback(nullptr); });
-    Thread::set_thread_name(_update_cache_expire_thread, "cache_expire");
-
-    _update_cache_evict_thread = std::thread([this] { _update_cache_evict_thread_callback(nullptr); });
-    Thread::set_thread_name(_update_cache_expire_thread, "evict_update_cache");
-
-    _unused_rowset_monitor_thread = std::thread([this] { _unused_rowset_monitor_thread_callback(nullptr); });
-    Thread::set_thread_name(_unused_rowset_monitor_thread, "rowset_monitor");
-
     // start thread for monitoring the tablet with io error
     _disk_stat_monitor_thread = std::thread([this] { _disk_stat_monitor_thread_callback(nullptr); });
     Thread::set_thread_name(_disk_stat_monitor_thread, "disk_monitor");

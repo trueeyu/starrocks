@@ -492,12 +492,6 @@ void StorageEngine::stop() {
 
     _bg_worker_stopped.store(true, std::memory_order_release);
 
-    if (_update_cache_expire_thread.joinable()) {
-        _update_cache_expire_thread.join();
-    }
-    if (_unused_rowset_monitor_thread.joinable()) {
-        _unused_rowset_monitor_thread.join();
-    }
     if (_disk_stat_monitor_thread.joinable()) {
         _disk_stat_monitor_thread.join();
     }

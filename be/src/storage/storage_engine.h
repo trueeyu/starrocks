@@ -252,10 +252,6 @@ private:
     std::unordered_map<std::string, RowsetSharedPtr> _unused_rowsets;
 
     std::atomic<bool> _bg_worker_stopped{false};
-    // thread to expire update cache;
-    std::thread _update_cache_expire_thread;
-    std::thread _update_cache_evict_thread;
-    std::thread _unused_rowset_monitor_thread;
     // thread to monitor disk stat
     std::thread _disk_stat_monitor_thread;
     std::mutex _repair_compaction_tasks_lock;
