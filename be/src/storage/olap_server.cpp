@@ -96,48 +96,6 @@ Status StorageEngine::start_bg_threads() {
             max_compaction_concurrency = base_compaction_num_threads + cumulative_compaction_num_threads;
         }
         vectorized::Compaction::init(max_compaction_concurrency);
-
-        _base_compaction_threads.reserve(base_compaction_num_threads);
-        // The config::tablet_map_shard_size is preferably a multiple of `base_compaction_num_threads_per_disk`,
-        // otherwise the compaction thread will be distributed unevenly.
-        int32_t base_step = config::tablet_map_shard_size / base_compaction_num_threads_per_disk +
-                            (config::tablet_map_shard_size % base_compaction_num_threads_per_disk != 0);
-        for (int32_t i = 0; i < base_compaction_num_threads_per_disk; i++) {
-            std::pair<int32_t, int32_t> tablet_shards_range;
-            if (config::tablet_map_shard_size >= base_compaction_num_threads_per_disk) {
-                tablet_shards_range.first = std::min(config::tablet_map_shard_size, base_step * i);
-                tablet_shards_range.second = std::min(config::tablet_map_shard_size, base_step * (i + 1));
-            } else {
-                tablet_shards_range.first = 0;
-                tablet_shards_range.second = config::tablet_map_shard_size;
-            }
-            for (int32_t j = 0; j < data_dir_num; j++) {
-                _base_compaction_threads.emplace_back([this, data_dirs, j, tablet_shards_range] {
-                    _base_compaction_thread_callback(nullptr, data_dirs[j], tablet_shards_range);
-                });
-                Thread::set_thread_name(_base_compaction_threads.back(), "base_compact");
-            }
-        }
-
-        _cumulative_compaction_threads.reserve(cumulative_compaction_num_threads);
-        int32_t cumulative_step = config::tablet_map_shard_size / cumulative_compaction_num_threads_per_disk +
-                                  (config::tablet_map_shard_size % cumulative_compaction_num_threads_per_disk != 0);
-        for (int32_t i = 0; i < cumulative_compaction_num_threads_per_disk; i++) {
-            std::pair<int32_t, int32_t> tablet_shards_range;
-            if (config::tablet_map_shard_size >= cumulative_compaction_num_threads_per_disk) {
-                tablet_shards_range.first = std::min(config::tablet_map_shard_size, cumulative_step * i);
-                tablet_shards_range.second = std::min(config::tablet_map_shard_size, cumulative_step * (i + 1));
-            } else {
-                tablet_shards_range.first = 0;
-                tablet_shards_range.second = config::tablet_map_shard_size;
-            }
-            for (int32_t j = 0; j < data_dir_num; j++) {
-                _cumulative_compaction_threads.emplace_back([this, data_dirs, j, tablet_shards_range] {
-                    _cumulative_compaction_thread_callback(nullptr, data_dirs[j], tablet_shards_range);
-                });
-                Thread::set_thread_name(_cumulative_compaction_threads.back(), "cumulat_compact");
-            }
-        }
     } else {
         int32_t max_task_num = 0;
         // new compaction framework
@@ -156,17 +114,6 @@ Status StorageEngine::start_bg_threads() {
         }
 
         vectorized::Compaction::init(max_task_num);
-    }
-
-    int32_t update_compaction_num_threads_per_disk =
-            config::update_compaction_num_threads_per_disk >= 0 ? config::update_compaction_num_threads_per_disk : 1;
-    int32_t update_compaction_num_threads = update_compaction_num_threads_per_disk * data_dir_num;
-    _update_compaction_threads.reserve(update_compaction_num_threads);
-    for (uint32_t i = 0; i < update_compaction_num_threads; ++i) {
-        _update_compaction_threads.emplace_back([this, data_dir_num, data_dirs, i] {
-            _update_compaction_thread_callback(nullptr, data_dirs[i % data_dir_num]);
-        });
-        Thread::set_thread_name(_update_compaction_threads.back(), "update_compact");
     }
 
     LOG(INFO) << "All backgroud threads of storage engine have started.";

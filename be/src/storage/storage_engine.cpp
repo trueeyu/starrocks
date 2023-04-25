@@ -501,21 +501,6 @@ void StorageEngine::stop() {
     if (_disk_stat_monitor_thread.joinable()) {
         _disk_stat_monitor_thread.join();
     }
-    for (auto& thread : _base_compaction_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    for (auto& thread : _cumulative_compaction_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
-    for (auto& thread : _update_compaction_threads) {
-        if (thread.joinable()) {
-            thread.join();
-        }
-    }
 
     {
         std::lock_guard<std::mutex> l(_store_lock);
@@ -880,24 +865,6 @@ bool StorageEngine::check_rowset_id_in_unused_rowsets(const RowsetId& rowset_id)
 }
 
 void StorageEngine::increase_update_compaction_thread(const int num_threads_per_disk) {
-    // convert store map to vector
-    std::vector<DataDir*> data_dirs;
-    for (auto& tmp_store : _store_map) {
-        data_dirs.push_back(tmp_store.second);
-    }
-    const auto data_dir_num = static_cast<int32_t>(data_dirs.size());
-    const int32_t cur_threads_per_disk = _update_compaction_threads.size() / data_dir_num;
-    if (num_threads_per_disk <= cur_threads_per_disk) {
-        LOG(WARNING) << fmt::format("not support decrease update compaction thread, from {} to {}",
-                                    cur_threads_per_disk, num_threads_per_disk);
-        return;
-    }
-    for (uint32_t i = 0; i < data_dir_num * (num_threads_per_disk - cur_threads_per_disk); ++i) {
-        _update_compaction_threads.emplace_back([this, data_dir_num, data_dirs, i] {
-            _update_compaction_thread_callback(nullptr, data_dirs[i % data_dir_num]);
-        });
-        Thread::set_thread_name(_update_compaction_threads.back(), "update_compact");
-    }
 }
 
 DummyStorageEngine::DummyStorageEngine(const EngineOptions& options)

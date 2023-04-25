@@ -258,12 +258,6 @@ private:
     std::thread _unused_rowset_monitor_thread;
     // thread to monitor disk stat
     std::thread _disk_stat_monitor_thread;
-    // threads to run base compaction
-    std::vector<std::thread> _base_compaction_threads;
-    // threads to check cumulative
-    std::vector<std::thread> _cumulative_compaction_threads;
-    // threads to run update compaction
-    std::vector<std::thread> _update_compaction_threads;
     std::mutex _repair_compaction_tasks_lock;
     std::vector<std::pair<int64_t, std::vector<uint32_t>>> _repair_compaction_tasks;
     std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>> _executed_repair_compaction_tasks;
