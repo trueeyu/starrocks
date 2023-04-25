@@ -89,8 +89,7 @@ StorageEngine::StorageEngine(const EngineOptions& options)
           _txn_manager(new TxnManager(config::txn_map_shard_size, config::txn_shard_size, options.store_paths.size())),
           _rowset_id_generator(new UniqueRowsetIdGenerator(options.backend_uid)),
           _memtable_flush_executor(nullptr),
-          _update_manager(new UpdateManager(options.update_mem_tracker)),
-          _compaction_manager(new CompactionManager()) {
+          _update_manager(new UpdateManager(options.update_mem_tracker)) {
 #ifdef BE_TEST
     _p_instance = _s_instance;
     _s_instance = this;
@@ -712,44 +711,6 @@ void StorageEngine::do_manual_compact(bool force_compact) {
     }
 }
 
-void StorageEngine::_clean_unused_rowset_metas() {
-    std::vector<RowsetMetaSharedPtr> invalid_rowset_metas;
-    auto clean_rowset_func = [this, &invalid_rowset_metas](const TabletUid& tablet_uid, RowsetId rowset_id,
-                                                           std::string_view meta_str) -> bool {
-        bool parsed = false;
-        auto rowset_meta = std::make_shared<RowsetMeta>(meta_str, &parsed);
-        if (!parsed) {
-            LOG(WARNING) << "parse rowset meta string failed for rowset_id:" << rowset_id;
-            // return false will break meta iterator, return true to skip this error
-            return true;
-        }
-        if (rowset_meta->tablet_uid() != tablet_uid) {
-            LOG(WARNING) << "tablet uid is not equal, skip the rowset"
-                         << ", rowset_id=" << rowset_meta->rowset_id() << ", in_put_tablet_uid=" << tablet_uid
-                         << ", tablet_uid in rowset meta=" << rowset_meta->tablet_uid();
-            return true;
-        }
-
-        TabletSharedPtr tablet = _tablet_manager->get_tablet(rowset_meta->tablet_id(), tablet_uid);
-        if (tablet == nullptr) {
-            return true;
-        }
-        if (rowset_meta->rowset_state() == RowsetStatePB::VISIBLE && (!tablet->rowset_meta_is_useful(rowset_meta))) {
-            LOG(INFO) << "rowset meta is useless any more, remote it. rowset_id=" << rowset_meta->rowset_id();
-            invalid_rowset_metas.push_back(rowset_meta);
-        }
-        return true;
-    };
-    auto data_dirs = get_stores();
-    for (auto data_dir : data_dirs) {
-        (void)RowsetMetaManager::traverse_rowset_metas(data_dir->get_meta(), clean_rowset_func);
-        for (auto& rowset_meta : invalid_rowset_metas) {
-            (void)RowsetMetaManager::remove(data_dir->get_meta(), rowset_meta->tablet_uid(), rowset_meta->rowset_id());
-        }
-        invalid_rowset_metas.clear();
-    }
-}
-
 void StorageEngine::_clean_unused_txns() {
     std::set<TabletInfo> tablet_infos;
     _txn_manager->get_all_related_tablets(&tablet_infos);
@@ -765,54 +726,6 @@ void StorageEngine::_clean_unused_txns() {
                                                              tablet_info.tablet_uid);
         }
     }
-}
-
-Status StorageEngine::_do_sweep(const std::string& scan_root, const time_t& local_now, const int32_t expire) {
-    Status res = Status::OK();
-    if (!fs::path_exist(scan_root)) {
-        // dir not existed. no need to sweep trash.
-        return res;
-    }
-
-    try {
-        for (const auto& item : std::filesystem::directory_iterator(scan_root)) {
-            std::string path_name = item.path().string();
-            std::string dir_name = item.path().filename().string();
-            std::string str_time = dir_name.substr(0, dir_name.find('.'));
-            tm local_tm_create;
-            memset(&local_tm_create, 0, sizeof(tm));
-
-            if (strptime(str_time.c_str(), "%Y%m%d%H%M%S", &local_tm_create) == nullptr) {
-                LOG(WARNING) << "Fail to strptime time:" << str_time;
-                res = Status::InternalError(fmt::format("Fail to strptime time: {}", str_time));
-                continue;
-            }
-
-            int32_t actual_expire = expire;
-            // try get timeout in dir name, the old snapshot dir does not contain timeout
-            // eg: 20190818221123.3.86400, the 86400 is timeout, in second
-            size_t pos = dir_name.find('.', str_time.size() + 1);
-            if (pos != std::string::npos) {
-                actual_expire = std::stoi(dir_name.substr(pos + 1));
-            }
-            VLOG(10) << "get actual expire time " << actual_expire << " of dir: " << dir_name;
-
-            if (difftime(local_now, mktime(&local_tm_create)) >= actual_expire) {
-                Status ret = fs::remove_all(path_name);
-                if (!ret.ok()) {
-                    LOG(WARNING) << "fail to remove file. path: " << path_name << ", error: " << ret.to_string();
-                    res = Status::IOError(
-                            fmt::format("Fail remove file. path: {}, error: {}", path_name, ret.to_string()));
-                    continue;
-                }
-            }
-        }
-    } catch (...) {
-        LOG(WARNING) << "Exception occur when scan directory. path=" << scan_root;
-        res = Status::IOError(fmt::format("Exception occur when scan directory. path: {}", scan_root));
-    }
-
-    return res;
 }
 
 double StorageEngine::delete_unused_rowset() {

@@ -257,63 +257,6 @@ void* StorageEngine::_update_compaction_thread_callback(void* arg, DataDir* data
     return nullptr;
 }
 
-void* StorageEngine::_repair_compaction_thread_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-    Status status = Status::OK();
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        std::pair<int64_t, vector<uint32_t>> task(-1, vector<uint32>());
-        {
-            std::lock_guard lg(_repair_compaction_tasks_lock);
-            if (!_repair_compaction_tasks.empty()) {
-                task = _repair_compaction_tasks.back();
-                _repair_compaction_tasks.pop_back();
-            }
-        }
-        if (task.first != -1) {
-            auto tablet = _tablet_manager->get_tablet(task.first);
-            if (!tablet) {
-                LOG(WARNING) << "repair compaction failed, tablet not found: " << task.first;
-                continue;
-            }
-            if (tablet->updates() == nullptr) {
-                LOG(ERROR) << "repair compaction failed, tablet not primary key tablet found: " << task.first;
-                continue;
-            }
-            vector<pair<uint32_t, string>> rowset_results;
-            for (auto rowsetid : task.second) {
-                auto st = tablet->updates()->compaction(ExecEnv::GetInstance()->compaction_mem_tracker(), {rowsetid});
-                if (!st.ok()) {
-                    LOG(WARNING) << "repair compaction failed tablet: " << task.first << " rowset: " << rowsetid << " "
-                                 << st;
-                } else {
-                    LOG(INFO) << "repair compaction succeed tablet: " << task.first << " rowset: " << rowsetid << " "
-                              << st;
-                }
-                rowset_results.emplace_back(rowsetid, st.to_string());
-            }
-            _executed_repair_compaction_tasks.emplace_back(task.first, std::move(rowset_results));
-        }
-        do {
-            // do a compaction per 10min, to reduce potential memory pressure
-            SLEEP_IN_BG_WORKER(config::repair_compaction_interval_seconds);
-            if (!_options.compaction_mem_tracker->any_limit_exceeded()) {
-                break;
-            }
-        } while (true);
-    }
-    return nullptr;
-}
-
-struct pair_hash {
-public:
-    template <typename T, typename U>
-    std::size_t operator()(const std::pair<T, U>& x) const {
-        return std::hash<T>()(x.first) ^ std::hash<U>()(x.second);
-    }
-};
-
 void StorageEngine::submit_repair_compaction_tasks(
         const std::vector<std::pair<int64_t, std::vector<uint32_t>>>& tasks) {
     std::lock_guard lg(_repair_compaction_tasks_lock);
@@ -444,26 +387,6 @@ void* StorageEngine::_unused_rowset_monitor_thread_callback(void* arg) {
             interval = 1;
         }
         SLEEP_IN_BG_WORKER(interval);
-    }
-
-    return nullptr;
-}
-
-void* StorageEngine::_tablet_checkpoint_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        LOG(INFO) << "begin to do tablet meta checkpoint:" << ((DataDir*)arg)->path();
-        int64_t start_time = UnixMillis();
-        _tablet_manager->do_tablet_meta_checkpoint((DataDir*)arg);
-        int64_t used_time = (UnixMillis() - start_time) / 1000;
-        if (used_time < config::tablet_meta_checkpoint_min_interval_secs) {
-            int64_t interval = config::tablet_meta_checkpoint_min_interval_secs - used_time;
-            SLEEP_IN_BG_WORKER(interval);
-        } else {
-            sleep(1);
-        }
     }
 
     return nullptr;

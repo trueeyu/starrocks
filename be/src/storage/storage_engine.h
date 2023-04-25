@@ -156,8 +156,6 @@ public:
 
     TxnManager* txn_manager() { return _txn_manager.get(); }
 
-    CompactionManager* compaction_manager() { return _compaction_manager.get(); }
-
     bthread::Executor* async_delta_writer_executor() { return _async_delta_writer_executor.get(); }
 
     MemTableFlushExecutor* memtable_flush_executor() { return _memtable_flush_executor.get(); }
@@ -217,10 +215,6 @@ private:
 
     void _clean_unused_txns();
 
-    void _clean_unused_rowset_metas();
-
-    Status _do_sweep(const std::string& scan_root, const time_t& local_tm_now, const int32_t expire);
-
     // All these xxx_callback() functions are for Background threads
     // update cache expire thread
     void* _update_cache_expire_thread_callback(void* arg);
@@ -236,8 +230,6 @@ private:
                                                  const std::pair<int32_t, int32_t>& tablet_shards_range);
     // update compaction function
     void* _update_compaction_thread_callback(void* arg, DataDir* data_dir);
-    // repair compaction function
-    void* _repair_compaction_thread_callback(void* arg);
 
     // delete tablet with io error process function
     void* _disk_stat_monitor_thread_callback(void* arg);
@@ -276,7 +268,6 @@ private:
     std::vector<std::pair<int64_t, std::vector<uint32_t>>> _repair_compaction_tasks;
     std::vector<std::pair<int64_t, std::vector<std::pair<uint32_t, std::string>>>> _executed_repair_compaction_tasks;
 
-    std::mutex _checker_mutex;
     std::condition_variable _checker_cv;
 
     std::mutex _trash_sweeper_mutex;
