@@ -499,9 +499,6 @@ void StorageEngine::stop() {
     if (_unused_rowset_monitor_thread.joinable()) {
         _unused_rowset_monitor_thread.join();
     }
-    if (_garbage_sweeper_thread.joinable()) {
-        _garbage_sweeper_thread.join();
-    }
     if (_disk_stat_monitor_thread.joinable()) {
         _disk_stat_monitor_thread.join();
     }
@@ -527,9 +524,6 @@ void StorageEngine::stop() {
         if (thread.joinable()) {
             thread.join();
         }
-    }
-    if (_fd_cache_clean_thread.joinable()) {
-        _fd_cache_clean_thread.join();
     }
     if (_adjust_cache_thread.joinable()) {
         _adjust_cache_thread.join();

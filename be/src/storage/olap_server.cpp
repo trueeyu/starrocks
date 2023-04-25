@@ -69,10 +69,6 @@ Status StorageEngine::start_bg_threads() {
     _unused_rowset_monitor_thread = std::thread([this] { _unused_rowset_monitor_thread_callback(nullptr); });
     Thread::set_thread_name(_unused_rowset_monitor_thread, "rowset_monitor");
 
-    // start thread for monitoring the snapshot and trash folder
-    _garbage_sweeper_thread = std::thread([this] { _garbage_sweeper_thread_callback(nullptr); });
-    Thread::set_thread_name(_garbage_sweeper_thread, "garbage_sweeper");
-
     // start thread for monitoring the tablet with io error
     _disk_stat_monitor_thread = std::thread([this] { _disk_stat_monitor_thread_callback(nullptr); });
     Thread::set_thread_name(_disk_stat_monitor_thread, "disk_monitor");
@@ -188,10 +184,6 @@ Status StorageEngine::start_bg_threads() {
         _tablet_checkpoint_threads.emplace_back([this, data_dir] { _tablet_checkpoint_callback((void*)data_dir); });
         Thread::set_thread_name(_tablet_checkpoint_threads.back(), "tablet_check_pt");
     }
-
-    // fd cache clean thread
-    _fd_cache_clean_thread = std::thread([this] { _fd_cache_clean_callback(nullptr); });
-    Thread::set_thread_name(_fd_cache_clean_thread, "fd_cache_clean");
 
     if (!config::disable_storage_page_cache) {
         _adjust_cache_thread = std::thread([this] { _adjust_pagecache_callback(nullptr); });
@@ -618,57 +610,6 @@ void* StorageEngine::_unused_rowset_monitor_thread_callback(void* arg) {
         int32_t interval = config::unused_rowset_monitor_interval * deleted_pct;
         if (interval <= 0) {
             interval = 1;
-        }
-        SLEEP_IN_BG_WORKER(interval);
-    }
-
-    return nullptr;
-}
-
-void* StorageEngine::_path_gc_thread_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        LOG(INFO) << "try to perform path gc by tablet!";
-        ((DataDir*)arg)->perform_path_gc_by_tablet();
-
-        LOG(INFO) << "try to perform path gc by rowsetid!";
-        // perform path gc by rowset id
-        ((DataDir*)arg)->perform_path_gc_by_rowsetid();
-
-        int32_t interval = config::path_gc_check_interval_second;
-        if (interval <= 0) {
-            LOG(WARNING) << "path gc thread check interval config is illegal:" << interval
-                         << "will be forced set to half hour";
-            interval = 1800; // 0.5 hour
-        }
-        SLEEP_IN_BG_WORKER(interval);
-    }
-
-    return nullptr;
-}
-
-void* StorageEngine::_path_scan_thread_callback(void* arg) {
-#ifdef GOOGLE_PROFILER
-    ProfilerRegisterThread();
-#endif
-
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        SLEEP_IN_BG_WORKER(600);
-        break;
-    }
-
-    while (!_bg_worker_stopped.load(std::memory_order_consume)) {
-        LOG(INFO) << "try to perform path scan!";
-        ((DataDir*)arg)->perform_path_scan();
-
-        int32_t interval = config::path_scan_interval_second;
-        if (interval <= 0) {
-            LOG(WARNING) << "path gc thread check interval config is illegal:" << interval
-                         << "will be forced set to one day";
-            interval = 24 * 3600; // one day
         }
         SLEEP_IN_BG_WORKER(interval);
     }

@@ -176,8 +176,6 @@ public:
 
     void release_rowset_id(const RowsetId& rowset_id) { return _rowset_id_generator->release_id(rowset_id); }
 
-    void set_heartbeat_flags(HeartbeatFlags* heartbeat_flags) { _heartbeat_flags = heartbeat_flags; }
-
     // start all backgroud threads. This should be call after env is ready.
     virtual Status start_bg_threads();
 
@@ -252,11 +250,6 @@ private:
     // clean file descriptors cache
     void* _fd_cache_clean_callback(void* arg);
 
-    // path gc process function
-    void* _path_gc_thread_callback(void* arg);
-
-    void* _path_scan_thread_callback(void* arg);
-
     void* _tablet_checkpoint_callback(void* arg);
 
     void* _adjust_pagecache_callback(void* arg);
@@ -271,29 +264,6 @@ private:
     size_t _compaction_check_one_round();
 
 private:
-    struct CompactionCandidate {
-        CompactionCandidate(uint32_t nicumulative_compaction_, int64_t tablet_id_, uint32_t index_)
-                : nice(nicumulative_compaction_), tablet_id(tablet_id_), disk_index(index_) {}
-        uint32_t nice;
-        int64_t tablet_id;
-        uint32_t disk_index = -1;
-    };
-
-    // In descending order
-    struct CompactionCandidateComparator {
-        bool operator()(const CompactionCandidate& a, const CompactionCandidate& b) { return a.nice > b.nice; }
-    };
-
-    struct CompactionDiskStat {
-        CompactionDiskStat(std::string path, uint32_t index, bool used)
-                : storage_path(std::move(path)), disk_index(index), task_running(0), task_remaining(0), is_used(used) {}
-        const std::string storage_path;
-        const uint32_t disk_index;
-        uint32_t task_running;
-        uint32_t task_remaining;
-        bool is_used;
-    };
-
     EngineOptions _options;
     std::mutex _store_lock;
     std::map<std::string, DataDir*> _store_map;
@@ -310,8 +280,6 @@ private:
     std::thread _update_cache_expire_thread;
     std::thread _update_cache_evict_thread;
     std::thread _unused_rowset_monitor_thread;
-    // thread to monitor snapshot expiry
-    std::thread _garbage_sweeper_thread;
     // thread to monitor disk stat
     std::thread _disk_stat_monitor_thread;
     // threads to run base compaction
@@ -344,8 +312,6 @@ private:
     bool _need_report_tablet = false;
     bool _need_report_disk_stat = false;
 
-    std::mutex _engine_task_mutex;
-
     std::unique_ptr<TabletManager> _tablet_manager;
     std::unique_ptr<TxnManager> _txn_manager;
 
@@ -362,8 +328,6 @@ private:
     std::unique_ptr<UpdateManager> _update_manager;
 
     std::unique_ptr<CompactionManager> _compaction_manager;
-
-    HeartbeatFlags* _heartbeat_flags = nullptr;
 
     StorageEngine(const StorageEngine&) = delete;
     const StorageEngine& operator=(const StorageEngine&) = delete;
