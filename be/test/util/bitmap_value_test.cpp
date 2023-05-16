@@ -26,11 +26,86 @@
 
 #include "util/coding.h"
 #define private public
+#include <fcntl.h>
+
+#include <fstream>
+#include <iostream>
+
 #include "types/bitmap_value.h"
 #include "types/bitmap_value_detail.h"
+#include "util/faststring.h"
+#include "util/md5.h"
 #include "util/phmap/phmap.h"
+#include "gutil/strings/split.h"
 
 namespace starrocks {
+
+TEST(BitmapValueTest, test_serialize_1) {
+    Roaring src_bitmap;
+    std::ifstream fs;
+    fs.open("./1.out", std::ios::in);
+    std::string buf;
+    int i = 0;
+    while (std::getline(fs, buf)) {
+        i++;
+        std::vector<std::string> tmp_strs = strings::Split(buf, ",");
+        int result1 = std::stoi(tmp_strs[0]);
+        int result2 = std::stoi(tmp_strs[1]);
+        src_bitmap.addRange(result1, result2);
+    }
+    std::cout << "TOTAL: " << i << std::endl;
+
+    size_t src_size = src_bitmap.getSizeInBytes(false);
+    faststring src_buf;
+    src_buf.resize(src_size);
+    src_bitmap.write(reinterpret_cast<char*>(src_buf.data()), false);
+    std::cout << "SRC_RESULT: "<< src_bitmap.cardinality() << ":" << src_bitmap.contains(8846992) << std::endl;
+    std::cout << "SRC_DETAIL: " << src_bitmap.toString() << std::endl;
+
+    Roaring dest_bitmap;
+    dest_bitmap = Roaring::read((const char*)(src_buf.data()), false);
+    std::cout << "DEST_RESULT: " << dest_bitmap.cardinality() << ":" << dest_bitmap.contains(8846992) << std::endl;
+    std::cout << "DEST_DETAIL: " << dest_bitmap.toString() << std::endl;
+
+    std::cout << "EQUAL: " << (dest_bitmap == src_bitmap) << std::endl;
+
+    Roaring tmp_bitmap;
+    tmp_bitmap.add(8846992);
+    tmp_bitmap -= dest_bitmap;
+
+    std::cout << "RESULT: " << tmp_bitmap.cardinality() << ":" << tmp_bitmap.toString() << std::endl;
+}
+
+TEST(BitmapValueTest, test_serialize) {
+    Roaring src_bitmap;
+    std::ifstream fs;
+    fs.open("./1.out", std::ios::in);
+    std::string buf;
+    int i = 0;
+    while (std::getline(fs, buf)) {
+        i++;
+        int result = std::stoi(buf);
+        src_bitmap.add(result);
+        //std::cout << "RESULT:" << result<<std::endl;
+    }
+    std::cout << "TOTAL: " << i << std::endl;
+
+    Md5Digest digest;
+
+    size_t src_size = src_bitmap.getSizeInBytes(false);
+    faststring src_buf;
+    src_buf.resize(src_size);
+    src_bitmap.write(reinterpret_cast<char*>(src_buf.data()), false);
+    digest.update(src_buf.data(), src_buf.size());
+    digest.digest();
+    std::cout << "RESULT: "<< src_bitmap.cardinality() << ":" << src_bitmap.contains(8846992) << ":" << digest.hex() << std::endl;
+
+    Roaring dest_bitmap;
+    dest_bitmap = Roaring::read((const char*)(src_buf.data()), false);
+    std::cout << "RESULT: " << dest_bitmap.cardinality() << ":" << dest_bitmap.contains(8846992) << std::endl;
+
+    std::cout << "EQUAL: " << (dest_bitmap == src_bitmap) << std::endl;
+}
 
 TEST(BitmapValueTest, bitmap_union) {
     BitmapValue empty;
