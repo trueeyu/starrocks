@@ -41,7 +41,7 @@
 namespace starrocks {
 
 TEST(BitmapValueTest, test_serialize_1) {
-    Roaring src_bitmap;
+    roaring::Roaring src_bitmap;
     std::ifstream fs;
     fs.open("./1.out", std::ios::in);
     std::string buf;
@@ -62,14 +62,14 @@ TEST(BitmapValueTest, test_serialize_1) {
     std::cout << "SRC_RESULT: "<< src_bitmap.cardinality() << ":" << src_bitmap.contains(8846992) << std::endl;
     std::cout << "SRC_DETAIL: " << src_bitmap.toString() << std::endl;
 
-    Roaring dest_bitmap;
-    dest_bitmap = Roaring::read((const char*)(src_buf.data()), false);
+    roaring::Roaring dest_bitmap;
+    dest_bitmap = roaring::Roaring::read((const char*)(src_buf.data()), false);
     std::cout << "DEST_RESULT: " << dest_bitmap.cardinality() << ":" << dest_bitmap.contains(8846992) << std::endl;
     std::cout << "DEST_DETAIL: " << dest_bitmap.toString() << std::endl;
 
     std::cout << "EQUAL: " << (dest_bitmap == src_bitmap) << std::endl;
 
-    Roaring tmp_bitmap;
+    roaring::Roaring tmp_bitmap;
     tmp_bitmap.add(8846992);
     tmp_bitmap -= dest_bitmap;
 
@@ -77,7 +77,7 @@ TEST(BitmapValueTest, test_serialize_1) {
 }
 
 TEST(BitmapValueTest, test_serialize) {
-    Roaring src_bitmap;
+    roaring::Roaring src_bitmap;
     std::ifstream fs;
     fs.open("./1.out", std::ios::in);
     std::string buf;
@@ -100,8 +100,8 @@ TEST(BitmapValueTest, test_serialize) {
     digest.digest();
     std::cout << "RESULT: "<< src_bitmap.cardinality() << ":" << src_bitmap.contains(8846992) << ":" << digest.hex() << std::endl;
 
-    Roaring dest_bitmap;
-    dest_bitmap = Roaring::read((const char*)(src_buf.data()), false);
+    roaring::Roaring dest_bitmap;
+    dest_bitmap = roaring::Roaring::read((const char*)(src_buf.data()), false);
     std::cout << "RESULT: " << dest_bitmap.cardinality() << ":" << dest_bitmap.contains(8846992) << std::endl;
 
     std::cout << "EQUAL: " << (dest_bitmap == src_bitmap) << std::endl;
@@ -246,7 +246,7 @@ TEST(BitmapValueTest, bitmap_serde) {
         BitmapValue bitmap32(std::vector<uint64_t>{0, UINT32_MAX});
         std::string buffer = convert_bitmap_to_string(bitmap32);
 
-        Roaring roaring;
+        roaring::Roaring roaring;
         roaring.add(0);
         roaring.add(UINT32_MAX);
         std::string expect_buffer(1, type_bitmap32);
@@ -275,7 +275,7 @@ TEST(BitmapValueTest, bitmap_serde) {
         BitmapValue bitmap64(std::vector<uint64_t>{0, static_cast<uint64_t>(UINT32_MAX) + 1});
         std::string buffer = convert_bitmap_to_string(bitmap64);
 
-        Roaring roaring;
+        roaring::Roaring roaring;
         roaring.add(0);
         std::string expect_buffer(1, type_bitmap64);
         put_varint64(&expect_buffer, 2); // map size

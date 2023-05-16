@@ -23,7 +23,7 @@ void DelVector::set_empty() {
 
 void DelVector::_add_dels(const std::vector<uint32_t>& dels) {
     if (!_roaring) {
-        _roaring = std::make_unique<Roaring>(dels.size(), dels.data());
+        _roaring = std::make_unique<roaring::Roaring>(dels.size(), dels.data());
     } else {
         _roaring->addMany(dels.size(), dels.data());
     }
@@ -35,7 +35,7 @@ void DelVector::add_dels_as_new_version(const std::vector<uint32_t>& dels, int64
     CHECK(this != pdelvec->get());
     DelVectorPtr tmp(new DelVector());
     if (_roaring) {
-        tmp->_roaring = std::make_unique<Roaring>(*_roaring);
+        tmp->_roaring = std::make_unique<roaring::Roaring>(*_roaring);
     }
     tmp->_version = version;
     tmp->_loaded = true;
@@ -65,7 +65,7 @@ void DelVector::init(int64_t version, const uint32_t* data, size_t length) {
     _loaded = true;
     _version = version;
     if (length > 0) {
-        _roaring = std::make_unique<Roaring>(length, data);
+        _roaring = std::make_unique<roaring::Roaring>(length, data);
     }
     _update_stats();
 }

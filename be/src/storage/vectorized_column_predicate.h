@@ -22,7 +22,7 @@
 #include "util/json.h"
 #include "util/string_parser.hpp"
 
-class Roaring;
+class roaring::Roaring;
 
 namespace starrocks {
 class BloomFilter;

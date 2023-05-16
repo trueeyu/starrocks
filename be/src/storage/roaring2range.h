@@ -7,7 +7,7 @@
 
 namespace starrocks::vectorized {
 
-static inline SparseRange roaring2range(const Roaring& roaring) {
+static inline SparseRange roaring2range(const roaring::Roaring& roaring) {
     SparseRange range;
     BitmapRangeIterator iter(roaring);
     uint32_t from;
@@ -18,8 +18,8 @@ static inline SparseRange roaring2range(const Roaring& roaring) {
     return range;
 }
 
-static inline Roaring range2roaring(const SparseRange& range) {
-    Roaring roaring;
+static inline roaring::Roaring range2roaring(const SparseRange& range) {
+    roaring::Roaring roaring;
     for (SparseRangeIterator iter = range.new_iterator(); iter.has_more(); /**/) {
         Range r = iter.next(1000000);
         roaring.addRange(r.begin(), r.end());

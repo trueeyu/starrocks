@@ -45,9 +45,9 @@ class BitmapUpdateContext {
 
 public:
     explicit BitmapUpdateContext(rowid_t rid)
-            : _roaring(Roaring::bitmapOf(1, rid)), _previous_size(0), _element_count(1), _size_changed(false){};
+            : _roaring(roaring::Roaring::bitmapOf(1, rid)), _previous_size(0), _element_count(1), _size_changed(false){};
 
-    Roaring* roaring() { return &_roaring; }
+    roaring::Roaring* roaring() { return &_roaring; }
 
     static uint64_t estimate_size(int element_count) {
         // When _element_count is less than estimate_size_threshold, we use
@@ -96,7 +96,7 @@ public:
     }
 
 private:
-    Roaring _roaring;
+    roaring::Roaring _roaring;
     uint64_t _previous_size;
     uint32_t _element_count;
     bool _size_changed;
@@ -184,7 +184,7 @@ public:
             RETURN_IF_ERROR(dict_column_writer.finish(meta->mutable_dict_column()));
         }
         { // write bitmaps
-            std::vector<Roaring*> bitmaps;
+            std::vector<roaring::Roaring*> bitmaps;
             for (auto& it : _mem_index) {
                 bitmaps.push_back(it.second->roaring());
             }
@@ -246,7 +246,7 @@ private:
     rowid_t _rid = 0;
 
     // row id list for null value
-    Roaring _null_bitmap;
+    roaring::Roaring _null_bitmap;
     // unique value to its row id list
     MemoryIndexType _mem_index;
     MemPool _pool;

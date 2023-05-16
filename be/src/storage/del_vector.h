@@ -43,7 +43,7 @@ public:
 
     bool empty() const { return !_roaring; }
 
-    Roaring* roaring() { return _roaring.get(); }
+    roaring::Roaring* roaring() { return _roaring.get(); }
 
 private:
     void _add_dels(const std::vector<uint32_t>& dels);
@@ -54,7 +54,7 @@ private:
     int64_t _version = 1;
     size_t _cardinality = 0;
     size_t _memory_usage = 0;
-    std::unique_ptr<Roaring> _roaring;
+    std::unique_ptr<roaring::Roaring> _roaring;
 };
 
 typedef std::shared_ptr<DelVector> DelVectorPtr;

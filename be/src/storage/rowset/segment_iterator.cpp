@@ -1392,15 +1392,15 @@ Status SegmentIterator::_apply_bitmap_index() {
     // ---------------------------------------------------------
     // Retrieve the bitmap of each field.
     // ---------------------------------------------------------
-    Roaring row_bitmap = range2roaring(_scan_range);
+    roaring::Roaring row_bitmap = range2roaring(_scan_range);
     size_t input_rows = row_bitmap.cardinality();
     DCHECK_EQ(input_rows, _scan_range.span_size());
 
     for (size_t i = 0; i < bitmap_columns.size(); i++) {
-        Roaring roaring;
+        roaring::Roaring roaring;
         BitmapIndexIterator* bitmap_iter = _bitmap_index_iterators[bitmap_columns[i]];
         if (bitmap_iter->has_null_bitmap() && !has_is_null_predicate[i]) {
-            Roaring null_bitmap;
+            roaring::Roaring null_bitmap;
             RETURN_IF_ERROR(bitmap_iter->read_null_bitmap(&null_bitmap));
             row_bitmap -= null_bitmap;
         }
@@ -1427,7 +1427,7 @@ Status SegmentIterator::_apply_bitmap_index() {
 
 Status SegmentIterator::_apply_del_vector() {
     if (_opts.is_primary_keys && _opts.version > 0 && _del_vec && !_del_vec->empty()) {
-        Roaring row_bitmap = range2roaring(_scan_range);
+        roaring::Roaring row_bitmap = range2roaring(_scan_range);
         size_t input_rows = row_bitmap.cardinality();
         row_bitmap -= *(_del_vec->roaring());
         _scan_range = roaring2range(row_bitmap);

@@ -103,9 +103,9 @@ TEST_F(BitmapIndexTest, test_invert) {
         ASSERT_TRUE(exact_match);
         ASSERT_EQ(2, iter->current_ordinal());
 
-        Roaring bitmap;
+        roaring::Roaring bitmap;
         iter->read_bitmap(iter->current_ordinal(), &bitmap);
-        ASSERT_TRUE(Roaring::bitmapOf(1, 2) == bitmap);
+        ASSERT_TRUE(roaring::Roaring::bitmapOf(1, 2) == bitmap);
 
         int value2 = 1024 * 9;
         st = iter->seek_dictionary(&value2, &exact_match);
@@ -120,7 +120,7 @@ TEST_F(BitmapIndexTest, test_invert) {
         iter->seek_dictionary(&value3, &exact_match);
         ASSERT_EQ(1024, iter->current_ordinal());
 
-        Roaring bitmap2;
+        roaring::Roaring bitmap2;
         iter->read_union_bitmap(0, iter->current_ordinal(), &bitmap2);
         ASSERT_EQ(1024, bitmap2.cardinality());
 
@@ -158,7 +158,7 @@ TEST_F(BitmapIndexTest, test_invert_2) {
 
         ASSERT_EQ(1024, iter->current_ordinal());
 
-        Roaring bitmap;
+        roaring::Roaring bitmap;
         iter->read_union_bitmap(0, iter->current_ordinal(), &bitmap);
         ASSERT_EQ(1024, bitmap.cardinality());
 
@@ -190,7 +190,7 @@ TEST_F(BitmapIndexTest, test_multi_pages) {
         ASSERT_TRUE(st.ok()) << "status:" << st.to_string();
         ASSERT_EQ(0, iter->current_ordinal());
 
-        Roaring bitmap;
+        roaring::Roaring bitmap;
         iter->read_bitmap(iter->current_ordinal(), &bitmap);
         ASSERT_EQ(1, bitmap.cardinality());
 
@@ -215,7 +215,7 @@ TEST_F(BitmapIndexTest, test_null) {
         BitmapIndexIterator* iter = nullptr;
         get_bitmap_reader_iter(file_name, meta, &reader, &iter);
 
-        Roaring bitmap;
+        roaring::Roaring bitmap;
         iter->read_null_bitmap(&bitmap);
         ASSERT_EQ(30, bitmap.cardinality());
 
@@ -260,7 +260,7 @@ TEST_F(BitmapIndexTest, test_concurrent_load) {
     BitmapIndexIterator* iter = nullptr;
     ASSERT_OK(reader->new_iterator(&iter));
 
-    Roaring bitmap;
+    roaring::Roaring bitmap;
     iter->read_null_bitmap(&bitmap);
     ASSERT_EQ(30, bitmap.cardinality());
 
