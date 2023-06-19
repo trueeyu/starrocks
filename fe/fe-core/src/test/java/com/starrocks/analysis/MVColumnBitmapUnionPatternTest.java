@@ -69,6 +69,12 @@ public class MVColumnBitmapUnionPatternTest {
         TableName tableName = new TableName("db", "table");
         SlotRef slotRef = new SlotRef(tableName, "c1");
         Deencapsulation.setField(slotRef, "type", Type.INT);
+        new Expectations() {
+            {
+                castExpr.unwrapSlotRef();
+                result = slotRef;
+            }
+        };
         List<Expr> child0Params = Lists.newArrayList();
         child0Params.add(castExpr);
         FunctionCallExpr child0 = new FunctionCallExpr(FunctionSet.TO_BITMAP, child0Params);
@@ -120,8 +126,7 @@ public class MVColumnBitmapUnionPatternTest {
         params.add(child0);
         FunctionCallExpr expr = new FunctionCallExpr(FunctionSet.BITMAP_UNION, params);
         MVColumnBitmapUnionPattern pattern = new MVColumnBitmapUnionPattern();
-        // Support complex expression for now.
-        Assert.assertTrue(pattern.match(expr));
+        Assert.assertFalse(pattern.match(expr));
     }
 
     @Test
@@ -136,8 +141,7 @@ public class MVColumnBitmapUnionPatternTest {
         params.add(child0);
         FunctionCallExpr expr = new FunctionCallExpr(FunctionSet.BITMAP_UNION, params);
         MVColumnBitmapUnionPattern pattern = new MVColumnBitmapUnionPattern();
-        // Support complex expression for now.
-        Assert.assertTrue(pattern.match(expr));
+        Assert.assertFalse(pattern.match(expr));
     }
 
     @Test

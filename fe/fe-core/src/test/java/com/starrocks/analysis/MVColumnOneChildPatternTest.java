@@ -90,7 +90,7 @@ public class MVColumnOneChildPatternTest {
         FunctionCallExpr functionCallExpr = new FunctionCallExpr(AggregateType.SUM.name(), params);
         MVColumnOneChildPattern mvColumnOneChildPattern = new MVColumnOneChildPattern(
                 AggregateType.SUM.name().toLowerCase());
-        Assert.assertTrue(mvColumnOneChildPattern.match(functionCallExpr));
+        Assert.assertFalse(mvColumnOneChildPattern.match(functionCallExpr));
     }
 
     @Test
@@ -104,7 +104,6 @@ public class MVColumnOneChildPatternTest {
         FunctionCallExpr functionCallExpr = new FunctionCallExpr(AggregateType.SUM.name(), params);
         MVColumnOneChildPattern mvColumnOneChildPattern = new MVColumnOneChildPattern(
                 AggregateType.SUM.name().toLowerCase());
-        // Support complex expression now.
-        Assert.assertTrue(mvColumnOneChildPattern.match(functionCallExpr));
+        Assert.assertFalse(mvColumnOneChildPattern.match(functionCallExpr));
     }
 }

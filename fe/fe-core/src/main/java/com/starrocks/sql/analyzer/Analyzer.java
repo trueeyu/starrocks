@@ -388,7 +388,7 @@ public class Analyzer {
 
         @Override
         public Void visitCreateMaterializedViewStmt(CreateMaterializedViewStmt statement, ConnectContext context) {
-            statement.analyze(context);
+            CreateMaterializedViewStmt.analyze(statement, context);
             return null;
         }
 

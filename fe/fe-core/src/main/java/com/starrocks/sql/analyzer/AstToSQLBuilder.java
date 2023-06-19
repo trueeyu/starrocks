@@ -46,26 +46,24 @@ public class AstToSQLBuilder {
     public static String buildSimple(StatementBase statement) {
         Map<TableName, Table> tables = AnalyzerUtils.collectAllTableAndViewWithAlias(statement);
         boolean sameCatalogDb = tables.keySet().stream().map(TableName::getCatalogAndDb).distinct().count() == 1;
-        return new AST2SQLBuilderVisitor(sameCatalogDb, false).visit(statement);
+        return new AST2SQLBuilderVisitor(sameCatalogDb).visit(statement);
     }
 
     public static String toSQL(ParseNode statement) {
-        return new AST2SQLBuilderVisitor(false, false).visit(statement);
+        return new AST2SQLBuilderVisitor(false).visit(statement);
     }
 
-    public static class AST2SQLBuilderVisitor extends AstToStringBuilder.AST2StringBuilderVisitor {
+    private static class AST2SQLBuilderVisitor extends AstToStringBuilder.AST2StringBuilderVisitor {
 
         private final boolean simple;
-        private final boolean withoutTbl;
 
-        public AST2SQLBuilderVisitor(boolean simple, boolean withoutTbl) {
+        public AST2SQLBuilderVisitor(boolean simple) {
             this.simple = simple;
-            this.withoutTbl = withoutTbl;
         }
 
         private String buildColumnName(TableName tableName, String fieldName, String columnName) {
             String res = "";
-            if (tableName != null && !withoutTbl) {
+            if (tableName != null) {
                 if (!simple) {
                     res = tableName.toSql();
                 } else {

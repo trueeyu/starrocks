@@ -63,7 +63,11 @@ public class MVColumnPercentileUnionPattern implements MVColumnPattern {
             if (!child0FnExpr.getFnName().getFunction().equalsIgnoreCase(FunctionSet.PERCENTILE_HASH)) {
                 return false;
             }
-            return true;
+            if (child0FnExpr.getChild(0).unwrapSlotRef() == null) {
+                return false;
+            } else {
+                return true;
+            }
         } else {
             return false;
         }

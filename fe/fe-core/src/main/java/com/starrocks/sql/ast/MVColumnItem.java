@@ -34,14 +34,13 @@
 
 package com.starrocks.sql.ast;
 
+import com.google.common.base.Preconditions;
 import com.starrocks.analysis.Expr;
 import com.starrocks.catalog.AggregateType;
 import com.starrocks.catalog.Column;
 import com.starrocks.catalog.OlapTable;
 import com.starrocks.catalog.Type;
 import com.starrocks.common.DdlException;
-
-import java.util.Set;
 
 /**
  * This is a result of semantic analysis for AddMaterializedViewClause.
@@ -58,17 +57,23 @@ public class MVColumnItem {
     private boolean isAllowNull;
     private boolean isAggregationTypeImplicit;
     private Expr defineExpr;
-    private Set<String> baseColumnNames;
+    private final String baseColumnName;
 
-    public MVColumnItem(String name, Type type, AggregateType aggregateType, boolean isAggregationTypeImplicit,
-                        Expr defineExpr, boolean isAllowNull, Set<String> baseColumnNames) {
+    public MVColumnItem(String name, Type type, AggregateType aggregateType, boolean isAllowNull,
+                        boolean isAggregationTypeImplicit, Expr defineExpr, String baseColumnName) {
         this.name = name;
         this.type = type;
         this.aggregationType = aggregateType;
+        this.isAllowNull = isAllowNull;
         this.isAggregationTypeImplicit = isAggregationTypeImplicit;
         this.defineExpr = defineExpr;
-        this.isAllowNull = isAllowNull;
-        this.baseColumnNames = baseColumnNames;
+        this.baseColumnName = baseColumnName;
+    }
+
+    public MVColumnItem(String name, Type type) {
+        this.name = name;
+        this.type = type;
+        this.baseColumnName = name;
     }
 
     public boolean isAllowNull() {
@@ -116,25 +121,23 @@ public class MVColumnItem {
         this.defineExpr = defineExpr;
     }
 
-    public Set<String> getBaseColumnNames() {
-        return baseColumnNames;
+    public String getBaseColumnName() {
+        return baseColumnName;
     }
 
     public Column toMVColumn(OlapTable olapTable) throws DdlException {
         Column baseColumn = olapTable.getBaseColumn(name);
-        Column result;
         if (baseColumn == null) {
-            result = new Column(name, type, isKey, aggregationType, isAllowNull,
-                    null, "");
-            if (defineExpr != null) {
-                result.setDefineExpr(defineExpr);
-            }
+            Preconditions.checkNotNull(defineExpr);
+            Column result = new Column(name, type, isKey, aggregationType, isAllowNull,
+                    ColumnDef.DefaultValueDef.EMPTY_VALUE, "");
+            result.setDefineExpr(defineExpr);
+            return result;
         } else {
-            result = new Column(baseColumn);
+            Column result = new Column(baseColumn);
+            result.setIsKey(isKey);
+            result.setAggregationType(aggregationType, isAggregationTypeImplicit);
+            return result;
         }
-        result.setName(name);
-        result.setIsKey(isKey);
-        result.setAggregationType(aggregationType, isAggregationTypeImplicit);
-        return result;
     }
 }
