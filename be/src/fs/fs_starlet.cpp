@@ -15,7 +15,11 @@
 #ifdef USE_STAROS
 #include "fs/fs_starlet.h"
 
+DIAGNOSTIC_PUSH
+DIAGNOSTIC_IGNORE("-Wclass-memaccess")
 #include <bvar/bvar.h>
+DIAGNOSTIC_POP
+
 #include <fmt/core.h>
 #include <fslib/configuration.h>
 #include <fslib/file.h>
@@ -277,7 +281,7 @@ public:
         return std::make_unique<SequentialFile>(std::move(istream), path);
     }
 
-    StatusOr<std::unique_ptr<WritableFile>> new_writable_file(const std::string& path) override {
+    StatusOr<std::unique_ptr<WritableFile>> new_writable_file(const std::string& path) {
         return new_writable_file(WritableFileOptions(), path);
     }
 
