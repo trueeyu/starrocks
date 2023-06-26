@@ -26,7 +26,7 @@ namespace starrocks {
 struct AlterMaterializedViewParam {
     std::string column_name;
     std::string origin_column_name;
-    std::unique_ptr<TExpr> mv_expr;
+    std::string mv_expr;
 };
 using MaterializedViewParamMap = std::unordered_map<std::string, AlterMaterializedViewParam>;
 
@@ -39,8 +39,9 @@ public:
 
     const SchemaMapping& get_schema_mapping() const { return _schema_mapping; }
 
-    const std::unordered_map<int32_t, int32_t>& get_slot_id_to_index_map() const { return _slot_id_to_index_map; }
-    std::unordered_map<int32_t, int32_t>* get_mutable_slot_id_to_index_map() { return &_slot_id_to_index_map; }
+    std::vector<ColumnId>* get_mutable_selected_column_indexes() { return &_selected_column_indexes; }
+
+    const std::vector<ColumnId>& get_selected_column_indexes() const { return _selected_column_indexes; }
 
     ObjectPool* get_object_pool() { return &_obj_pool; }
 
@@ -58,14 +59,10 @@ public:
 
     void init_runtime_state(TQueryOptions query_options, TQueryGlobals query_globals);
 
-    const std::vector<ColumnId>& get_selected_column_indexes() const { return _selected_column_indexes; }
-    std::vector<ColumnId>* get_mutable_selected_column_indexes() { return &_selected_column_indexes; }
-
-    void set_has_mv_expr_context(bool has_mv_expr_context) { this->_has_mv_expr_context = has_mv_expr_context; }
-
-    Status prepare();
-
 private:
+    const MaterializeTypeConverter* get_materialize_type_converter(const std::string& materialized_function,
+                                                                   LogicalType type);
+
     // @brief column-mapping specification of new schema
     SchemaMapping _schema_mapping;
 
@@ -74,10 +71,6 @@ private:
     ObjectPool _obj_pool;
     RuntimeState* _state = nullptr;
     std::unordered_map<int, ExprContext*> _mc_exprs;
-
-    bool _has_mv_expr_context{false};
-    // base table's slot_id to index mapping
-    std::unordered_map<int32_t, int32_t> _slot_id_to_index_map;
 
     DISALLOW_COPY(ChunkChanger);
 };
