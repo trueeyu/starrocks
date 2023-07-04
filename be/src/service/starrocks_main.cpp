@@ -388,8 +388,8 @@ int main(int argc, char** argv) {
 
     starrocks::ExecEnv::stop(exec_env);
     engine->stop();
-    delete engine;
     starrocks::ExecEnv::destroy(exec_env);
+    delete engine;
 
     return 0;
 }

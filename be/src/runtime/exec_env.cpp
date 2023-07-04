@@ -470,6 +470,7 @@ void ExecEnv::_stop() {
     // so when the ThreadPool is destroyed, it will crash.
     _load_channel_mgr->clear();
     _pipeline_sink_io_pool->shutdown();
+    _wg_driver_executor->cancel_all();
 }
 
 void ExecEnv::_destroy() {
