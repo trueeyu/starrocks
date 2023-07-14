@@ -161,13 +161,14 @@ public class OlapTableTxnLogApplier implements TransactionLogApplier {
         }
 
         table.lastVersionUpdateEndTime.set(System.currentTimeMillis());
-        if (!GlobalStateMgr.isCheckpointThread() && dictCollectedVersions.size() == validDictCacheColumns.size()) {
-            for (int i = 0; i < validDictCacheColumns.size(); i++) {
-                String columnName = validDictCacheColumns.get(i);
-                long collectedVersion = dictCollectedVersions.get(i);
-                IDictManager.getInstance()
-                        .updateGlobalDict(tableId, columnName, collectedVersion, maxPartitionVersionTime);
-            }
+        if (dictCollectedVersions.size() != validDictCacheColumns.size()) {
+            return;
+        }
+        Preconditions.checkState(dictCollectedVersions.size() == validDictCacheColumns.size());
+        for (int i = 0; i < validDictCacheColumns.size(); i++) {
+            String columnName = validDictCacheColumns.get(i);
+            long collectedVersion = dictCollectedVersions.get(i);
+            IDictManager.getInstance().updateGlobalDict(tableId, columnName, collectedVersion, maxPartitionVersionTime);
         }
     }
 

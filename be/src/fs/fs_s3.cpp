@@ -128,6 +128,10 @@ private:
     Random _rand;
 };
 
+void clean_s3_clients() {
+    S3ClientFactory::instance().clear();
+}
+
 S3ClientFactory::S3ClientFactory() : _rand((int)::time(nullptr)) {}
 
 // Get an AWSCredentialsProvider based on CloudCredential
@@ -221,6 +225,13 @@ S3ClientFactory::S3ClientPtr S3ClientFactory::new_client(const TCloudConfigurati
         }
     }
     return client;
+}
+
+void S3ClientFactory::clear() {
+    std::lock_guard l(_lock);
+    for (auto& item : _clients) {
+        item.reset();
+    }
 }
 
 S3ClientFactory::S3ClientPtr S3ClientFactory::new_client(const ClientConfiguration& config, const FSOptions& opts) {

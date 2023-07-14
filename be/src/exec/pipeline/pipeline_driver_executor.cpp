@@ -43,11 +43,10 @@ GlobalDriverExecutor::GlobalDriverExecutor(const std::string& name, std::unique_
                                     [this]() { return _blocked_driver_poller->blocked_driver_queue_len(); });
 }
 
-GlobalDriverExecutor::~GlobalDriverExecutor() {
-    close();
-}
+GlobalDriverExecutor::~GlobalDriverExecutor() = default;
 
 void GlobalDriverExecutor::close() {
+    _thread_pool->shutdown();
     _driver_queue->close();
 }
 

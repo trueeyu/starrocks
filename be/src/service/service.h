@@ -15,14 +15,11 @@
 #pragma once
 
 #include <atomic>
-
-#include "util/logging.h"
+#include "storage/options.h"
 
 namespace starrocks {
-class ExecEnv;
-
 extern std::atomic<bool> k_starrocks_exit;
 extern std::atomic<bool> k_starrocks_exit_quick;
 
-void start_be();
+void start_be(const std::vector<StorePath>& paths, bool as_cn);
 } // namespace starrocks
