@@ -80,6 +80,8 @@ public:
 
     size_t byte_size() const override;
 
+    size_t byte_size(size_t from, size_t size) const override;
+
     size_t byte_size(size_t idx) const override;
 
     void reserve(size_t n) override;

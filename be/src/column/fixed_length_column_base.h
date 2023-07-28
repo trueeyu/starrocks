@@ -92,6 +92,8 @@ public:
 
     size_t byte_size() const override { return _data.size() * sizeof(ValueType); }
 
+    size_t byte_size(size_t from, size_t size) const { return sizeof(ValueType) * size; }
+
     size_t byte_size(size_t idx __attribute__((unused))) const override { return sizeof(ValueType); }
 
     void reserve(size_t n) override { _data.reserve(n); }

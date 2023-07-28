@@ -54,7 +54,8 @@ public:
               _enable_exchange_pass_through(enable_exchange_pass_through),
               _enable_exchange_perf(enable_exchange_perf),
               _pass_through_context(pass_through_chunk_buffer, fragment_instance_id, dest_node_id),
-              _chunks(num_shuffles) {}
+              _chunks(num_shuffles),
+              _chunk_mem_usages(num_shuffles, 0) {}
 
     // Initialize channel.
     // Returns OK if successful, error indication otherwise.
@@ -125,6 +126,7 @@ private:
     // If pipeline level shuffle is disable, the size of _chunks
     // always be 1
     std::vector<std::unique_ptr<Chunk>> _chunks;
+    std::vector<size_t> _chunk_mem_usages;
     PTransmitChunkParamsPtr _chunk_request;
     size_t _current_request_bytes = 0;
 
@@ -193,14 +195,26 @@ Status ExchangeSinkOperator::Channel::add_rows_selective(Chunk* chunk, int32_t d
     if (UNLIKELY(_chunks[driver_sequence] == nullptr)) {
         _chunks[driver_sequence] = chunk->clone_empty_with_slot(size);
     }
+    LOG(ERROR) << "LXH: append rows selective start: channel_id(" << driver_sequence << "), num_rows("
+               << _chunks[driver_sequence]->num_rows() << "):chunn_mem(" << _chunk_mem_usages[driver_sequence]
+               << "):from(" << from << "):size(" << size << "):(" << CurrentThread::current().get_consumed_bytes()
+               << ")";
 
-    if (_chunks[driver_sequence]->num_rows() + size > state->chunk_size()) {
+    size_t num_rows = _chunks[driver_sequence]->num_rows();
+    if (num_rows + size > state->chunk_size() || _chunk_mem_usages[driver_sequence] >= config::chunk_mem_size) {
+        LOG(ERROR) << "LXH: SEND: " << _chunk_mem_usages[driver_sequence];
         RETURN_IF_ERROR(send_one_chunk(state, _chunks[driver_sequence].get(), driver_sequence, false));
         // we only clear column data, because we need to reuse column schema
         _chunks[driver_sequence]->set_num_rows(0);
+        _chunk_mem_usages[driver_sequence] = 0;
     }
 
     _chunks[driver_sequence]->append_selective(*chunk, indexes, from, size);
+    _chunk_mem_usages[driver_sequence] += _chunks[driver_sequence]->bytes_usage(num_rows, size);
+    LOG(ERROR) << "LXH: append rows selective end: channel_id(" << driver_sequence << "), num_rows("
+               << _chunks[driver_sequence]->num_rows() << "):chunn_mem(" << _chunk_mem_usages[driver_sequence]
+               << "):from(" << from << "):size(" << size << "):(" << CurrentThread::current().get_consumed_bytes()
+               << ")";
     return Status::OK();
 }
 
