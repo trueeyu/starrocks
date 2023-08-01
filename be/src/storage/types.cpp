@@ -937,9 +937,7 @@ struct ScalarTypeInfoImpl<TYPE_CHAR> : public ScalarTypeInfoImplBase<TYPE_CHAR> 
     static void direct_copy(void* dest, const void* src, MemPool* mem_pool) {
         auto l_slice = unaligned_load<Slice>(dest);
         auto r_slice = unaligned_load<Slice>(src);
-        memory_copy(l_slice.data, r_slice.data, r_slice.size);
-        l_slice.size = r_slice.size;
-        unaligned_store<Slice>(dest, l_slice);
+        l_slice = r_slice;
     }
 
     // using field.set_to_max to set varchar/char,not here
