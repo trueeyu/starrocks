@@ -59,10 +59,10 @@ protected:
 
     void TearDown() override { StoragePageCache::release_global_cache(); }
 
-    void test_string(const std::string& testname, TypeInfoPtr type_info, int length) {
+    void test_string(const std::string& testname, TypeInfoPtr type_info) {
         std::string filename = kTestDir + "/" + testname;
 
-        std::unique_ptr<ZoneMapIndexWriter> builder = ZoneMapIndexWriter::create(type_info.get(), length);
+        std::unique_ptr<ZoneMapIndexWriter> builder = ZoneMapIndexWriter::create(type_info.get());
         std::vector<std::string> values1 = {"aaaa", "bbbb", "cccc", "dddd", "eeee", "ffff"};
         for (auto& value : values1) {
             Slice slice(value);
@@ -128,7 +128,7 @@ TEST_F(ColumnZoneMapTest, NormalTestIntPage) {
     TabletColumn int_column = create_int_key(0);
     TypeInfoPtr type_info = get_type_info(int_column);
 
-    std::unique_ptr<ZoneMapIndexWriter> builder = ZoneMapIndexWriter::create(type_info.get(), 4);
+    std::unique_ptr<ZoneMapIndexWriter> builder = ZoneMapIndexWriter::create(type_info.get());
     std::vector<int> values1 = {1, 10, 11, 20, 21, 22};
     for (auto value : values1) {
         builder->add_values((const uint8_t*)&value, 1);
@@ -184,14 +184,14 @@ TEST_F(ColumnZoneMapTest, NormalTestIntPage) {
 TEST_F(ColumnZoneMapTest, NormalTestVarcharPage) {
     TabletColumn varchar_column = create_varchar_key(0);
     TypeInfoPtr type_info = get_type_info(varchar_column);
-    test_string("NormalTestVarcharPage", type_info, 10);
+    test_string("NormalTestVarcharPage", type_info);
 }
 
 // Test for string
 TEST_F(ColumnZoneMapTest, NormalTestCharPage) {
     TabletColumn char_column = create_char_key(0);
     TypeInfoPtr type_info = get_type_info(char_column);
-    test_string("NormalTestCharPage", type_info, 10);
+    test_string("NormalTestCharPage", type_info);
 }
 
 } // namespace starrocks
