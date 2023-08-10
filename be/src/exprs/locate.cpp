@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <algorithm>
 
 #include "column/binary_column.h"
@@ -253,3 +256,5 @@ StatusOr<ColumnPtr> StringFunctions::locate_pos(FunctionContext* context, const 
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

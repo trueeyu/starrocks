@@ -36,7 +36,7 @@ StatusOr<ColumnPtr> BitmapFunctions::to_bitmap(FunctionContext* context, const s
     ColumnViewer<LT> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (viewer.is_null(row)) {
             builder.append_null();
@@ -61,7 +61,8 @@ StatusOr<ColumnPtr> BitmapFunctions::to_bitmap(FunctionContext* context, const s
         } else {
             StringParser::ParseResult parse_result = StringParser::PARSE_SUCCESS;
             auto slice = viewer.value(row);
-            value = StringParser::string_to_unsigned_int<uint64_t>(slice.data, slice.size, &parse_result);
+            value = StringParser::string_to_unsigned_int<uint64_t>(slice.data, static_cast<int>(slice.size),
+                                                                   &parse_result);
             if (parse_result != StringParser::PARSE_SUCCESS) {
                 context->set_error(strings::Substitute("The input: {0} is not valid, to_bitmap only "
                                                        "support bigint value from 0 to "
@@ -100,13 +101,14 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_hash(FunctionContext* context, const
     ColumnViewer<TYPE_VARCHAR> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         BitmapValue bitmap;
 
         if (!viewer.is_null(row)) {
             auto slice = viewer.value(row);
-            uint32_t hash_value = HashUtil::murmur_hash3_32(slice.data, slice.size, HashUtil::MURMUR3_32_SEED);
+            uint32_t hash_value =
+                    HashUtil::murmur_hash3_32(slice.data, static_cast<int32_t>(slice.size), HashUtil::MURMUR3_32_SEED);
 
             bitmap.add(hash_value);
         }
@@ -121,7 +123,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_count(FunctionContext* context, cons
     ColumnViewer<TYPE_OBJECT> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_BIGINT> builder(size);
+    ColumnBuilder<TYPE_BIGINT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         int64_t value = viewer.is_null(row) ? 0 : viewer.value(row)->cardinality();
         builder.append(value);
@@ -142,7 +144,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_or(FunctionContext* context, const s
     ColumnViewer<TYPE_OBJECT> rhs(columns[1]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (lhs.is_null(row) || rhs.is_null(row)) {
             builder.append_null();
@@ -166,7 +168,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_and(FunctionContext* context, const 
     ColumnViewer<TYPE_OBJECT> rhs(columns[1]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (lhs.is_null(row) || rhs.is_null(row)) {
             builder.append_null();
@@ -204,7 +206,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_from_string(FunctionContext* context
     std::vector<uint64_t> bits;
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (viewer.is_null(row)) {
             builder.append_null();
@@ -256,7 +258,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_andnot(FunctionContext* context, con
     ColumnViewer<TYPE_OBJECT> rhs(columns[1]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (lhs.is_null(row) || rhs.is_null(row)) {
             builder.append_null();
@@ -280,7 +282,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_xor(FunctionContext* context, const 
     ColumnViewer<TYPE_OBJECT> rhs(columns[1]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (lhs.is_null(row) || rhs.is_null(row)) {
             builder.append_null();
@@ -304,7 +306,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_remove(FunctionContext* context, con
     ColumnViewer<TYPE_BIGINT> rhs(columns[1]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (lhs.is_null(row) || rhs.is_null(row)) {
             builder.append_null();
@@ -368,14 +370,14 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_to_array(FunctionContext* context, c
 
             auto& bitmap = *lhs.value(row);
             bitmap.to_array(&array_bigint_column->get_data());
-            offset += bitmap.cardinality();
+            offset += static_cast<int>(bitmap.cardinality());
         }
     } else {
         for (int row = 0; row < size; ++row) {
             array_offsets->append(offset);
             auto& bitmap = *lhs.value(row);
             bitmap.to_array(&array_bigint_column->get_data());
-            offset += bitmap.cardinality();
+            offset += static_cast<int>(bitmap.cardinality());
         }
     }
     array_offsets->append(offset);
@@ -398,7 +400,7 @@ StatusOr<ColumnPtr> BitmapFunctions::array_to_bitmap(FunctionContext* context, c
     RETURN_IF_COLUMNS_ONLY_NULL(columns);
     const constexpr LogicalType TYPE = TYPE_BIGINT;
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int>(size));
 
     Column* data_column = ColumnHelper::get_data_column(columns[0].get());
     NullData::pointer null_data = columns[0]->is_nullable()
@@ -446,7 +448,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_max(FunctionContext* context, const 
     ColumnViewer<TYPE_OBJECT> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_LARGEINT> builder(size);
+    ColumnBuilder<TYPE_LARGEINT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (viewer.is_null(row)) {
             builder.append_null();
@@ -467,7 +469,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_min(FunctionContext* context, const 
     ColumnViewer<TYPE_OBJECT> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_LARGEINT> builder(size);
+    ColumnBuilder<TYPE_LARGEINT> builder(static_cast<int32_t>(size));
     for (int row = 0; row < size; ++row) {
         if (viewer.is_null(row)) {
             builder.append_null();
@@ -487,7 +489,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_min(FunctionContext* context, const 
 StatusOr<ColumnPtr> BitmapFunctions::base64_to_bitmap(FunctionContext* context, const starrocks::Columns& columns) {
     ColumnViewer<TYPE_VARCHAR> viewer(columns[0]);
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
     std::unique_ptr<char[]> p;
     int last_len = 0;
     int curr_len = 0;
@@ -499,7 +501,7 @@ StatusOr<ColumnPtr> BitmapFunctions::base64_to_bitmap(FunctionContext* context, 
         }
 
         auto src_value = viewer.value(row);
-        int ssize = src_value.size;
+        int ssize = static_cast<int>(src_value.size);
         if (ssize == 0) {
             builder.append_null();
             continue;
@@ -511,7 +513,7 @@ StatusOr<ColumnPtr> BitmapFunctions::base64_to_bitmap(FunctionContext* context, 
             last_len = curr_len;
         }
 
-        int decode_res = base64_decode2(src_value.data, ssize, p.get());
+        auto decode_res = base64_decode2(src_value.data, ssize, p.get());
         if (decode_res < 0) {
             builder.append_null();
             continue;
@@ -532,7 +534,7 @@ StatusOr<ColumnPtr> BitmapFunctions::sub_bitmap(FunctionContext* context, const 
     ColumnViewer<TYPE_BIGINT> len_viewer(columns[2]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
 
     for (int row = 0; row < size; row++) {
         if (bitmap_viewer.is_null(row) || offset_viewer.is_null(row) || len_viewer.is_null(row) ||
@@ -565,22 +567,22 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_to_base64(FunctionContext* context, 
     ColumnViewer<TYPE_OBJECT> viewer(columns[0]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_VARCHAR> builder(size);
+    ColumnBuilder<TYPE_VARCHAR> builder(static_cast<int32_t>(size));
 
     for (int row = 0; row < size; ++row) {
         BitmapValue* bitmap = viewer.value(row);
-        int byteSize = bitmap->getSizeInBytes();
+        int byteSize = static_cast<int>(bitmap->getSizeInBytes());
         std::unique_ptr<char[]> buf;
         buf.reset(new char[byteSize]);
 
-        int len = (size_t)(4.0 * ceil((double)byteSize / 3.0)) + 1;
+        int len = static_cast<int>((size_t)(4.0 * ceil((double)byteSize / 3.0)) + 1);
         std::unique_ptr<char[]> p;
         p.reset(new char[len]);
         memset(p.get(), 0, len);
 
         bitmap->write((char*)buf.get());
 
-        int resLen = base64_encode2((unsigned char*)buf.get(), byteSize, (unsigned char*)p.get());
+        int resLen = static_cast<int>(base64_encode2((unsigned char*)buf.get(), byteSize, (unsigned char*)p.get()));
 
         if (resLen < 0) {
             builder.append_null();
@@ -599,7 +601,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_subset_limit(FunctionContext* contex
     ColumnViewer<TYPE_BIGINT> limit_viewer(columns[2]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
 
     for (int row = 0; row < size; row++) {
         if (bitmap_viewer.is_null(row) || range_start_viewer.is_null(row) || limit_viewer.is_null(row)) {
@@ -641,7 +643,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_subset_in_range(FunctionContext* con
     ColumnViewer<TYPE_BIGINT> range_end_viewer(columns[2]);
 
     size_t size = columns[0]->size();
-    ColumnBuilder<TYPE_OBJECT> builder(size);
+    ColumnBuilder<TYPE_OBJECT> builder(static_cast<int32_t>(size));
 
     for (int row = 0; row < size; row++) {
         if (bitmap_viewer.is_null(row) || range_start_viewer.is_null(row) || range_end_viewer.is_null(row)) {

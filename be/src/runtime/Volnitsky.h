@@ -17,6 +17,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <algorithm>
 #include <functional>
 
@@ -166,3 +169,4 @@ protected:
 using VolnitskyUTF8 = VolnitskyBase<StringSearcher>;
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

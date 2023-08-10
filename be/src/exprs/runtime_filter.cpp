@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/runtime_filter.h"
 
 #include "types/logical_type_infra.h"
@@ -216,3 +219,5 @@ bool JoinRuntimeFilter::check_equal(const JoinRuntimeFilter& rf) const {
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

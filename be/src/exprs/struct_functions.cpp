@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/struct_functions.h"
 
 #include "column/column_helper.h"
@@ -51,3 +54,5 @@ StatusOr<ColumnPtr> StructFunctions::named_struct(FunctionContext* context, cons
     return new_struct(context, cols);
 }
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

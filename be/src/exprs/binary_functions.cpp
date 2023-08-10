@@ -30,7 +30,7 @@ namespace starrocks {
 StatusOr<ColumnPtr> BinaryFunctions::to_binary(FunctionContext* context, const Columns& columns) {
     auto state = reinterpret_cast<BinaryFormatState*>(context->get_function_state(FunctionContext::THREAD_LOCAL));
     auto& src_column = columns[0];
-    const int size = src_column->size();
+    const int size = static_cast<int>(src_column->size());
     ColumnBuilder<TYPE_VARBINARY> result(size);
     auto to_binary_type = state->to_binary_type;
     switch (to_binary_type) {
@@ -76,7 +76,7 @@ Status BinaryFunctions::to_binary_close(FunctionContext* context, FunctionContex
 StatusOr<ColumnPtr> BinaryFunctions::from_binary(FunctionContext* context, const Columns& columns) {
     auto state = reinterpret_cast<BinaryFormatState*>(context->get_function_state(FunctionContext::THREAD_LOCAL));
     auto& src_column = columns[0];
-    const int size = src_column->size();
+    const int size = static_cast<int>(src_column->size());
     ColumnBuilder<TYPE_VARBINARY> result(size);
     auto to_binary_type = state->to_binary_type;
     switch (to_binary_type) {

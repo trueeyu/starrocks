@@ -54,7 +54,7 @@ public:
         auto* data1 = r1.data();
         auto* data2 = r2.data();
         auto* data3 = r3.data();
-        const int s = std::min(v1->size(), v2->size());
+        const int s = static_cast<int>(std::min(v1->size(), v2->size()));
         for (int i = 0; i < s; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
                     data1[i], data2[i]);
@@ -76,7 +76,7 @@ public:
         auto* data2 = r2.data();
         auto* data3 = r3.data();
 
-        int size = v2->size();
+        int size = static_cast<int>(v2->size());
         for (int i = 0; i < size; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
                     data1, data2[i]);
@@ -98,7 +98,7 @@ public:
         auto data2 = r2[0];
         auto* data3 = r3.data();
 
-        int size = v1->size();
+        int size = static_cast<int>(v1->size());
         for (int i = 0; i < size; ++i) {
             data3[i] = OP::template apply<RunTimeCppType<LType>, RunTimeCppType<RType>, RunTimeCppType<ResultType>>(
                     data1[i], data2);
@@ -370,7 +370,7 @@ public:
         auto* lnd = ln->get_data().data();
         auto* rnd = rn->get_data().data();
 
-        int size = std::min(lv->size(), rv->size());
+        int size = static_cast<int>(std::min(lv->size(), rv->size()));
 
         auto null_column = NullColumn::create();
         null_column->resize_uninitialized(size);
@@ -403,7 +403,7 @@ public:
         auto* lnd = ln->get_data().data();
         auto* rnd = rn->get_data().data();
 
-        int size = rv->size();
+        int size = static_cast<int>(rv->size());
 
         auto null_column = NullColumn::create();
         null_column->resize_uninitialized(size);
@@ -436,7 +436,7 @@ public:
         auto* lnd = ln->get_data().data();
         auto* rnd = rn->get_data().data();
 
-        int size = lv->size();
+        int size = static_cast<int>(lv->size());
 
         auto null_column = NullColumn::create();
         null_column->resize_uninitialized(size);

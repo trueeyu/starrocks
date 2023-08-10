@@ -163,21 +163,21 @@ public:
         Bytes& bytes = _column->get_bytes();
         Offsets& offsets = _column->get_offset();
         NullColumn::Container& nulls = _null_column->get_data();
-        offsets[i + 1] = bytes.size();
+        offsets[i + 1] = static_cast<ColumnType::Offset>(bytes.size());
         nulls[i] = 1;
     }
 
     void append_empty(size_t i) {
         Bytes& bytes = _column->get_bytes();
         Offsets& offsets = _column->get_offset();
-        offsets[i + 1] = bytes.size();
+        offsets[i + 1] = static_cast<ColumnType::Offset>(bytes.size());
     }
 
     void append(uint8_t* begin, uint8_t* end, size_t i) {
         Bytes& bytes = _column->get_bytes();
         Offsets& offsets = _column->get_offset();
         bytes.insert(bytes.end(), begin, end);
-        offsets[i + 1] = bytes.size();
+        offsets[i + 1] = static_cast<ColumnType::Offset>(bytes.size());
     }
     // for concat and concat_ws, several columns are concatenated
     // together into a string, so append must be invoked as many times
@@ -199,7 +199,7 @@ public:
     void append_complete(size_t i) {
         Bytes& bytes = _column->get_bytes();
         Offsets& offsets = _column->get_offset();
-        offsets[i + 1] = bytes.size();
+        offsets[i + 1] = static_cast<ColumnType::Offset>(bytes.size());
     }
 
     // move current ptr backwards for n bytes, used in concat_ws

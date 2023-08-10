@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/encryption_functions.h"
 
 #include "column/column_helper.h"
@@ -31,7 +34,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::aes_encrypt(FunctionContext* ctx, const
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
     auto key_viewer = ColumnViewer<TYPE_VARCHAR>(columns[1]);
 
-    const int size = columns[0]->size();
+    const int size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; ++row) {
         if (src_viewer.is_null(row) || key_viewer.is_null(row)) {
@@ -40,7 +43,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::aes_encrypt(FunctionContext* ctx, const
         }
 
         auto src_value = src_viewer.value(row);
-        int cipher_len = src_value.size + 16;
+        int cipher_len = static_cast<int>(src_value.size + 16);
         char p[cipher_len];
 
         auto key_value = key_viewer.value(row);
@@ -61,7 +64,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::aes_decrypt(FunctionContext* ctx, const
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
     auto key_viewer = ColumnViewer<TYPE_VARCHAR>(columns[1]);
 
-    const int size = columns[0]->size();
+    const int size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; ++row) {
         if (src_viewer.is_null(row) || key_viewer.is_null(row)) {
@@ -95,7 +98,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::aes_decrypt(FunctionContext* ctx, const
 
 StatusOr<ColumnPtr> EncryptionFunctions::from_base64(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
-    const int size = columns[0]->size();
+    const int size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; ++row) {
         if (src_viewer.is_null(row)) {
@@ -128,7 +131,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::from_base64(FunctionContext* ctx, const
 StatusOr<ColumnPtr> EncryptionFunctions::to_base64(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    const int size = columns[0]->size();
+    const int size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; ++row) {
         if (src_viewer.is_null(row)) {
@@ -168,7 +171,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::md5sum(FunctionContext* ctx, const Colu
         list.emplace_back(col);
     }
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         Md5Digest digest;
@@ -193,7 +196,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::md5sum_numeric(FunctionContext* ctx, co
     for (const ColumnPtr& col : columns) {
         list.emplace_back(col);
     }
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_LARGEINT> result(size);
     for (int row = 0; row < size; row++) {
         Md5Digest digest;
@@ -217,7 +220,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::md5sum_numeric(FunctionContext* ctx, co
 StatusOr<ColumnPtr> EncryptionFunctions::md5(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         if (src_viewer.is_null(row)) {
@@ -275,7 +278,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::invalid_sha(FunctionContext* ctx, const
 StatusOr<ColumnPtr> EncryptionFunctions::sha224(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         if (src_viewer.is_null(row)) {
@@ -297,7 +300,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::sha224(FunctionContext* ctx, const Colu
 StatusOr<ColumnPtr> EncryptionFunctions::sha256(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         if (src_viewer.is_null(row)) {
@@ -319,7 +322,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::sha256(FunctionContext* ctx, const Colu
 StatusOr<ColumnPtr> EncryptionFunctions::sha384(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         if (src_viewer.is_null(row)) {
@@ -341,7 +344,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::sha384(FunctionContext* ctx, const Colu
 StatusOr<ColumnPtr> EncryptionFunctions::sha512(FunctionContext* ctx, const Columns& columns) {
     auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
 
-    auto size = columns[0]->size();
+    auto size = static_cast<int>(columns[0]->size());
     ColumnBuilder<TYPE_VARCHAR> result(size);
     for (int row = 0; row < size; row++) {
         if (src_viewer.is_null(row)) {
@@ -365,7 +368,7 @@ StatusOr<ColumnPtr> EncryptionFunctions::sha2(FunctionContext* ctx, const Column
         auto src_viewer = ColumnViewer<TYPE_VARCHAR>(columns[0]);
         auto length_viewer = ColumnViewer<TYPE_INT>(columns[1]);
 
-        auto size = columns[0]->size();
+        auto size = static_cast<int>(columns[0]->size());
         ColumnBuilder<TYPE_VARCHAR> result(size);
 
         for (int row = 0; row < size; row++) {
@@ -419,3 +422,5 @@ Status EncryptionFunctions::sha2_close(FunctionContext* context, FunctionContext
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

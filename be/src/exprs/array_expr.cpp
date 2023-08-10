@@ -60,7 +60,7 @@ public:
             for (const auto& element : element_columns) {
                 array_elements->append(*element, i, 1);
             }
-            curr_offset += num_elements;
+            curr_offset += static_cast<uint32_t>(num_elements);
             array_offsets->append(curr_offset);
         }
 

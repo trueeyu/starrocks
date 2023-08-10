@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/map_functions.h"
 
 #include "column/array_column.h"
@@ -483,3 +486,4 @@ StatusOr<ColumnPtr> MapFunctions::map_concat(FunctionContext* context, const Col
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

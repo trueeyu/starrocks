@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <memory>
 #include <mutex>
 #include <vector>
@@ -67,3 +70,4 @@ private:
     int _common_sub_expr_num;
 };
 } // namespace starrocks
+#pragma GCC diagnostic pop

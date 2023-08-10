@@ -99,3 +99,5 @@ set(EXPR_FILES
 )
 
 add_library(Exprs ${EXPR_FILES})
+
+set_target_properties(Exprs PROPERTIES COMPILE_FLAGS "-Wconversion")

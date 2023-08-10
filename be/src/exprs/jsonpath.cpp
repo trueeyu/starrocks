@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/jsonpath.h"
 
 #include <re2/re2.h>
@@ -263,3 +266,5 @@ vpack::Slice JsonPath::extract(const JsonValue* json, const JsonPath& jsonpath, 
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

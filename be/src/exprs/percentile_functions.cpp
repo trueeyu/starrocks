@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/percentile_functions.h"
 
 #include "column/column_builder.h"
@@ -31,7 +34,7 @@ StatusOr<ColumnPtr> PercentileFunctions::percentile_hash(FunctionContext* contex
     for (int row = 0; row < size; ++row) {
         PercentileValue value;
         if (!viewer.is_null(row)) {
-            value.add(viewer.value(row));
+            value.add(static_cast<float>(viewer.value(row)));
         }
         percentile_column->append(&value);
     }
@@ -57,7 +60,7 @@ StatusOr<ColumnPtr> PercentileFunctions::percentile_approx_raw(FunctionContext* 
         if (viewer1.is_null(row) || viewer2.is_null(row)) {
             builder.append_null();
         } else {
-            double result = viewer1.value(row)->quantile(viewer2.value(row));
+            double result = viewer1.value(row)->quantile(static_cast<Value>(viewer2.value(row)));
             builder.append(result);
         }
     }
@@ -65,3 +68,4 @@ StatusOr<ColumnPtr> PercentileFunctions::percentile_approx_raw(FunctionContext* 
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

@@ -32,6 +32,9 @@
 // specific language governing permissions and limitations
 // under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "base64.h"
 
 #include <cmath>
@@ -169,3 +172,4 @@ int64_t base64_decode2(const char* data, size_t length, char* decoded_data) {
 }
 */
 } // namespace starrocks
+#pragma GCC diagnostic pop

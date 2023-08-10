@@ -98,7 +98,7 @@ public:
         result->resize(v1->size());
         auto* r3 = result->get_data().data();
 
-        int size = v1->size();
+        int size = static_cast<int>(v1->size());
         for (int i = 0; i < size; ++i) {
             r3[i] = OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]);
         }
@@ -122,8 +122,8 @@ public:
 
         auto& offset = result->get_offset();
         auto& bytes = result->get_bytes();
-        int size = v1->size();
-        for (int i = 0; i < size; ++i) {
+        size_t size = v1->size();
+        for (auto i = 0; i < size; ++i) {
             std::string ret = OP::template apply<RunTimeCppType<Type>, std::string>(r1[i], std::forward<Args>(args)...);
             bytes.reserve(ret.size());
             bytes.insert(bytes.end(), (uint8_t*)ret.data(), (uint8_t*)ret.data() + ret.size());

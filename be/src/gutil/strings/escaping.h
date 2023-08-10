@@ -279,30 +279,6 @@ int QuotedPrintableUnescape(const char* src, int slen, char* dest, int szdest);
 // ----------------------------------------------------------------------
 int QEncodingUnescape(const char* src, int slen, char* dest, int szdest);
 
-// ----------------------------------------------------------------------
-// Base64Unescape()
-// WebSafeBase64Unescape()
-//    Copies "src" to "dest", where src is in base64 and is written to its
-//    ASCII equivalents. src is not null terminated, instead specify len.
-//    I recommend that slen<szdest, but we honor szdest anyway.
-//    RETURNS the length of dest, or -1 if src contains invalid chars.
-//    The WebSafe variation use '-' instead of '+' and '_' instead of '/'.
-//    The variations that store into a string clear the string first, and
-//    return false (with dest empty) if src contains invalid chars; for
-//    these versions src and dest must be different strings.
-// ----------------------------------------------------------------------
-int Base64Unescape(const char* src, int slen, char* dest, int szdest);
-bool Base64Unescape(const char* src, int slen, string* dest);
-inline bool Base64Unescape(const string& src, string* dest) {
-    return Base64Unescape(src.data(), src.size(), dest);
-}
-
-int WebSafeBase64Unescape(const char* src, int slen, char* dest, int szdest);
-bool WebSafeBase64Unescape(const char* src, int slen, string* dest);
-inline bool WebSafeBase64Unescape(const string& src, string* dest) {
-    return WebSafeBase64Unescape(src.data(), src.size(), dest);
-}
-
 // Return the length to use for the output buffer given to the base64 escape
 // routines. Make sure to use the same value for do_padding in both.
 // This function may return incorrect results if given input_len values that
@@ -310,42 +286,6 @@ inline bool WebSafeBase64Unescape(const string& src, string* dest) {
 int CalculateBase64EscapedLen(int input_len, bool do_padding);
 // Use this version when calling Base64Escape without a do_padding arg.
 int CalculateBase64EscapedLen(int input_len);
-
-// ----------------------------------------------------------------------
-// Base64Escape()
-// WebSafeBase64Escape()
-//    Encode "src" to "dest" using base64 encoding.
-//    src is not null terminated, instead specify len.
-//    'dest' should have at least CalculateBase64EscapedLen() length.
-//    RETURNS the length of dest.
-//    The WebSafe variation use '-' instead of '+' and '_' instead of '/'
-//    so that we can place the out in the URL or cookies without having
-//    to escape them.  It also has an extra parameter "do_padding",
-//    which when set to false will prevent padding with "=".
-// ----------------------------------------------------------------------
-int Base64Escape(const unsigned char* src, int slen, char* dest, int szdest);
-int WebSafeBase64Escape(const unsigned char* src, int slen, char* dest, int szdest, bool do_padding);
-// Encode src into dest with padding.
-void Base64Escape(const string& src, string* dest);
-// Encode src into dest web-safely without padding.
-void WebSafeBase64Escape(const string& src, string* dest);
-// Encode src into dest web-safely with padding.
-void WebSafeBase64EscapeWithPadding(const string& src, string* dest);
-
-void Base64Escape(const unsigned char* src, int szsrc, string* dest, bool do_padding);
-void WebSafeBase64Escape(const unsigned char* src, int szsrc, string* dest, bool do_padding);
-
-// ----------------------------------------------------------------------
-// Base32Unescape()
-//    Copies "src" to "dest", where src is in base32 and is written to its
-//    ASCII equivalents. src is not null terminated, instead specify len.
-//    RETURNS the length of dest, or -1 if src contains invalid chars.
-// ----------------------------------------------------------------------
-int Base32Unescape(const char* src, int slen, char* dest, int szdest);
-bool Base32Unescape(const char* src, int slen, string* dest);
-inline bool Base32Unescape(const string& src, string* dest) {
-    return Base32Unescape(src.data(), src.size(), dest);
-}
 
 // ----------------------------------------------------------------------
 // Base32Escape()
@@ -621,12 +561,7 @@ using strings::BackslashEscape;
 using strings::BackslashUnescape;
 using strings::QuotedPrintableUnescape;
 using strings::QEncodingUnescape;
-using strings::Base64Unescape;
-using strings::WebSafeBase64Unescape;
 using strings::CalculateBase64EscapedLen;
-using strings::Base64Escape;
-using strings::WebSafeBase64Escape;
-using strings::WebSafeBase64EscapeWithPadding;
 using strings::Base32Escape;
 using strings::Base32HexEscape;
 using strings::CalculateBase32EscapedLen;

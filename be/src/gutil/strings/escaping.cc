@@ -830,10 +830,6 @@ int CalculateBase64EscapedLen(int input_len) {
 }
 
 // ----------------------------------------------------------------------
-// int Base64Unescape() - base64 decoder
-// int Base64Escape() - base64 encoder
-// int WebSafeBase64Unescape() - Google's variation of base64 decoder
-// int WebSafeBase64Escape() - Google's variation of base64 encoder
 //
 // Check out
 // http://www.cis.ohio-state.edu/htbin/rfc/rfc2045.html for formal
@@ -1164,46 +1160,6 @@ static const signed char kUnWebSafeBase64[] = {
         -1,       -1,       -1,       -1,       -1,       -1,       -1,       -1,       -1,       -1,       -1,
         -1,       -1,       -1};
 
-int Base64Unescape(const char* src, int szsrc, char* dest, int szdest) {
-    return Base64UnescapeInternal(src, szsrc, dest, szdest, kUnBase64);
-}
-
-int WebSafeBase64Unescape(const char* src, int szsrc, char* dest, int szdest) {
-    return Base64UnescapeInternal(src, szsrc, dest, szdest, kUnWebSafeBase64);
-}
-
-static bool Base64UnescapeInternal(const char* src, int slen, string* dest, const signed char* unbase64) {
-    // Determine the size of the output string.  Base64 encodes every 3 bytes into
-    // 4 characters.  any leftover chars are added directly for good measure.
-    // This is documented in the base64 RFC: http://www.ietf.org/rfc/rfc3548.txt
-    const int dest_len = 3 * (slen / 4) + (slen % 4);
-
-    dest->clear();
-    dest->resize(dest_len);
-
-    // We are getting the destination buffer by getting the beginning of the
-    // string and converting it into a char *.
-    const int len = Base64UnescapeInternal(src, slen, string_as_array(dest), dest->size(), unbase64);
-    if (len < 0) {
-        dest->clear();
-        return false;
-    }
-
-    // could be shorter if there was padding
-    DCHECK_LE(len, dest_len);
-    dest->resize(len);
-
-    return true;
-}
-
-bool Base64Unescape(const char* src, int slen, string* dest) {
-    return Base64UnescapeInternal(src, slen, dest, kUnBase64);
-}
-
-bool WebSafeBase64Unescape(const char* src, int slen, string* dest) {
-    return Base64UnescapeInternal(src, slen, dest, kUnWebSafeBase64);
-}
-
 int Base64EscapeInternal(const unsigned char* src, int szsrc, char* dest, int szdest, const char* base64,
                          bool do_padding) {
     static const char kPad64 = '=';
@@ -1271,15 +1227,6 @@ int Base64EscapeInternal(const unsigned char* src, int szsrc, char* dest, int sz
 
 static const char kBase64Chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
-static const char kWebSafeBase64Chars[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
-
-int Base64Escape(const unsigned char* src, int szsrc, char* dest, int szdest) {
-    return Base64EscapeInternal(src, szsrc, dest, szdest, kBase64Chars, true);
-}
-int WebSafeBase64Escape(const unsigned char* src, int szsrc, char* dest, int szdest, bool do_padding) {
-    return Base64EscapeInternal(src, szsrc, dest, szdest, kWebSafeBase64Chars, do_padding);
-}
-
 void Base64EscapeInternal(const unsigned char* src, int szsrc, string* dest, bool do_padding,
                           const char* base64_chars) {
     const int calc_escaped_size = CalculateBase64EscapedLen(szsrc, do_padding);
@@ -1290,100 +1237,9 @@ void Base64EscapeInternal(const unsigned char* src, int szsrc, string* dest, boo
     DCHECK_EQ(calc_escaped_size, escaped_len);
 }
 
-void Base64Escape(const unsigned char* src, int szsrc, string* dest, bool do_padding) {
-    Base64EscapeInternal(src, szsrc, dest, do_padding, kBase64Chars);
-}
-
-void WebSafeBase64Escape(const unsigned char* src, int szsrc, string* dest, bool do_padding) {
-    Base64EscapeInternal(src, szsrc, dest, do_padding, kWebSafeBase64Chars);
-}
-
-void Base64Escape(const string& src, string* dest) {
-    Base64Escape(reinterpret_cast<const unsigned char*>(src.data()), src.size(), dest, true);
-}
-
-void WebSafeBase64Escape(const string& src, string* dest) {
-    WebSafeBase64Escape(reinterpret_cast<const unsigned char*>(src.data()), src.size(), dest, false);
-}
-
-void WebSafeBase64EscapeWithPadding(const string& src, string* dest) {
-    WebSafeBase64Escape(reinterpret_cast<const unsigned char*>(src.data()), src.size(), dest, true);
-}
-
 // Returns true iff c is in the Base 32 alphabet.
 bool ValidBase32Byte(char c) {
     return (c >= 'A' && c <= 'Z') || (c >= '2' && c <= '7') || c == '=';
-}
-
-// Mapping from number of Base32 escaped characters (0 through 8) to number of
-// unescaped bytes.  8 Base32 escaped characters represent 5 unescaped bytes.
-// For N < 8, then number of unescaped bytes is less than 5.  Note that in
-// valid input, N can only be 0, 2, 4, 5, 7, or 8 (corresponding to 0, 1, 2,
-// 3, 4, or 5 unescaped bytes).
-//
-// We use 5 for invalid values of N to be safe, since this is used to compute
-// the length of the buffer to hold unescaped data.
-//
-// See http://tools.ietf.org/html/rfc4648#section-6 for details.
-static const int kBase32NumUnescapedBytes[] = {0, 5, 1, 5, 2, 3, 5, 4, 5};
-
-int Base32Unescape(const char* src, int slen, char* dest, int szdest) {
-    int destidx = 0;
-    char escaped_bytes[8];
-    unsigned char unescaped_bytes[5];
-    while (slen > 0) {
-        // Collect the next 8 escaped bytes and convert to upper case.  If there
-        // are less than 8 bytes left, pad with '=', but keep track of the number
-        // of non-padded bytes for later.
-        int non_padded_len = 8;
-        for (int i = 0; i < 8; ++i) {
-            escaped_bytes[i] = (i < slen) ? ascii_toupper(src[i]) : '=';
-            if (!ValidBase32Byte(escaped_bytes[i])) {
-                return -1;
-            }
-            // Stop counting escaped bytes at first '='.
-            if (escaped_bytes[i] == '=' && non_padded_len == 8) {
-                non_padded_len = i;
-            }
-        }
-
-        // Convert the 8 escaped bytes to 5 unescaped bytes and copy to dest.
-        EightBase32DigitsToFiveBytes(escaped_bytes, unescaped_bytes);
-        const int num_unescaped = kBase32NumUnescapedBytes[non_padded_len];
-        for (int i = 0; i < num_unescaped; ++i) {
-            if (destidx == szdest) {
-                // No more room in dest, so terminate early.
-                return -1;
-            }
-            dest[destidx] = unescaped_bytes[i];
-            ++destidx;
-        }
-        src += 8;
-        slen -= 8;
-    }
-    return destidx;
-}
-
-bool Base32Unescape(const char* src, int slen, string* dest) {
-    // Determine the size of the output string.
-    const int dest_len = 5 * (slen / 8) + kBase32NumUnescapedBytes[slen % 8];
-
-    dest->clear();
-    dest->resize(dest_len);
-
-    // We are getting the destination buffer by getting the beginning of the
-    // string and converting it into a char *.
-    const int len = Base32Unescape(src, slen, string_as_array(dest), dest->size());
-    if (len < 0) {
-        dest->clear();
-        return false;
-    }
-
-    // Could be shorter if there was padding.
-    DCHECK_LE(len, dest_len);
-    dest->resize(len);
-
-    return true;
 }
 
 void GeneralFiveBytesToEightBase32Digits(const unsigned char* in_bytes, char* out, const char* alphabet) {
