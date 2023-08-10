@@ -46,3 +46,5 @@ add_library(Column STATIC
         struct_column.cpp
         stream_chunk.cpp
 )
+
+set_target_properties(Column PROPERTIES COMPILE_FLAGS "-Wconversion")

@@ -113,18 +113,4 @@ const StreamRowOp* StreamChunkConverter::ops(const StreamChunkPtr& stream_chunk)
     auto* op_col = ops_col(stream_chunk);
     return (StreamRowOp*)(op_col->get_data().data());
 }
-
-ChunkPtr StreamChunkConverter::to_chunk(const StreamChunkPtr& stream_chunk) {
-    if (has_ops_column(stream_chunk)) {
-        auto extra_column_data = down_cast<ChunkExtraColumnsData*>(stream_chunk->get_extra_data().get());
-        DCHECK(extra_column_data);
-        auto mock_slot_id = stream_chunk->num_columns();
-        for (auto& extra_column : extra_column_data->columns()) {
-            stream_chunk->append_column(extra_column, mock_slot_id++);
-        }
-        stream_chunk->set_extra_data(nullptr);
-    }
-    return stream_chunk;
-}
-
 } // namespace starrocks

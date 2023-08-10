@@ -223,7 +223,7 @@ void MapColumn::remove_first_n_values(size_t count) {
         count = _offsets->size() - 1;
     }
 
-    size_t offset = _offsets->get_data()[count];
+    uint32_t offset = _offsets->get_data()[count];
     _keys->remove_first_n_values(offset);
     _values->remove_first_n_values(offset);
     _offsets->remove_first_n_values(count);
@@ -412,10 +412,10 @@ int MapColumn::compare_at(size_t left, size_t right, const Column& right_column,
 int MapColumn::equals(size_t left, const Column& rhs, size_t right, bool safe_eq) const {
     const auto& rhs_map = down_cast<const MapColumn&>(rhs);
 
-    size_t lhs_offset = _offsets->get_data()[left];
-    size_t lhs_end = _offsets->get_data()[left + 1];
-    size_t rhs_offset = rhs_map._offsets->get_data()[right];
-    size_t rhs_end = rhs_map._offsets->get_data()[right + 1];
+    uint32_t lhs_offset = _offsets->get_data()[left];
+    uint32_t lhs_end = _offsets->get_data()[left + 1];
+    uint32_t rhs_offset = rhs_map._offsets->get_data()[right];
+    uint32_t rhs_end = rhs_map._offsets->get_data()[right + 1];
     // If size is not equal return false
     if (lhs_end - lhs_offset != rhs_end - rhs_offset) {
         return false;
@@ -515,11 +515,11 @@ void MapColumn::crc32_hash_at(uint32_t* hash, uint32_t idx) const {
     DCHECK_LT(idx + 1, _offsets->size()) << "idx + 1 should be less than offsets size";
     uint32_t offset = _offsets->get_data()[idx];
     // Should use size_t not uint32_t for compatible
-    size_t map_size = _offsets->get_data()[idx + 1] - offset;
+    uint32_t map_size = _offsets->get_data()[idx + 1] - offset;
 
     *hash = HashUtil::zlib_crc_hash(&map_size, static_cast<uint32_t>(sizeof(map_size)), *hash);
     uint32_t base_hash = *hash;
-    for (size_t i = 0; i < map_size; ++i) {
+    for (uint32_t i = 0; i < map_size; ++i) {
         uint32_t pair_hash = base_hash;
         uint32_t ele_offset = offset + i;
         _keys->crc32_hash_at(&pair_hash, ele_offset);
@@ -703,7 +703,7 @@ void MapColumn::remove_duplicated_keys(bool need_recursive) {
     // compute hash for all keys
     auto hash = std::make_unique<uint32_t[]>(_keys->size());
     memset(hash.get(), 0, _keys->size() * sizeof(uint32_t));
-    _keys->fnv_hash(hash.get(), 0, _keys->size());
+    _keys->fnv_hash(hash.get(), 0, static_cast<uint32_t>(_keys->size()));
 
     bool has_duplicated_keys = false;
     size_t size = this->size();

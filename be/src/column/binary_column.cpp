@@ -180,7 +180,7 @@ void append_fixed_length(const Buffer<Slice>& strs, Bytes* bytes, typename Binar
     for (size_t i = 0; i < rows; ++i) {
         memcpy(&(*bytes)[offset], strs[i].get_data(), copy_length);
         offset += strs[i].get_size();
-        (*offsets)[length++] = offset;
+        (*offsets)[length++] = static_cast<T>(offset);
     }
 
     bytes->resize(offset);

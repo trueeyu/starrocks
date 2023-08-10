@@ -172,7 +172,7 @@ public:
         T frac_part = abs_value % scale_factor;
 
         auto end = fmt::format_to(str_decimal + len, "{}", int_part);
-        len = end - str_decimal;
+        len = static_cast<int>(end - str_decimal);
 
         int low_scale = 0;
         int high_scale = scale;
@@ -197,7 +197,7 @@ public:
             }
             if (frac_part) {
                 end = fmt::format_to(str_decimal + len, "{}", frac_part);
-                len = end - str_decimal;
+                len = static_cast<int>(end - str_decimal);
             }
         }
 

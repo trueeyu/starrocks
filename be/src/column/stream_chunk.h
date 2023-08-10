@@ -121,8 +121,6 @@ public:
     static const StreamRowOp* ops(const StreamChunk& stream_chunk);
     static const StreamRowOp* ops(const StreamChunk* stream_chunk);
     static const StreamRowOp* ops(const StreamChunkPtr& stream_chunk);
-
-    static ChunkPtr to_chunk(const StreamChunkPtr& stream_chunk);
 };
 
 } // namespace starrocks
