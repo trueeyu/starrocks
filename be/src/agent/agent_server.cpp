@@ -147,9 +147,9 @@ void AgentServer::Impl::init_or_die() {
 #define BUILD_DYNAMIC_TASK_THREAD_POOL(name, min_threads, max_threads, queue_size, pool) \
     do {                                                                                 \
         auto st = ThreadPoolBuilder(name)                                                \
-                          .set_min_threads(min_threads)                                  \
-                          .set_max_threads(max_threads)                                  \
-                          .set_max_queue_size(queue_size)                                \
+                          .set_min_threads(static_cast<int>(min_threads))                \
+                          .set_max_threads(static_cast<int>(max_threads))                \
+                          .set_max_queue_size(static_cast<int>(queue_size))              \
                           .build(&(pool));                                               \
         CHECK(st.ok()) << st;                                                            \
     } while (false)

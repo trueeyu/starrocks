@@ -491,7 +491,7 @@ void* PublishVersionTaskWorkerPool::_worker_thread_callback(void* arg_this) {
     int64_t batch_publish_latency = 0;
 
     while (true) {
-        uint32_t wait_time = config::wait_apply_time;
+        uint32_t wait_time = static_cast<uint32_t>(config::wait_apply_time);
         {
             std::unique_lock l(worker_pool_this->_worker_thread_lock);
             worker_pool_this->_sleeping_count++;
@@ -743,7 +743,8 @@ void* ReportResourceUsageTaskWorkerPool::_worker_thread_callback(void* arg_this)
         request.__set_report_version(g_report_version.load(std::memory_order_relaxed));
 
         TResourceUsage resource_usage;
-        resource_usage.__set_num_running_queries(ExecEnv::GetInstance()->query_context_mgr()->size());
+        resource_usage.__set_num_running_queries(
+                static_cast<int32_t>(ExecEnv::GetInstance()->query_context_mgr()->size()));
         resource_usage.__set_mem_used_bytes(GlobalEnv::GetInstance()->process_mem_tracker()->consumption());
         resource_usage.__set_mem_limit_bytes(GlobalEnv::GetInstance()->process_mem_tracker()->limit());
         worker_pool_this->_cpu_usage_recorder.update_interval();
