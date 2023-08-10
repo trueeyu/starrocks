@@ -123,7 +123,7 @@ inline uint32_t crc_hash_32(const void* data, int32_t bytes, uint32_t hash) {
 #if defined(__x86_64__) && !defined(__SSE4_2__)
     return static_cast<uint32_t>(crc32(hash, (const unsigned char*)data, bytes));
 #else
-    uint32_t words = bytes / sizeof(uint32_t);
+    uint32_t words = static_cast<uint32_t>(bytes / sizeof(uint32_t));
     bytes = bytes % 4 /*sizeof(uint32_t)*/;
 
     auto* p = reinterpret_cast<const uint8_t*>(data);
@@ -237,9 +237,9 @@ typename std::enable_if<sizeof(T) == 1, bool>::type memequal_padded(const T* p1,
         return false;
     }
     for (size_t offset = 0; offset < size1; offset += 16) {
-        uint16_t mask =
+        uint16_t mask = static_cast<uint16_t>(
                 _mm_movemask_epi8(_mm_cmpeq_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(p1 + offset)),
-                                                 _mm_loadu_si128(reinterpret_cast<const __m128i*>(p2 + offset))));
+                                                 _mm_loadu_si128(reinterpret_cast<const __m128i*>(p2 + offset)))));
         mask = ~mask;
         if (mask) {
             offset += __builtin_ctz(mask);

@@ -9,6 +9,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <string>
 
 #include "gutil/endian.h"
@@ -237,3 +240,4 @@ inline bool get_length_prefixed_slice(Slice* input, Slice* val) {
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 // GCC extended(inline) asm used to optimize decimal arithmetic operations
 // on X84_64 architecture.
 #if defined(__x86_64__) && defined(__GNUC__)
@@ -313,3 +316,5 @@ static inline void divmodti3(int128_t x, int128_t y, int128_t& q, uint128_t& r) 
 }
 } // namespace starrocks
 #endif // defined(__x86_64__) && defined(COMPILER_GCC)
+
+#pragma GCC diagnostic pop

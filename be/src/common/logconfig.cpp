@@ -91,7 +91,7 @@ static void dump_trace_info() {
         char buffer[MAX_BUFFER_SIZE] = {};
 
         // write build version
-        int res = get_build_version(buffer, sizeof(buffer));
+        int res = static_cast<int>(get_build_version(buffer, sizeof(buffer)));
         [[maybe_unused]] auto wt = write(STDERR_FILENO, buffer, res);
 
         res = sprintf(buffer, "query_id:");

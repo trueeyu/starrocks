@@ -182,7 +182,7 @@ Status grep_log_single_file(const string& path, int64_t start_ts, int64_t end_ts
             // no pattern, add all lines
             scan_by_line_handler(0, 0, 0, 0, &ctx);
         } else {
-            if (hs_scan(database, line, read, 0, scratch, scan_by_line_handler, &ctx) != HS_SUCCESS) {
+            if (hs_scan(database, line, static_cast<int>(read), 0, scratch, scan_by_line_handler, &ctx) != HS_SUCCESS) {
                 break;
             }
         }

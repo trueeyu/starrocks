@@ -59,7 +59,7 @@ namespace starrocks {
 class HashUtil {
 public:
     static uint32_t zlib_crc_hash(const void* data, int32_t bytes, uint32_t hash) {
-        return crc32(hash, (const unsigned char*)data, bytes);
+        return static_cast<uint32_t>(crc32(hash, (const unsigned char*)data, bytes));
     }
 #ifdef __SSE4_2__
     // Compute the Crc32 hash for data using SSE4 instructions.  The input hash parameter is
@@ -75,7 +75,7 @@ public:
         if (!CpuInfo::is_supported(CpuInfo::SSE4_2)) {
             return zlib_crc_hash(data, bytes, hash);
         }
-        uint32_t words = bytes / sizeof(uint32_t);
+        uint32_t words = static_cast<uint32_t>(bytes / sizeof(uint32_t));
         bytes = bytes % sizeof(uint32_t);
 
         const uint32_t* p = reinterpret_cast<const uint32_t*>(data);
@@ -99,11 +99,11 @@ public:
     }
 
     static uint64_t crc_hash64(const void* data, int32_t bytes, uint64_t hash) {
-        uint32_t words = bytes / sizeof(uint32_t);
+        uint32_t words = static_cast<uint32_t>(bytes / sizeof(uint32_t));
         bytes = bytes % sizeof(uint32_t);
 
-        uint32_t h1 = hash >> 32;
-        uint32_t h2 = (hash << 32) >> 32;
+        uint32_t h1 = static_cast<uint32_t>(hash >> 32);
+        uint32_t h2 = static_cast<uint32_t>((hash << 32) >> 32);
 
         const uint32_t* p = reinterpret_cast<const uint32_t*>(data);
         while (words--) {
@@ -335,7 +335,7 @@ struct ModuloOp {
 // mapping l to the range [0, r]
 // we weed to ensure that l is randomly and uniformly distributed in [0, 2^32]
 struct ReduceOp {
-    uint32_t operator()(uint32_t l, uint32_t r) { return ((uint64_t)l * (uint64_t)r) >> 32; }
+    uint32_t operator()(uint32_t l, uint32_t r) { return static_cast<uint32_t>(((uint64_t)l * (uint64_t)r) >> 32); }
 };
 
 } // namespace starrocks
@@ -344,7 +344,7 @@ namespace std {
 template <>
 struct hash<starrocks::TUniqueId> {
     std::size_t operator()(const starrocks::TUniqueId& id) const {
-        std::size_t seed = 0;
+        uint32_t seed = 0;
         seed = starrocks::HashUtil::hash(&id.lo, sizeof(id.lo), seed);
         seed = starrocks::HashUtil::hash(&id.hi, sizeof(id.hi), seed);
         return seed;
@@ -354,8 +354,8 @@ struct hash<starrocks::TUniqueId> {
 template <>
 struct hash<starrocks::TNetworkAddress> {
     size_t operator()(const starrocks::TNetworkAddress& address) const {
-        std::size_t seed = 0;
-        seed = starrocks::HashUtil::hash(address.hostname.data(), address.hostname.size(), seed);
+        uint32_t seed = 0;
+        seed = starrocks::HashUtil::hash(address.hostname.data(), static_cast<int32_t>(address.hostname.size()), seed);
         seed = starrocks::HashUtil::hash(&address.port, 4, seed);
         return seed;
     }
@@ -389,7 +389,7 @@ struct hash<starrocks::decimal12_t> {
 template <>
 struct hash<std::pair<starrocks::TUniqueId, int64_t>> {
     size_t operator()(const std::pair<starrocks::TUniqueId, int64_t>& pair) const {
-        size_t seed = 0;
+        uint32_t seed = 0;
         seed = starrocks::HashUtil::hash(&pair.first.lo, sizeof(pair.first.lo), seed);
         seed = starrocks::HashUtil::hash(&pair.first.hi, sizeof(pair.first.hi), seed);
         seed = starrocks::HashUtil::hash(&pair.second, sizeof(pair.second), seed);

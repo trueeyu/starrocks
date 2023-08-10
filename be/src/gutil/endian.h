@@ -60,7 +60,7 @@ inline unsigned __int128 gbswap_128(unsigned __int128 host_int) {
 
 // Swap bytes of a 24-bit value.
 inline uint32_t bswap_24(uint32_t x) {
-    return ((x & 0x0000ffULL) << 16) | ((x & 0x00ff00ULL)) | ((x & 0xff0000ULL) >> 16);
+    return static_cast<uint32_t>(((x & 0x0000ffULL) << 16) | ((x & 0x00ff00ULL)) | ((x & 0xff0000ULL) >> 16));
 }
 
 #ifdef IS_LITTLE_ENDIAN
@@ -99,27 +99,6 @@ inline uint64 ghtonll(uint64 x) {
 #else
 #error "Unsupported bytesex: Either IS_BIG_ENDIAN or IS_LITTLE_ENDIAN must be defined"  // NOLINT
 #endif // bytesex
-
-// ntoh* and hton* are the same thing for any size and bytesex,
-// since the function is an involution, i.e., its own inverse.
-inline uint16 gntohl(uint16 x) {
-    return ghtonl(x);
-}
-inline uint32 gntohs(uint32 x) {
-    return ghtons(x);
-}
-inline uint64 gntohll(uint64 x) {
-    return ghtonll(x);
-}
-#if !defined(__APPLE__)
-// This one is safe to take as it's an extension
-inline uint64 htonll(uint64 x) {
-    return ghtonll(x);
-}
-inline uint64 ntohll(uint64 x) {
-    return htonll(x);
-}
-#endif
 
 // Utilities to convert numbers between the current hosts's native byte
 // order and little-endian byte order
@@ -223,21 +202,6 @@ public:
             return uint128(Load64VariableLength(static_cast<const char*>(p) + 8, len - 8), Load64(p));
         }
     }
-
-    // Load & Store in machine's word size.
-    static uword_t LoadUnsignedWord(const void* p) {
-        if (sizeof(uword_t) == 8)
-            return Load64(p);
-        else
-            return Load32(p);
-    }
-
-    static void StoreUnsignedWord(void* p, uword_t v) {
-        if (sizeof(v) == 8)
-            Store64(p, v);
-        else
-            Store32(p, v);
-    }
 };
 
 // Utilities to convert numbers between the current hosts's native byte
@@ -296,72 +260,7 @@ public:
 
     static uint64 Load64(const void* p) { return ToHost64(UNALIGNED_LOAD64(p)); }
 
-    // Build a uint64 from 1-8 bytes.
-    // 8 * len least significant bits are loaded from the memory with
-    // BigEndian order. The 64 - 8 * len most significant bits are
-    // set all to 0.
-    // In latex-friendly words, this function returns:
-    //     $\sum_{i=0}^{len-1} p[i] 256^{i}$, where p[i] is unsigned.
-    //
-    // This function is equivalent with:
-    // uint64 val = 0;
-    // memcpy(&val, p, len);
-    // return ToHost64(val);
-    // TODO(user): write a small benchmark and benchmark the speed
-    // of a memcpy based approach.
-    //
-    // For speed reasons this function does not work for len == 0.
-    // The caller needs to guarantee that 1 <= len <= 8.
-    static uint64 Load64VariableLength(const void* const p, int len) {
-        assert(len >= 1 && len <= 8);
-        uint64 val = Load64(p);
-        uint64 mask = 0;
-        --len;
-        do {
-            mask = (mask << 8) | 0xff;
-            // (--len >= 0) is about 10 % faster than (len--) in some benchmarks.
-        } while (--len >= 0);
-        return val & mask;
-    }
-
     static void Store64(void* p, uint64 v) { UNALIGNED_STORE64(p, FromHost64(v)); }
-
-    static uint128 Load128(const void* p) {
-        return uint128(ToHost64(UNALIGNED_LOAD64(p)),
-                       ToHost64(UNALIGNED_LOAD64(reinterpret_cast<const uint64*>(p) + 1)));
-    }
-
-    static void Store128(void* p, const uint128& v) {
-        UNALIGNED_STORE64(p, FromHost64(Uint128High64(v)));
-        UNALIGNED_STORE64(reinterpret_cast<uint64*>(p) + 1, FromHost64(Uint128Low64(v)));
-    }
-
-    // Build a uint128 from 1-16 bytes.
-    // 8 * len least significant bits are loaded from the memory with
-    // BigEndian order. The 128 - 8 * len most significant bits are
-    // set all to 0.
-    static uint128 Load128VariableLength(const void* p, int len) {
-        if (len <= 8) {
-            return uint128(Load64VariableLength(static_cast<const char*>(p) + 8, len));
-        } else {
-            return uint128(Load64VariableLength(p, len - 8), Load64(static_cast<const char*>(p) + 8));
-        }
-    }
-
-    // Load & Store in machine's word size.
-    static uword_t LoadUnsignedWord(const void* p) {
-        if (sizeof(uword_t) == 8)
-            return Load64(p);
-        else
-            return Load32(p);
-    }
-
-    static void StoreUnsignedWord(void* p, uword_t v) {
-        if (sizeof(uword_t) == 8)
-            Store64(p, v);
-        else
-            Store32(p, v);
-    }
 }; // BigEndian
 
 // Network byte order is big-endian

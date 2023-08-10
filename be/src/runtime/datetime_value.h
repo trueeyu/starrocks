@@ -34,6 +34,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <re2/re2.h>
 
 #include <chrono>
@@ -514,3 +517,5 @@ struct hash<starrocks::DateTimeValue> {
     size_t operator()(const starrocks::DateTimeValue& v) const { return starrocks::hash_value(v); }
 };
 } // namespace std
+
+#pragma GCC diagnostic pop

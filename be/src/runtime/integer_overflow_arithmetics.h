@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <runtime/int128_arithmetics_x86_64.h>
 #include <util/decimal_types.h>
 
@@ -144,3 +147,5 @@ inline bool mul_overflow(int128_t a, int128_t b, int128_t* c) {
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

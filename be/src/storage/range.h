@@ -414,7 +414,7 @@ inline size_t SparseRangeIterator<T>::covered_ranges(size_t size) const {
         return 0;
     }
     const std::vector<Range<T>>& ranges = _range->_ranges;
-    rowid_t end = std::min<rowid_t>(_next_rowid + size, ranges.back().end());
+    rowid_t end = std::min<rowid_t>(static_cast<rowid_t>(_next_rowid + size), ranges.back().end());
     size_t i = _index;
     for (; ranges[i].end() < end; i++) {
     }

@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "common/minidump.h"
 
 #include <client/linux/handler/exception_handler.h>
 #include <common/linux/linux_libc_support.h>
 #include <glob.h>
+
 #include <google_breakpad/common/minidump_format.h>
 
 #include <csignal>
@@ -137,7 +140,7 @@ void Minidump::check_and_rotate_minidumps(int max_minidumps, const std::string& 
 
     // Remove oldest entries until max_minidumps are left.
     if (timestamp_to_path.size() <= max_minidumps) return;
-    int files_to_delete = timestamp_to_path.size() - max_minidumps;
+    int files_to_delete = static_cast<int>(timestamp_to_path.size() - max_minidumps);
     DCHECK_GT(files_to_delete, 0);
     auto to_delete = timestamp_to_path.begin();
     for (int i = 0; i < files_to_delete; ++i, ++to_delete) {
@@ -159,7 +162,7 @@ bool Minidump::dump_callback(const google_breakpad::MinidumpDescriptor& descript
         const int msg_len = sizeof(msg) / sizeof(msg[0]) - 1;
         const char* path = descriptor.path();
         // We use breakpad's reimplementation of strlen to avoid calling into libc.
-        const int path_len = my_strlen(path);
+        const int path_len = static_cast<int>(my_strlen(path));
         // We use the linux syscall support methods from chromium here as per the
         // recommendation of the breakpad docs to avoid calling into other shared libraries.
         sys_write(STDOUT_FILENO, msg, msg_len);
@@ -173,3 +176,4 @@ bool Minidump::filter_callback(void* context) {
     return true;
 }
 } // namespace starrocks
+#pragma GCC diagnostic pop

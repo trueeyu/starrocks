@@ -128,36 +128,6 @@ char* strnstr(const char* haystack, const char* needle, size_t haystack_len);
 #endif
 const char* strnprefix(const char* haystack, int haystack_size, const char* needle, int needle_size);
 
-// Matches a case-insensitive prefix (up to the first needle_size bytes of
-// needle) in the first haystack_size byte of haystack. Returns a pointer past
-// the prefix, or NULL if the prefix wasn't matched.
-//
-// Always returns either NULL or haystack + needle_size.
-const char* strncaseprefix(const char* haystack, int haystack_size, const char* needle, int needle_size);
-
-// Matches a prefix; returns a pointer past the prefix, or NULL if not found.
-// (Like strprefix() and strcaseprefix() but not restricted to searching for
-// char* literals). Templated so searching a const char* returns a const char*,
-// and searching a non-const char* returns a non-const char*.
-template <class CharStar>
-inline CharStar var_strprefix(CharStar str, const char* prefix) {
-    const int len = strlen(prefix);
-    return strncmp(str, prefix, len) == 0 ? str + len : NULL;
-}
-
-// Same as var_strprefix() (immediately above), but matches a case-insensitive
-// prefix.
-template <class CharStar>
-inline CharStar var_strcaseprefix(CharStar str, const char* prefix) {
-    const int len = strlen(prefix);
-    return strncasecmp(str, prefix, len) == 0 ? str + len : NULL;
-}
-
-// Returns input, or "(null)" if NULL. (Useful for logging.)
-inline const char* GetPrintableString(const char* const in) {
-    return nullptr == in ? "(null)" : in;
-}
-
 // Returns whether str begins with prefix.
 inline bool HasPrefixString(const StringPiece& str, const StringPiece& prefix) {
     return str.starts_with(prefix);
@@ -177,8 +147,8 @@ bool MatchPattern(const StringPiece& string, const StringPiece& pattern);
 
 // Returns where suffix begins in str, or NULL if str doesn't end with suffix.
 inline char* strsuffix(char* str, const char* suffix) {
-    const int lenstr = strlen(str);
-    const int lensuffix = strlen(suffix);
+    const int lenstr = static_cast<int>(strlen(str));
+    const int lensuffix = static_cast<int>(strlen(suffix));
     char* strbeginningoftheend = str + lenstr - lensuffix;
 
     if (lenstr >= lensuffix && 0 == strcmp(strbeginningoftheend, suffix)) {

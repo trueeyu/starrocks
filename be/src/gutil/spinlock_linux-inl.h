@@ -38,6 +38,8 @@
 #include <climits>
 #include <ctime>
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
 #include "gutil/linux_syscall_support.h"
 
 #define FUTEX_WAIT 0
@@ -95,3 +97,5 @@ void SpinLockWake(volatile Atomic32* w, bool all) {
 
 } // namespace internal
 } // namespace base
+
+#pragma GCC diagnostic pop

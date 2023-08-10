@@ -109,7 +109,7 @@ private:
 
     struct SubQueue {
         void incr_cost_ns(int64_t delta) { cost_ns += delta; }
-        double normalized_cost() const { return cost_ns / factor_for_normal; }
+        double normalized_cost() const { return static_cast<double>(cost_ns) / factor_for_normal; }
 
         std::queue<ScanTask> queue;
 

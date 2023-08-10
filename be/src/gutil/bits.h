@@ -2,13 +2,16 @@
 //
 // A collection of useful (static) bit-twiddling functions.
 
+#pragma once
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <common/logging.h>
 
 #include "gutil/basictypes.h"
 #include "gutil/integral_types.h"
 #include "gutil/macros.h"
-
-#pragma once
 
 class Bits {
 public:
@@ -280,3 +283,5 @@ inline int Bits::CountTrailingZerosNonZero64(uint64_t n) {
 inline int Bits::CountTrailingZeros64(uint64_t n) {
     return n == 0 ? 64 : Bits::CountTrailingZerosNonZero64(n);
 }
+
+#pragma GCC diagnostic pop

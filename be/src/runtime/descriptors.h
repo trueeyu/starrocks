@@ -73,11 +73,6 @@ struct NullIndicatorOffset {
     uint8_t bit_mask;   // to extract null indicator
     uint8_t bit_offset; // only used to serialize, from 1 to 8
 
-    NullIndicatorOffset(int byte_offset, int bit_offset_)
-            : byte_offset(byte_offset),
-              bit_mask(bit_offset_ == -1 ? 0 : 1 << (7 - bit_offset_)),
-              bit_offset(bit_offset_) {}
-
     bool equals(const NullIndicatorOffset& o) const {
         return this->byte_offset == o.byte_offset && this->bit_mask == o.bit_mask;
     }
