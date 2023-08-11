@@ -95,8 +95,9 @@ public:
 
     std::string toBucketJson(const std::string& lower, const std::string& upper, size_t count, size_t upper_repeats,
                              double sample_ratio) const {
-        return fmt::format(R"(["{}","{}","{}","{}"])", lower, upper, std::to_string((int64_t)(count * sample_ratio)),
-                           std::to_string((int64_t)(upper_repeats * sample_ratio)));
+        return fmt::format(R"(["{}","{}","{}","{}"])", lower, upper,
+                           std::to_string((int64_t)((double)count * sample_ratio)),
+                           std::to_string((int64_t)((double)upper_repeats * sample_ratio)));
     }
 
     void finalize_to_column(FunctionContext* ctx __attribute__((unused)), ConstAggDataPtr __restrict state,
@@ -104,7 +105,7 @@ public:
         auto bucket_num = ColumnHelper::get_const_value<TYPE_INT>(ctx->get_constant_column(1));
         [[maybe_unused]] double sample_ratio =
                 1 / ColumnHelper::get_const_value<TYPE_DOUBLE>(ctx->get_constant_column(2));
-        int bucket_size = this->data(state).data.size() / bucket_num;
+        int bucket_size = static_cast<int>(this->data(state).data.size() / bucket_num);
 
         //Build bucket
         std::vector<Bucket<T>> buckets;

@@ -103,7 +103,7 @@ private:
         ColumnViewer<Type> rhs_viewer(columns[1]);
         auto [all_const, num_rows] = ColumnHelper::num_packed_rows(columns);
 
-        ColumnBuilder<Type> result(num_rows, this->type().precision, this->type().scale);
+        ColumnBuilder<Type> result((int)num_rows, this->type().precision, this->type().scale);
 
         for (int row = 0; row < num_rows; ++row) {
             if (lhs_viewer.is_null(row)) {
@@ -172,7 +172,7 @@ private:
         ColumnViewer<Type> rhs_viewer(columns[1]);
 
         size_t size = columns[0]->size();
-        ColumnBuilder<Type> result(size, this->type().precision, this->type().scale);
+        ColumnBuilder<Type> result((int)size, this->type().precision, this->type().scale);
         for (int row = 0; row < size; ++row) {
             if (lhs_viewer.is_null(row)) {
                 result.append_null();

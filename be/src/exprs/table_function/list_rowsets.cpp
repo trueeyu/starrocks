@@ -142,7 +142,7 @@ std::pair<Columns, UInt32Column::Ptr> ListRowsets::process(TableFunctionState* b
         }
 
         for (int64_t i = 0; i < count; i++) {
-            const auto& rowset = metadata->rowsets(row_offset + i);
+            const auto& rowset = metadata->rowsets(static_cast<int>(row_offset + i));
             fill_rowset_row(result, rowset);
         }
 

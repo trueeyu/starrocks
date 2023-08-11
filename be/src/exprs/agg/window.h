@@ -266,7 +266,7 @@ class CumeDistWindowFunction final : public WindowFunction<CumeDistState> {
         auto& s = this->data(state);
         auto* column = down_cast<DoubleColumn*>(dst);
         for (size_t i = start; i < end; ++i) {
-            column->get_data()[i] = static_cast<DoubleColumn::ValueType>((double)s.rank / s.count);
+            column->get_data()[i] = static_cast<DoubleColumn::ValueType>((double)s.rank / (double)s.count);
         }
     }
 
