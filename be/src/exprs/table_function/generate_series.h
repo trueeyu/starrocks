@@ -75,7 +75,7 @@ public:
         auto get_step = [&](size_t row) -> NumericType { return (arg_step == nullptr) ? 1 : arg_step->value(row); };
 
         while (res->size() < max_chunk_size && curr_row < arg_start.size()) {
-            offsets->append(res->size());
+            offsets->append(static_cast<uint32_t>(res->size()));
             if (arg_start.is_null(curr_row) || arg_stop.is_null(curr_row) || step_is_null(curr_row)) {
                 move_to_next_row();
             } else {
@@ -106,7 +106,7 @@ public:
 
                 bool overflow = false;
                 auto old_size = res->size();
-                resize_column_uninitialized(res.get(), old_size + count);
+                resize_column_uninitialized(res.get(), static_cast<size_t>(old_size + count));
                 auto* data = res->get_data().data();
                 for (decltype(count) i = 0; i < count; i++) {
                     data[old_size + i] = current;
