@@ -266,7 +266,7 @@ class CumeDistWindowFunction final : public WindowFunction<CumeDistState> {
         auto& s = this->data(state);
         auto* column = down_cast<DoubleColumn*>(dst);
         for (size_t i = start; i < end; ++i) {
-            column->get_data()[i] = (double)s.rank / s.count;
+            column->get_data()[i] = static_cast<DoubleColumn::ValueType>((double)s.rank / s.count);
         }
     }
 
@@ -305,7 +305,7 @@ class PercentRankWindowFunction final : public WindowFunction<PercentRankState> 
         auto* column = down_cast<DoubleColumn*>(dst);
         for (size_t i = start; i < end; ++i) {
             if (s.count > 1) {
-                column->get_data()[i] = (double)(s.rank - 1) / (s.count - 1);
+                column->get_data()[i] = (double)(s.rank - 1) / (double)(s.count - 1);
             } else {
                 column->get_data()[i] = (double)0;
             }

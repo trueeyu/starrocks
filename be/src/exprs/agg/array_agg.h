@@ -206,7 +206,7 @@ public:
                         elem_size);
             }
             auto& offsets = array_col->offsets_column()->get_data();
-            offsets.push_back(offsets.back() + elem_size);
+            offsets.push_back(offsets.back() + static_cast<uint32_t>(elem_size));
         }
     }
 
@@ -241,7 +241,7 @@ public:
                                                  elem_size);
         }
         auto& offsets = array_col->offsets_column()->get_data();
-        offsets.push_back(offsets.back() + elem_size);
+        offsets.push_back(offsets.back() + static_cast<uint32_t>(elem_size));
     }
 
     // convert each cell of a row to a [nullable] array in a struct
