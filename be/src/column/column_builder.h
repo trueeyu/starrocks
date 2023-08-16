@@ -31,7 +31,7 @@ public:
     using DatumType = RunTimeCppType<Type>;
     using MovableType = RunTimeCppMovableType<Type>;
 
-    ColumnBuilder(int32_t chunk_size) {
+    ColumnBuilder(size_t chunk_size) {
         static_assert(!lt_is_decimal<Type>, "Not support Decimal32/64/128 types");
         _has_null = false;
         _column = RunTimeColumnType<Type>::create();
@@ -39,7 +39,7 @@ public:
         reserve(chunk_size);
     }
 
-    ColumnBuilder(int32_t chunk_size, int precision, int scale) {
+    ColumnBuilder(size_t chunk_size, int precision, int scale) {
         _has_null = false;
         _column = RunTimeColumnType<Type>::create();
         _null_column = NullColumn::create();

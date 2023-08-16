@@ -101,7 +101,7 @@ public:
 
                 auto count = (stop - current) / step + 1;
                 if (count > max_chunk_size - res->size()) {
-                    count = max_chunk_size - res->size();
+                    count = static_cast<uint32_t>(max_chunk_size - res->size());
                 }
 
                 bool overflow = false;
@@ -120,11 +120,11 @@ public:
                 if (done || overflow) {
                     move_to_next_row();
                 } else {
-                    state->set_offset(current - start);
+                    state->set_offset(static_cast<int64_t>(current - start));
                 }
             }
         } // while
-        offsets->append(res->size());
+        offsets->append(static_cast<uint32_t>(res->size()));
         return std::make_pair(Columns{res}, offsets);
     }
 

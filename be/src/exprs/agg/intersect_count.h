@@ -158,7 +158,7 @@ public:
                 intersect_per_row.update(key, bimtap_value);
             }
 
-            new_size += intersect_per_row.size();
+            new_size += static_cast<int>(intersect_per_row.size());
 
             // intersect_per_row has one bitmapValue at most.
             // Or has one empty bitmap.
@@ -177,7 +177,7 @@ public:
             auto& intersect = intersect_chunks[i];
             intersect.serialize(reinterpret_cast<char*>(bytes.data() + old_size));
             old_size += intersect.size();
-            dst_column->get_offset()[i + 1] = old_size;
+            dst_column->get_offset()[i + 1] = static_cast<uint32_t>(old_size);
         }
     }
 

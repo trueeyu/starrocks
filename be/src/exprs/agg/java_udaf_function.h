@@ -136,7 +136,7 @@ public:
 
         // 2 batch call update
         helper.batch_update_state(ctx, ctx->udaf_ctxs()->handle.handle(), ctx->udaf_ctxs()->update->method.handle(),
-                                  args.data(), args.size());
+                                  args.data(), static_cast<int>(args.size()));
         // 3 get serialize size
         auto serialize_szs = (jintArray)helper.int_batch_call(
                 ctx, rets, ctx->udaf_ctxs()->serialize_size->method.handle(), batch_size);
