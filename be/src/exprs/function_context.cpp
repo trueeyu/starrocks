@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/function_context.h"
 
 #include <iostream>
@@ -257,3 +260,4 @@ ColumnPtr FunctionContext::create_column(const FunctionContext::TypeDesc& type_d
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

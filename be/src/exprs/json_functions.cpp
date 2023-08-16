@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/json_functions.h"
 
 #include <re2/re2.h>
@@ -785,3 +788,4 @@ StatusOr<ColumnPtr> JsonFunctions::to_json(FunctionContext* context, const Colum
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

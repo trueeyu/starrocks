@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <fmt/format.h>
 
 #include <cmath>
@@ -397,3 +400,4 @@ public:
 };
 
 } // namespace starrocks
+#pragma GCC diagnostic pop
