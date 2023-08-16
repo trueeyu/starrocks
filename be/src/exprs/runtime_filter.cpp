@@ -48,7 +48,7 @@ RuntimeFilterSerializeType::PrimitiveType RuntimeFilterSerializeType::to_seriali
 
 void SimdBlockFilter::init(size_t nums) {
     nums = std::max(1UL, nums);
-    int log_heap_space = std::ceil(std::log2(nums));
+    int log_heap_space = (int)std::ceil(std::log2(nums));
     _log_num_buckets = std::max(1, log_heap_space - LOG_BUCKET_BYTE_SIZE);
     _directory_mask = (1ull << std::min(63, _log_num_buckets)) - 1;
     const size_t alloc_size = get_alloc_size();

@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "column/object_column.h"
 #include "column/type_traits.h"
 #include "column/vectorized_fwd.h"
@@ -101,3 +104,4 @@ public:
     std::string get_name() const override { return "bitmap_agg"; }
 };
 } // namespace starrocks
+#pragma GCC diagnostic pop

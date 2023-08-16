@@ -39,10 +39,10 @@ static bool split_index(const Slice& haystack, const Slice& delimiter, int32_t p
                 size_t n = haystack.size - offset - 1;
                 char* pos = reinterpret_cast<char*>(memchr(haystack.data + offset + 1, delimiter.data[0], n));
                 if (pos != nullptr) {
-                    offset = pos - haystack.data;
+                    offset = (int)(pos - haystack.data);
                     num++;
                 } else {
-                    offset = haystack.size;
+                    offset = (int)haystack.size;
                     num = (num == 0) ? 0 : num + 1;
                     break;
                 }
@@ -64,10 +64,10 @@ static bool split_index(const Slice& haystack, const Slice& delimiter, int32_t p
                 char* pos = reinterpret_cast<char*>(
                         memmem(haystack.data + offset + delimiter.size, n, delimiter.data, delimiter.size));
                 if (pos != nullptr) {
-                    offset = pos - haystack.data;
+                    offset = (int)(pos - haystack.data);
                     num++;
                 } else {
-                    offset = haystack.size;
+                    offset = (int)haystack.size;
                     num = (num == 0) ? 0 : num + 1;
                     break;
                 }
@@ -82,7 +82,7 @@ static bool split_index(const Slice& haystack, const Slice& delimiter, int32_t p
     } else {
         part_number = -part_number;
         auto haystack_str = haystack.to_string();
-        int32_t offset = haystack.size;
+        int32_t offset = (int)haystack.size;
         int32_t pre_offset = offset;
         int32_t num = 0;
         auto substr = haystack_str;

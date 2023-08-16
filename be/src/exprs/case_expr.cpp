@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/case_expr.h"
 
 #include <cstdint>
@@ -531,3 +534,5 @@ Expr* VectorizedCaseExprFactory::from_thrift(const starrocks::TExprNode& node, L
 #undef CASE_RESULT_TYPE
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop
