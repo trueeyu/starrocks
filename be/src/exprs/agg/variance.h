@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <cmath>
 
 #include "column/type_traits.h"
@@ -441,3 +444,4 @@ public:
 };
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

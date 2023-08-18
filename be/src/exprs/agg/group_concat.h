@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <cmath>
 
 #include "column/column_helper.h"
@@ -293,3 +296,4 @@ public:
 };
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

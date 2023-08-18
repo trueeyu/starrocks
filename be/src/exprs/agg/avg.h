@@ -225,9 +225,9 @@ public:
         if constexpr (lt_is_decimalv2<LT>) {
             result = this->data(state).sum / DecimalV2Value(this->data(state).count, 0);
         } else if constexpr (lt_is_datetime<LT>) {
-            result.from_unix_second(this->data(state).sum / this->data(state).count);
+            result.from_unix_second((int64_t)(this->data(state).sum / this->data(state).count));
         } else if constexpr (lt_is_date<LT>) {
-            result._julian = this->data(state).sum / this->data(state).count;
+            result._julian = (JulianDate)(this->data(state).sum / this->data(state).count);
         } else if constexpr (lt_is_arithmetic<LT>) {
             result = this->data(state).sum / this->data(state).count;
         } else if constexpr (lt_is_decimal<LT>) {
@@ -251,9 +251,9 @@ public:
         if constexpr (lt_is_decimalv2<LT>) {
             result = this->data(state).sum / DecimalV2Value(this->data(state).count, 0);
         } else if constexpr (lt_is_datetime<LT>) {
-            result.from_unix_second(this->data(state).sum / this->data(state).count);
+            result.from_unix_second((int64_t)(this->data(state).sum / this->data(state).count));
         } else if constexpr (lt_is_date<LT>) {
-            result._julian = this->data(state).sum / this->data(state).count;
+            result._julian = (JulianDate)(this->data(state).sum / this->data(state).count);
         } else if constexpr (lt_is_arithmetic<LT>) {
             result = this->data(state).sum / this->data(state).count;
         } else if constexpr (lt_is_decimal<LT>) {

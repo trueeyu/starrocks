@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/math_functions.h"
 
 #include <runtime/decimalv3.h>
@@ -852,3 +855,5 @@ template StatusOr<ColumnPtr> MathFunctions::cosine_similarity<TYPE_FLOAT, false>
                                                                                  const Columns& columns);
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop
