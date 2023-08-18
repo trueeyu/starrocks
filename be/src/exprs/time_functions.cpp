@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/time_functions.h"
 
 #include <algorithm>
@@ -2940,3 +2943,5 @@ Status TimeFunctions::last_day_close(FunctionContext* context, FunctionContext::
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

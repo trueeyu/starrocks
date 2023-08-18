@@ -223,7 +223,7 @@ static ColumnPtr cast_from_json_fn(ColumnPtr& column) {
             } else if constexpr (lt_is_float<ToType>) {
                 auto res = json->get_double();
                 ok = res.ok() && min <= res.value() && res.value() <= max;
-                cpp_value = ok ? res.value() : cpp_value;
+                cpp_value = ok ? (RunTimeCppType<ToType>)res.value() : cpp_value;
             } else if constexpr (lt_is_boolean<ToType>) {
                 auto res = json->get_bool();
                 ok = res.ok();
@@ -709,7 +709,7 @@ DEFINE_UNARY_FN_WITH_IMPL(TimestampToDecimal, value) {
     return DecimalV2Value(value.to_timestamp_literal(), 0);
 }
 DEFINE_UNARY_FN_WITH_IMPL(TimeToDecimal, value) {
-    return DecimalV2Value(timestamp::time_to_literal(value), 0);
+    return DecimalV2Value((int64_t)(timestamp::time_to_literal(value)), 0);
 }
 
 SELF_CAST(TYPE_DECIMALV2);
@@ -951,7 +951,7 @@ DEFINE_UNARY_FN_WITH_IMPL(DateToTime, value) {
 }
 
 DEFINE_UNARY_FN_WITH_IMPL(NumberToTime, value) {
-    uint64_t data = value;
+    uint64_t data = (uint64_t)value;
     uint64_t hour = data / 10000;
     uint64_t min = (data / 100) % 100;
     uint64_t sec = data % 100;
@@ -1126,7 +1126,7 @@ DEFINE_BINARY_FUNCTION_WITH_IMPL(timeToDate, date, time) {
 
 DEFINE_BINARY_FUNCTION_WITH_IMPL(timeToDatetime, date, time) {
     TimestampValue v;
-    v.set_timestamp(timestamp::from_julian_and_time(date.julian(), time * USECS_PER_SEC));
+    v.set_timestamp(timestamp::from_julian_and_time(date.julian(), (Timestamp)(time * USECS_PER_SEC)));
     return v;
 }
 

@@ -27,12 +27,12 @@
 
 namespace starrocks {
 
-#define CASE_TYPE_COLUMN(NODE_TYPE, CHECK_TYPE, LITERAL_VALUE)                              \
-    case NODE_TYPE: {                                                                       \
-        DCHECK_EQ(node.node_type, TExprNodeType::CHECK_TYPE);                               \
-        DCHECK(node.__isset.LITERAL_VALUE);                                                 \
-        _value = ColumnHelper::create_const_column<NODE_TYPE>(node.LITERAL_VALUE.value, 1); \
-        break;                                                                              \
+#define CASE_TYPE_COLUMN(NODE_TYPE, CHECK_TYPE, LITERAL_VALUE)                                                         \
+    case NODE_TYPE: {                                                                                                  \
+        DCHECK_EQ(node.node_type, TExprNodeType::CHECK_TYPE);                                                          \
+        DCHECK(node.__isset.LITERAL_VALUE);                                                                            \
+        _value = ColumnHelper::create_const_column<NODE_TYPE>((RunTimeCppType<NODE_TYPE>)node.LITERAL_VALUE.value, 1); \
+        break;                                                                                                         \
     }
 
 template <LogicalType LT>

@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <cstdint>
 #include <utility>
 #include <vector>
@@ -233,3 +236,5 @@ ColumnPredicate* new_column_dict_conjuct_predicate(const TypeInfoPtr& type_info,
                                                    std::vector<uint8_t> dict_mapping);
 
 } //namespace starrocks
+
+#pragma GCC diagnostic pop

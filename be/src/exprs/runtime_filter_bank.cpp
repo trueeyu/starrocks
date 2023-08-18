@@ -505,7 +505,7 @@ void RuntimeFilterProbeCollector::update_selectivity(Chunk* chunk, RuntimeBloomF
         filter->evaluate(column.get(), &eval_context.running_context);
         auto true_count = SIMD::count_nonzero(selection);
         eval_context.run_filter_nums += 1;
-        double selectivity = true_count * 1.0 / chunk_size;
+        double selectivity = (double)(true_count) * 1.0 / (double)chunk_size;
         if (selectivity <= 0.5) {                          // useful filter
             if (selectivity < _early_return_selectivity) { // very useful filter, could early return
                 seletivity_map.clear();
@@ -595,7 +595,7 @@ void RuntimeFilterProbeCollector::wait(bool on_scan_node) {
 
     int wait_time = _wait_timeout_ms;
     if (on_scan_node) {
-        wait_time = _scan_wait_timeout_ms;
+        wait_time = (int)_scan_wait_timeout_ms;
     }
     const int wait_interval = 5;
     auto wait_duration = std::chrono::milliseconds(wait_interval);

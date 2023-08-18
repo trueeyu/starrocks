@@ -137,7 +137,7 @@ public:
             this->data(state).mean = mean + delta * (this->data(state).count / sum_count);
             this->data(state).m2 =
                     m2 + this->data(state).m2 + (delta * delta) * (count * this->data(state).count / sum_count);
-            this->data(state).count = sum_count;
+            this->data(state).count = (int64_t)sum_count;
         }
     }
 
@@ -363,13 +363,13 @@ public:
         } else {
             if constexpr (is_sample) {
                 if (count > 1) {
-                    down_cast<ResultColumnType*>(to)->append(sqrt(this->data(state).m2 / (count - 1)));
+                    down_cast<ResultColumnType*>(to)->append((TResult)sqrt(this->data(state).m2 / (count - 1)));
                 } else {
                     down_cast<ResultColumnType*>(to)->append(0);
                 }
             } else {
                 if (count > 0) {
-                    down_cast<ResultColumnType*>(to)->append(sqrt(this->data(state).m2 / count));
+                    down_cast<ResultColumnType*>(to)->append((TResult)sqrt(this->data(state).m2 / count));
                 } else {
                     down_cast<ResultColumnType*>(to)->append(0);
                 }
@@ -421,13 +421,13 @@ public:
         } else {
             if constexpr (is_sample) {
                 if (count > 1) {
-                    result = sqrt(this->data(state).m2 / (count - 1));
+                    result = (TResult)sqrt(this->data(state).m2 / (count - 1));
                 } else {
                     result = 0;
                 }
             } else {
                 if (count > 0) {
-                    result = sqrt(this->data(state).m2 / count);
+                    result = (TResult)sqrt(this->data(state).m2 / count);
                 } else {
                     result = 0;
                 }

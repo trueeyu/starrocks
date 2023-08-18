@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <cstring>
 #include <limits>
 #include <type_traits>
@@ -272,12 +275,13 @@ class PercentileContAggregateFunction final : public PercentileContDiscAggregate
 
         [[maybe_unused]] ResultType result;
         if constexpr (lt_is_datetime<LT>) {
-            result.from_unix_second(
-                    new_vector[index].to_unix_second() +
-                    (u - (float)index) * (new_vector[index + 1].to_unix_second() - new_vector[index].to_unix_second()));
+            result.from_unix_second((int64_t)(new_vector[index].to_unix_second() +
+                                              (u - (float)index) * (new_vector[index + 1].to_unix_second() -
+                                                                    new_vector[index].to_unix_second())));
         } else if constexpr (lt_is_date<LT>) {
-            result._julian = new_vector[index]._julian +
-                             (u - (double)index) * (new_vector[index + 1]._julian - new_vector[index]._julian);
+            result._julian =
+                    (JulianDate)(new_vector[index]._julian +
+                                 (u - (double)index) * (new_vector[index + 1]._julian - new_vector[index]._julian));
         } else if constexpr (lt_is_arithmetic<LT>) {
             result = new_vector[index] + (u - (double)index) * (new_vector[index + 1] - new_vector[index]);
         } else {
@@ -313,7 +317,7 @@ class PercentileDiscAggregateFunction final : public PercentileContDiscAggregate
         }
 
         // choose the uppper one
-        int index = ceil((new_vector.size() - 1) * rate);
+        int index = (int)ceil((new_vector.size() - 1) * rate);
 
         [[maybe_unused]] ResultType result;
         if constexpr (lt_is_datetime<LT>) {
@@ -334,3 +338,5 @@ class PercentileDiscAggregateFunction final : public PercentileContDiscAggregate
 };
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

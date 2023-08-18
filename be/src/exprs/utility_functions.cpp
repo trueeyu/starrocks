@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/utility_functions.h"
 
 #include "gen_cpp/FrontendService_types.h"
@@ -300,3 +303,5 @@ StatusOr<ColumnPtr> UtilityFunctions::get_query_profile(FunctionContext* context
 }
 
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

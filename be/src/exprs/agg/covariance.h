@@ -78,8 +78,8 @@ public:
         double oldMeanY = this->data(state).meanY;
         InputCppType rowY = column1->get_data()[row_num];
 
-        double newMeanX = (oldMeanX + (rowX - oldMeanX) / (double)(this->data(state).count));
-        double newMeanY = (oldMeanY + (rowY - oldMeanY) / (double)(this->data(state).count));
+        double newMeanX = (oldMeanX + ((double)rowX - oldMeanX) / (double)(this->data(state).count));
+        double newMeanY = (oldMeanY + ((double)rowY - oldMeanY) / (double)(this->data(state).count));
 
         this->data(state).c2 = this->data(state).c2 + ((double)rowX - oldMeanX) * ((double)rowY - newMeanY);
 
@@ -112,14 +112,14 @@ public:
         double deltaX = this->data(state).meanX - meanX;
         double deltaY = this->data(state).meanY - meanY;
 
-        double sum_count = this->data(state).count + count;
-        double factor = (this->data(state).count / sum_count);
+        double sum_count = (double)(this->data(state).count + count);
+        double factor = ((double)this->data(state).count / sum_count);
 
         this->data(state).meanX = meanX + deltaX * factor;
         this->data(state).meanY = meanY + deltaY * factor;
 
         this->data(state).c2 = c2 + this->data(state).c2 + (deltaX * deltaY) * factor;
-        this->data(state).count = sum_count;
+        this->data(state).count = (int64_t)sum_count;
 
         if constexpr (isCorelation) {
             double m2X = *reinterpret_cast<double*>(slice.data + sizeof(double) * 3 + sizeof(int64_t));
@@ -178,8 +178,8 @@ public:
 
         int64_t count = 1;
         for (size_t i = 0; i < chunk_size; ++i) {
-            meanX = src_column0->get_data()[i];
-            meanY = src_column1->get_data()[i];
+            meanX = (double)src_column0->get_data()[i];
+            meanY = (double)src_column1->get_data()[i];
             memcpy(bytes.data() + old_size, &meanX, sizeof(double));
             memcpy(bytes.data() + old_size + sizeof(double), &meanY, sizeof(double));
             memcpy(bytes.data() + old_size + sizeof(double) * 2, &c2, sizeof(double));
@@ -193,7 +193,7 @@ public:
             }
             old_size += one_element_size;
 
-            dst_column->get_offset()[i + 1] = old_size;
+            dst_column->get_offset()[i + 1] = (uint32_t)old_size;
         }
     }
 };
@@ -209,13 +209,13 @@ class CorVarianceAggregateFunction final : public CorVarianceBaseAggregateFuncti
         int64_t count = this->data(state).count;
         if constexpr (isSample) {
             if (count > 1) {
-                down_cast<ResultColumnType*>(to)->append(this->data(state).c2 / (count - 1));
+                down_cast<ResultColumnType*>(to)->append(this->data(state).c2 / (double)(count - 1));
             } else {
                 down_cast<ResultColumnType*>(to)->append(0);
             }
         } else {
             if (count > 0) {
-                down_cast<ResultColumnType*>(to)->append(this->data(state).c2 / count);
+                down_cast<ResultColumnType*>(to)->append(this->data(state).c2 / (double)count);
             } else {
                 down_cast<ResultColumnType*>(to)->append(0);
             }
