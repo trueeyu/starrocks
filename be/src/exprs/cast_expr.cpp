@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/cast_expr.h"
 
 #include <ryu/ryu.h>
@@ -132,7 +135,7 @@ DEFINE_UNARY_FN_WITH_IMPL(TimestampToBoolean, value) {
     return value.to_timestamp_literal() != 0;
 }
 DEFINE_UNARY_FN_WITH_IMPL(TimeToNumber, value) {
-    return timestamp::time_to_literal(value);
+    return (ResultType)timestamp::time_to_literal(value);
 }
 
 template <LogicalType FromType, LogicalType ToType, bool AllowThrowException>
@@ -398,7 +401,7 @@ CUSTOMIZE_FN_CAST(TYPE_VARCHAR, TYPE_OBJECT, cast_from_string_to_bitmap_fn);
 
 // all int(tinyint, smallint, int, bigint, largeint) cast implements
 DEFINE_UNARY_FN_WITH_IMPL(ImplicitToNumber, value) {
-    return value;
+    return (ResultType)value;
 }
 
 DEFINE_UNARY_FN_WITH_IMPL(NumberCheck, value) {
@@ -430,15 +433,15 @@ DEFINE_UNARY_FN_WITH_IMPL(NumberCheckWithThrowException, value) {
         }
         throw std::runtime_error(ss.str());
     }
-    return result;
+    return (ResultType)result;
 }
 
 DEFINE_UNARY_FN_WITH_IMPL(DateToNumber, value) {
-    return value.to_date_literal();
+    return (ResultType)value.to_date_literal();
 }
 
 DEFINE_UNARY_FN_WITH_IMPL(TimestampToNumber, value) {
-    return value.to_timestamp_literal();
+    return (ResultType)value.to_timestamp_literal();
 }
 
 template <LogicalType FromType, LogicalType ToType, bool AllowThrowException>
@@ -1697,3 +1700,4 @@ Expr* VectorizedCastExprFactory::from_type(const TypeDescriptor& from, const Typ
 }
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

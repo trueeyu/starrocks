@@ -100,7 +100,7 @@ public:
             int64_t elapsed_time = MonotonicNanos() - this->data(state).start_time;
             double speed = 0;
             if (elapsed_time > 0) {
-                speed = this->data(state).bytes * 1.0 / 1048576.0 * 1000000 / ((double)elapsed_time / 1000.0);
+                speed = (double)(this->data(state).bytes) * 1.0 / 1048576.0 * 1000000 / ((double)elapsed_time / 1000.0);
             }
             std::string unit = "MB/s";
             if (speed >= 1024) {

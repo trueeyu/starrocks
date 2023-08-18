@@ -46,7 +46,7 @@ public:
 
         if constexpr (lt_is_string<LT>) {
             Slice s = column->get_slice(row_num);
-            value = HashUtil::murmur_hash64A(s.data, s.size, HashUtil::MURMUR_SEED);
+            value = HashUtil::murmur_hash64A(s.data, static_cast<int>(s.size), HashUtil::MURMUR_SEED);
         } else {
             const auto& v = column->get_data();
             value = HashUtil::murmur_hash64A(&v[row_num], sizeof(v[row_num]), HashUtil::MURMUR_SEED);
@@ -66,7 +66,7 @@ public:
             uint64_t value = 0;
             for (size_t i = frame_start; i < frame_end; ++i) {
                 Slice s = column->get_slice(i);
-                value = HashUtil::murmur_hash64A(s.data, s.size, HashUtil::MURMUR_SEED);
+                value = HashUtil::murmur_hash64A(s.data, (int)s.size, HashUtil::MURMUR_SEED);
 
                 if (value != 0) {
                     this->data(state).update(value);
@@ -131,10 +131,10 @@ public:
             HyperLogLog hll;
             if constexpr (lt_is_string<LT>) {
                 Slice s = column->get_slice(i);
-                value = HashUtil::murmur_hash64A(s.data, s.size, HashUtil::MURMUR_SEED);
+                value = HashUtil::murmur_hash64A(s.data, (int)s.size, HashUtil::MURMUR_SEED);
             } else {
                 auto v = column->get_data()[i];
-                value = HashUtil::murmur_hash64A(&v, sizeof(v), HashUtil::MURMUR_SEED);
+                value = HashUtil::murmur_hash64A(&v, (int)sizeof(v), HashUtil::MURMUR_SEED);
             }
             if (value != 0) {
                 hll.update(value);

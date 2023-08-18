@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/array_functions.h"
 
 #include "column/array_column.h"
@@ -1419,3 +1422,5 @@ StatusOr<ColumnPtr> ArrayFunctions::array_intersect_any_type(FunctionContext* ct
     return NullableColumn::create(ArrayColumn::create(base_elements, result_offsets), nulls);
 }
 } // namespace starrocks
+
+#pragma GCC diagnostic pop

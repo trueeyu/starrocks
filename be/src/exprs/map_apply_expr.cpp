@@ -101,7 +101,7 @@ StatusOr<ColumnPtr> MapApplyExpr::evaluate_checked(ExprContext* context, Chunk* 
     } else {
         auto cur_chunk = std::make_shared<Chunk>();
         // put all arguments into the new chunk
-        int argument_num = _arguments_ids.size();
+        int argument_num = (int)_arguments_ids.size();
         DCHECK(argument_num == input_columns.size());
         for (int i = 0; i < argument_num; ++i) {
             cur_chunk->append_column(input_columns[i], _arguments_ids[i]); // column ref

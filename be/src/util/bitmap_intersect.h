@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "exprs/anyval_util.h"
 #include "runtime/datetime_value.h"
 #include "runtime/string_value.h"
@@ -183,3 +186,4 @@ private:
 };
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

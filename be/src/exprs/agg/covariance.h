@@ -78,17 +78,17 @@ public:
         double oldMeanY = this->data(state).meanY;
         InputCppType rowY = column1->get_data()[row_num];
 
-        double newMeanX = (oldMeanX + (rowX - oldMeanX) / this->data(state).count);
-        double newMeanY = (oldMeanY + (rowY - oldMeanY) / this->data(state).count);
+        double newMeanX = (oldMeanX + (rowX - oldMeanX) / (double)(this->data(state).count));
+        double newMeanY = (oldMeanY + (rowY - oldMeanY) / (double)(this->data(state).count));
 
-        this->data(state).c2 = this->data(state).c2 + (rowX - oldMeanX) * (rowY - newMeanY);
+        this->data(state).c2 = this->data(state).c2 + ((double)rowX - oldMeanX) * ((double)rowY - newMeanY);
 
         this->data(state).meanX = newMeanX;
         this->data(state).meanY = newMeanY;
 
         if constexpr (isCorelation) {
-            this->data(state).m2X += (rowX - oldMeanX) * (rowX - newMeanX);
-            this->data(state).m2Y += (rowY - oldMeanY) * (rowY - newMeanY);
+            this->data(state).m2X += ((double)rowX - oldMeanX) * ((double)rowX - newMeanX);
+            this->data(state).m2Y += ((double)rowY - oldMeanY) * ((double)rowY - newMeanY);
         }
     }
 
@@ -230,13 +230,13 @@ class CorVarianceAggregateFunction final : public CorVarianceBaseAggregateFuncti
         int64_t count = this->data(state).count;
         if constexpr (isSample) {
             if (count > 1) {
-                result = this->data(state).c2 / (count - 1);
+                result = this->data(state).c2 / (double)(count - 1);
             } else {
                 result = 0;
             }
         } else {
             if (count > 0) {
-                result = this->data(state).c2 / count;
+                result = this->data(state).c2 / (double)count;
             } else {
                 result = 0;
             }

@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include <fmt/compile.h>
 #include <fmt/format.h>
 
@@ -315,3 +318,4 @@ using VectorizedOutputCheckUnaryFunction = DealNullableColumnUnaryFunction<
     std::string NAME::apply(const Type& VALUE)
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

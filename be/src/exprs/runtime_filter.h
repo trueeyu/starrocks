@@ -14,6 +14,9 @@
 
 #pragma once
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wconversion"
+
 #include "column/chunk.h"
 #include "column/column_hash.h"
 #include "column/const_column.h"
@@ -864,3 +867,4 @@ private:
 };
 
 } // namespace starrocks
+#pragma GCC diagnostic pop

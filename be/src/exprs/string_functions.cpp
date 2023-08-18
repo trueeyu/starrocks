@@ -1840,7 +1840,7 @@ static inline void trim_per_slice(const BinaryColumn* src, const size_t i, Bytes
                                   [[maybe_unused]] size_t* trailing_spaces_num) {
     auto s = src->get_slice(i);
     if (UNLIKELY(s.size == 0)) {
-        (*offsets)[i + 1] = bytes->size();
+        (*offsets)[i + 1] = (uint32_t)(bytes->size());
         return;
     }
 
@@ -1868,7 +1868,7 @@ static inline void trim_per_slice(const BinaryColumn* src, const size_t i, Bytes
     }
 
     bytes->insert(bytes->end(), (uint8*)from_ptr, (uint8*)to_ptr);
-    (*offsets)[i + 1] = bytes->size();
+    (*offsets)[i + 1] = (uint32_t)(bytes->size());
 }
 
 template <TrimType trim_type, size_t simd_threshold, bool trim_single, bool trim_utf8>
