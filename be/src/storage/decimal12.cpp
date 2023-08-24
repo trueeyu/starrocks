@@ -70,7 +70,7 @@ Status decimal12_t::from_string(const std::string& str) {
         }
         DIAGNOSTIC_POP
 
-        int32_t frac_len = (nullptr != sepr) ? MAX_FRAC_DIGITS_NUM - strlen(sepr + 1) : MAX_FRAC_DIGITS_NUM;
+        int32_t frac_len = (int32_t)((nullptr != sepr) ? MAX_FRAC_DIGITS_NUM - strlen(sepr + 1) : MAX_FRAC_DIGITS_NUM);
         frac_len = frac_len > 0 ? frac_len : 0;
         fraction *= g_power_table[frac_len];
     }

@@ -75,7 +75,7 @@ void TimestampedVersionTracker::get_stale_version_path_json_doc(rapidjson::Docum
         // add path_id to item
         auto path_id_str = std::to_string(path_id);
         rapidjson::Value path_id_value;
-        path_id_value.SetString(path_id_str.c_str(), path_id_str.length(), path_arr.GetAllocator());
+        path_id_value.SetString(path_id_str.c_str(), (uint32_t)path_id_str.length(), path_arr.GetAllocator());
         item.AddMember("path_id", path_id_value, path_arr.GetAllocator());
 
         // add max create time to item
@@ -85,7 +85,7 @@ void TimestampedVersionTracker::get_stale_version_path_json_doc(rapidjson::Docum
         auto create_time_str = cctz::format("%Y-%m-%d %H:%M:%S %z", tp, time_zone);
 
         rapidjson::Value create_time_value;
-        create_time_value.SetString(create_time_str.c_str(), create_time_str.length(), path_arr.GetAllocator());
+        create_time_value.SetString(create_time_str.c_str(), (uint32_t)create_time_str.length(), path_arr.GetAllocator());
         item.AddMember("last_create_time", create_time_value, path_arr.GetAllocator());
 
         // add path list to item
@@ -105,7 +105,7 @@ void TimestampedVersionTracker::get_stale_version_path_json_doc(rapidjson::Docum
         }
         std::string path_list = path_list_stream.str();
         rapidjson::Value path_list_value;
-        path_list_value.SetString(path_list.c_str(), path_list.length(), path_arr.GetAllocator());
+        path_list_value.SetString(path_list.c_str(), (uint32_t)path_list.length(), path_arr.GetAllocator());
         item.AddMember("path_list", path_list_value, path_arr.GetAllocator());
 
         // add item to path_arr

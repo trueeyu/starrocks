@@ -775,7 +775,7 @@ public:
             }
             RETURN_IF_ERROR(load_wals(batch_num, keys.data(), values.data()));
             offset += batch_num * kv_pair_size;
-            nums -= batch_num;
+            nums -= (uint32_t)batch_num;
         }
         return Status::OK();
     }
@@ -792,7 +792,7 @@ public:
     std::vector<std::vector<KVRef>> get_kv_refs_by_shard(size_t nshard, size_t num_entry,
                                                          bool without_null) const override {
         std::vector<std::vector<KVRef>> ret(nshard);
-        uint32_t shard_bits = log2(nshard);
+        uint32_t shard_bits = (uint32_t)log2(nshard);
         for (auto i = 0; i < nshard; ++i) {
             ret[i].reserve(num_entry / nshard * 100 / 85);
         }
