@@ -173,6 +173,11 @@ public:
         return _cache;
     }
 
+    const Buffer<T*>& get_proxy_data() const {
+        _build_cache();
+        return _cache;
+    }
+
     Datum get(size_t n) const override { return Datum(get_object(n)); }
 
     size_t container_memory_usage() const override { return _pool.capacity() * type_size(); }

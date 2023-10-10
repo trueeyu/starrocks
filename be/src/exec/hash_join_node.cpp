@@ -922,6 +922,7 @@ Status HashJoinNode::_do_publish_runtime_filters(RuntimeState* state, int64_t li
         int expr_order = rf_desc->build_expr_order();
         ColumnPtr column = _ht.get_key_columns()[expr_order];
         bool eq_null = _is_null_safes[expr_order];
+        LOG(WARNING) << "LXH: fill runtime filter";
         RETURN_IF_ERROR(RuntimeFilterHelper::fill_runtime_bloom_filter(column, build_type, filter,
                                                                        kHashJoinKeyColumnOffset, eq_null));
         rf_desc->set_runtime_filter(filter);

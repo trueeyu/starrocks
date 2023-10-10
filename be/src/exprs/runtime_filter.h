@@ -410,6 +410,19 @@ public:
         }
     }
 
+    void insert(const CppType& value) {
+        size_t hash = compute_hash(value);
+        _bf.insert_hash(hash);
+
+        _min = std::min(value, _min);
+        _max = std::max(value, _max);
+    }
+
+    void insert_null() {
+        _has_null = true;
+        return;
+    }
+
     void insert(CppType* value) {
         if (value == nullptr) {
             _has_null = true;

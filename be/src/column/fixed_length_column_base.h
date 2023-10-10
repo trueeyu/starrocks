@@ -214,6 +214,8 @@ public:
 
     const Container& get_data() const { return _data; }
 
+    const Container& get_proxy_data() const { return _data; }
+
     Datum get(size_t n) const override { return Datum(_data[n]); }
 
     std::string debug_item(size_t idx) const override;

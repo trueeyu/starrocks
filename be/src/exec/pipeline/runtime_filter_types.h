@@ -352,6 +352,8 @@ public:
         DCHECK(std::all_of(_partial_bloom_filter_build_params.begin(), _partial_bloom_filter_build_params.end(),
                            [&num_bloom_filters](auto& opt_params) { return opt_params.size() == num_bloom_filters; }));
 
+        int64_t t0 = GetCurrentTimeNanos();
+        LOG(WARNING) << "LXH: num_bloom_filters: " << num_bloom_filters;
         for (auto i = 0; i < num_bloom_filters; ++i) {
             auto& desc = _bloom_filter_descriptors[i];
             if (desc->runtime_filter() == nullptr) {
@@ -364,6 +366,7 @@ public:
                 desc->set_runtime_filter(nullptr);
                 continue;
             }
+            LOG(WARNING) << "LXH: partial_bloom_filters: " << _partial_bloom_filter_build_params.size();
             for (auto& opt_params : _partial_bloom_filter_build_params) {
                 auto& opt_param = opt_params[i];
                 DCHECK(opt_param.has_value());
@@ -380,6 +383,8 @@ public:
                 }
             }
         }
+        int64_t t1 = GetCurrentTimeNanos();
+        LOG(WARNING) << "LXH: MERGE TIME: " << (t1 - t0);
         return Status::OK();
     }
 
