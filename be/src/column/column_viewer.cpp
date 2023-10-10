@@ -49,7 +49,11 @@ ColumnViewer<Type>::ColumnViewer(const ColumnPtr& column)
         _null_column = ColumnHelper::one_size_not_null_column;
     }
 
-    _data = _column->get_data().data();
+    if constexpr (lt_is_string<Type> || lt_is_binary<Type>) {
+        _data = _column->get_slices().data();
+    } else {
+        _data = _column->get_data().data();
+    }
     _null_data = _null_column->get_data().data();
 }
 

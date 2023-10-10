@@ -268,13 +268,22 @@ public:
         }
     }
 
-    Container& get_data() {
+    BinaryDataProxyContainer& get_data() {
+        return _immuable_container;
+    }
+
+    const BinaryDataProxyContainer& get_data() const {
+        return _immuable_container;
+    }
+
+    Container& get_slices() {
         if (!_slices_cache) {
             _build_slices();
         }
         return _slices;
     }
-    const Container& get_data() const {
+
+    const Container& get_slices() const {
         if (!_slices_cache) {
             _build_slices();
         }

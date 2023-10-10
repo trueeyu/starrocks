@@ -186,11 +186,14 @@ StatusOr<ExprContext*> RuntimeFilterHelper::rewrite_runtime_filter_in_cross_join
 struct FilterZoneMapWithMinMaxOp {
     template <LogicalType ltype>
     bool operator()(const JoinRuntimeFilter* expr, const Column* min_column, const Column* max_column) {
+        /*
         using CppType = RunTimeCppType<ltype>;
         auto* filter = (RuntimeBloomFilter<ltype>*)(expr);
         const CppType* min_value = ColumnHelper::unpack_cpp_data_one_value<ltype>(min_column);
         const CppType* max_value = ColumnHelper::unpack_cpp_data_one_value<ltype>(max_column);
         return filter->filter_zonemap_with_min_max(min_value, max_value);
+        */
+        return true;
     }
 };
 
@@ -701,7 +704,7 @@ public:
         if (col->is_nullable()) {
             auto tmp = ColumnHelper::as_raw_column<NullableColumn>(col);
             uint8_t* __restrict__ null_data = tmp->null_column_data().data();
-            CppType* __restrict__ data = ColumnHelper::cast_to_raw<Type>(tmp->data_column())->get_data().data();
+            const auto& data = ColumnHelper::cast_to_raw<Type>(tmp->data_column())->get_data();
             for (int i = 0; i < size; i++) {
                 res[i] = (data[i] >= _min_value && data[i] <= _max_value);
             }
@@ -710,7 +713,7 @@ public:
                 res[i] = res[i] | null_data[i];
             }
         } else {
-            CppType* data = ColumnHelper::cast_to_raw<Type>(col)->get_data().data();
+            const auto& data = ColumnHelper::cast_to_raw<Type>(col)->get_data();
             for (int i = 0; i < size; i++) {
                 res[i] = (data[i] >= _min_value && data[i] <= _max_value);
             }

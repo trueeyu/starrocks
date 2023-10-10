@@ -41,9 +41,9 @@ const Buffer<typename JoinBuildFunc<LT>::CppType>& JoinBuildFunc<LT>::get_key_da
 
     if constexpr (lt_is_string<LT>) {
         if (UNLIKELY(data_column->is_large_binary())) {
-            return ColumnHelper::as_raw_column<LargeBinaryColumn>(data_column)->get_data();
+            return ColumnHelper::as_raw_column<LargeBinaryColumn>(data_column)->get_slices();
         } else {
-            return ColumnHelper::as_raw_column<BinaryColumn>(data_column)->get_data();
+            return ColumnHelper::as_raw_column<BinaryColumn>(data_column)->get_slices();
         }
     } else {
         return ColumnHelper::as_raw_column<ColumnType>(data_column)->get_data();
@@ -300,10 +300,18 @@ const Buffer<typename JoinProbeFunc<LT>::CppType>& JoinProbeFunc<LT>::get_key_da
         const HashTableProbeState& probe_state) {
     if ((*probe_state.key_columns)[0]->is_nullable()) {
         auto* nullable_column = ColumnHelper::as_raw_column<NullableColumn>((*probe_state.key_columns)[0]);
-        return ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_data();
+        if constexpr (lt_is_string<LT>) {
+            return ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_slices();
+        } else {
+            return ColumnHelper::as_raw_column<ColumnType>(nullable_column->data_column())->get_data();
+        }
     }
 
-    return ColumnHelper::as_raw_column<ColumnType>((*probe_state.key_columns)[0])->get_data();
+    if constexpr (lt_is_string<LT>) {
+        return ColumnHelper::as_raw_column<ColumnType>((*probe_state.key_columns)[0])->get_slices();
+    } else {
+        return ColumnHelper::as_raw_column<ColumnType>((*probe_state.key_columns)[0])->get_data();
+    }
 }
 
 template <LogicalType LT>
