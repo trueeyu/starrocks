@@ -74,19 +74,19 @@ void BinaryColumnCopyBench::do_bench(benchmark::State& state) {
 
         state.PauseTiming();
     } else if (_mode == 2) {
-        state.ResumeTiming();
-
-        for (size_t i = 0; i < _chunk_size; i++) {
-            dest_column.append(column->get_slice(i));
-        }
-
-        state.PauseTiming();
-    } else {
         auto& data = column->get_data();
         state.ResumeTiming();
 
         for (size_t i = 0; i < _chunk_size; i++) {
             dest_column.append(data[i]);
+        }
+
+        state.PauseTiming();
+    } else {
+        state.ResumeTiming();
+
+        for (size_t i = 0; i < _chunk_size; i++) {
+            dest_column.append(column->get_slice(i));
         }
 
         state.PauseTiming();
