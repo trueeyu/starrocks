@@ -17,6 +17,7 @@
 #include <limits>
 
 #include "column/binary_column.h"
+#include "column/bitmap_column.h"
 #include "column/decimalv3_column.h"
 #include "column/json_column.h"
 #include "column/nullable_column.h"

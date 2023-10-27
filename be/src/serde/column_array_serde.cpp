@@ -22,6 +22,7 @@
 
 #include "column/array_column.h"
 #include "column/binary_column.h"
+#include "column/bitmap_column.h"
 #include "column/column_visitor_adapter.h"
 #include "column/const_column.h"
 #include "column/decimalv3_column.h"
@@ -286,6 +287,44 @@ public:
     }
 };
 
+class BitmapColumnSerde {
+public:
+    static int64_t max_serialized_size(const BitmapColumn& column) {
+        const std::vector<BitmapValue>& pool = column.get_pool();
+        int64_t size = sizeof(uint32_t);
+        for (const auto& obj : pool) {
+            size += sizeof(uint64_t);
+            size += obj.serialize_size();
+        }
+        return size;
+    }
+
+    static uint8_t* serialize(const BitmapColumn& column, uint8_t* buff) {
+        buff = write_little_endian_32(column.get_pool().size(), buff);
+        for (const auto& obj : column.get_pool()) {
+            uint64_t actual = obj.serialize(buff + sizeof(uint64_t));
+            buff = write_little_endian_64(actual, buff);
+            buff += actual;
+        }
+        return buff;
+    }
+
+    static const uint8_t* deserialize(const uint8_t* buff, BitmapColumn* column) {
+        uint32_t num_objects = 0;
+        buff = read_little_endian_32(buff, &num_objects);
+        column->reset_column();
+        std::vector<BitmapValue>& pool = column->get_pool();
+        pool.reserve(num_objects);
+        for (int i = 0; i < num_objects; i++) {
+            uint64_t serialized_size = 0;
+            buff = read_little_endian_64(buff, &serialized_size);
+            pool.emplace_back(Slice(buff, serialized_size));
+            buff += serialized_size;
+        }
+        return buff;
+    }
+};
+
 template <typename T>
 class ObjectColumnSerde {
 public:
@@ -537,6 +576,11 @@ public:
         return Status::OK();
     }
 
+    Status do_visit(const BitmapColumn& column) {
+        _size += BitmapColumnSerde::max_serialized_size(column);
+        return Status::OK();
+    }
+
     Status do_visit(const JsonColumn& column) {
         _size += JsonColumnSerde::max_serialized_size(column);
         return Status::OK();
@@ -598,6 +642,11 @@ public:
     template <typename T>
     Status do_visit(const ObjectColumn<T>& column) {
         _cur = ObjectColumnSerde<T>::serialize(column, _cur);
+        return Status::OK();
+    }
+
+    Status do_visit(const BitmapColumn& column) {
+        _cur = BitmapColumnSerde::serialize(column, _cur);
         return Status::OK();
     }
 
@@ -670,6 +719,11 @@ public:
     template <typename T>
     Status do_visit(ObjectColumn<T>* column) {
         _cur = ObjectColumnSerde<T>::deserialize(_cur, column);
+        return Status::OK();
+    }
+
+    Status do_visit(BitmapColumn* column) {
+        _cur = BitmapColumnSerde::deserialize(_cur, column);
         return Status::OK();
     }
 

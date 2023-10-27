@@ -138,6 +138,12 @@ public:
         return Status::NotSupported("not support object column sort_and_tie");
     }
 
+    Status do_visit(const BitmapColumn& column) {
+        DCHECK(false) << "not support bitmap column sort_and_tie";
+
+        return Status::NotSupported("not support bitmap column sort_and_tie");
+    }
+
     Status do_visit(const JsonColumn& column) {
         auto cmp = [&](const SmallPermuteItem& lhs, const SmallPermuteItem& rhs) {
             return column.get_object(lhs.index_in_chunk)->compare(*column.get_object(rhs.index_in_chunk));
@@ -319,6 +325,11 @@ public:
 
     template <typename T>
     Status do_visit(const ObjectColumn<T>& column) {
+        DCHECK(false) << "not supported";
+        return Status::NotSupported("TOOD");
+    }
+
+    Status do_visit(const BitmapColumn& column) {
         DCHECK(false) << "not supported";
         return Status::NotSupported("TOOD");
     }

@@ -16,6 +16,7 @@
 
 #include "column/array_column.h"
 #include "column/binary_column.h"
+#include "column/bitmap_column.h"
 #include "column/column.h"
 #include "column/column_visitor_adapter.h"
 #include "column/const_column.h"
@@ -213,6 +214,14 @@ public:
         }
 
         dst->invalidate_slice_cache();
+
+        return Status::OK();
+    }
+
+    Status do_visit(BitmapColumn* dst) {
+        for (auto& p : _perm) {
+            dst->append(*_columns[p.chunk_index], p.index_in_chunk, 1);
+        }
 
         return Status::OK();
     }

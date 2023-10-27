@@ -146,6 +146,10 @@ public:
         return Status::NotSupported("Unsupported object column in column wise comparator");
     }
 
+    Status do_visit(const BitmapColumn& column) {
+        return Status::NotSupported("Unsupported bitmap column in column wise comparator");
+    }
+
     Status do_visit(const MapColumn& column) {
         return Status::NotSupported("Unsupported map column in column wise comparator");
     }
@@ -240,6 +244,10 @@ public:
     template <typename T>
     Status do_visit(ObjectColumn<T>* column) {
         return Status::NotSupported("Unsupported object column in column wise comparator");
+    }
+
+    Status do_visit(BitmapColumn* column) {
+        return Status::NotSupported("Unsupported bitmap column in column wise comparator");
     }
 
     Status do_visit(MapColumn* column) {

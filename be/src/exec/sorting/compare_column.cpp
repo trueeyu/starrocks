@@ -223,6 +223,12 @@ public:
         return Status::NotSupported("not support object column sort_and_tie");
     }
 
+    Status do_visit(const BitmapColumn& column) {
+        DCHECK(false) << "not support bitmap column sort_and_tie";
+
+        return Status::NotSupported("not support bitmap column sort_and_tie");
+    }
+
     Status do_visit(const JsonColumn& column) {
         auto& lhs_data = column.get_data();
         const JsonValue& rhs_json = *_rhs_value.get_json();
@@ -308,6 +314,7 @@ public:
     Status do_visit(const ArrayColumn& column) { return Status::NotSupported("Not support"); }
     Status do_visit(const MapColumn& column) { return Status::NotSupported("Not support"); }
     Status do_visit(const StructColumn& column) { return Status::NotSupported("Not support"); }
+    Status do_visit(const BitmapColumn& column) { return Status::NotSupported("not support"); }
     template <typename T>
     Status do_visit(const ObjectColumn<T>& column) {
         return Status::NotSupported("not support");
