@@ -18,7 +18,6 @@
 #include "gutil/casts.h"
 #include "types/bitmap_value.h"
 #include "util/mysql_row_buffer.h"
-#include "util/phmap/phmap.h"
 
 namespace starrocks {
 
@@ -76,7 +75,7 @@ void BitmapColumn::remove_first_n_values(size_t count) {
 }
 
 void BitmapColumn::append(const Column& src, size_t offset, size_t count) {
-    const auto& obj_col = down_cast<const ObjectColumn<T>&>(src);
+    const auto& obj_col = down_cast<const BitmapColumn&>(src);
     for (size_t i = offset; i < count + offset; ++i) {
         append(obj_col.get_object(i));
     }
@@ -131,7 +130,7 @@ void BitmapColumn::append_value_multiple_times(const void* value, size_t count) 
     }
 
     _cache_ok = false;
-};
+}
 
 void BitmapColumn::append_default() {
     _pool.emplace_back(BitmapValue());

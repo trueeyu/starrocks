@@ -36,6 +36,7 @@ add_library(Column STATIC
         fixed_length_column.cpp
         nullable_column.cpp
         schema.cpp
+        bitmap_column.cpp
         binary_column.cpp
         object_column.cpp
         decimalv3_column.cpp
