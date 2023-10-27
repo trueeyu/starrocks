@@ -355,7 +355,6 @@ StatusOr<ColumnPtr> ObjectColumn<T>::upgrade_if_overflow() {
 }
 
 template class ObjectColumn<HyperLogLog>;
-template class ObjectColumn<BitmapValue>;
 template class ObjectColumn<PercentileValue>;
 template class ObjectColumn<JsonValue>;
 

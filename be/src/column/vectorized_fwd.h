@@ -95,11 +95,11 @@ template <typename T>
 class ObjectColumn;
 
 using HyperLogLogColumn = ObjectColumn<HyperLogLog>;
-using BitmapColumn = ObjectColumn<BitmapValue>;
 using PercentileColumn = ObjectColumn<PercentileValue>;
 using JsonColumnBase = ObjectColumn<JsonValue>;
 class JsonColumn;
 
+class BitmapColumn;
 class MapColumn;
 class StructColumn;
 
