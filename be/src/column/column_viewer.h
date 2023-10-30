@@ -40,7 +40,7 @@ template <LogicalType Type>
 class ColumnViewer {
 public:
     static auto constexpr TYPE = Type;
-    explicit ColumnViewer(const ColumnPtr& column);
+    ColumnViewer(const ColumnPtr& column);
 
     const RunTimeCppType<Type> value(const size_t idx) const { return _data[idx & _not_const_mask]; }
 
@@ -65,6 +65,36 @@ private:
 
     const size_t _not_const_mask;
     const size_t _null_mask;
+};
+
+template <>
+class ColumnViewer<TYPE_OBJECT> {
+public:
+    ColumnViewer(const ColumnPtr& column);
+
+    const RunTimeCppType<TYPE_OBJECT> value(const size_t idx) const { return _data[idx & _not_const_mask].get(); }
+
+    const bool is_null(const size_t idx) const { return _null_data[idx & _null_mask]; }
+
+    size_t size() const { return _column->size(); }
+
+    const NullColumnPtr& null_column() const { return _null_column; };
+
+    typename RunTimeColumnType<TYPE_OBJECT>::Ptr column() const { return _column; };
+
+private:
+    // column ptr
+    typename RunTimeColumnType<TYPE_OBJECT>::Ptr _column;
+
+    NullColumnPtr _null_column;
+
+    // raw pointer
+    BitmapColumn::BitmapValuePtr* _data;
+
+    NullColumn::ValueType* _null_data;
+
+    const size_t _not_const_mask = 0;
+    const size_t _null_mask = 0;
 };
 
 } // namespace starrocks

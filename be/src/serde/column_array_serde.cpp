@@ -290,11 +290,11 @@ public:
 class BitmapColumnSerde {
 public:
     static int64_t max_serialized_size(const BitmapColumn& column) {
-        const std::vector<BitmapValue>& pool = column.get_pool();
+        const auto& pool = column.get_pool();
         int64_t size = sizeof(uint32_t);
         for (const auto& obj : pool) {
             size += sizeof(uint64_t);
-            size += obj.serialize_size();
+            size += obj->serialize_size();
         }
         return size;
     }
@@ -302,7 +302,7 @@ public:
     static uint8_t* serialize(const BitmapColumn& column, uint8_t* buff) {
         buff = write_little_endian_32(column.get_pool().size(), buff);
         for (const auto& obj : column.get_pool()) {
-            uint64_t actual = obj.serialize(buff + sizeof(uint64_t));
+            uint64_t actual = obj->serialize(buff + sizeof(uint64_t));
             buff = write_little_endian_64(actual, buff);
             buff += actual;
         }
@@ -313,12 +313,12 @@ public:
         uint32_t num_objects = 0;
         buff = read_little_endian_32(buff, &num_objects);
         column->reset_column();
-        std::vector<BitmapValue>& pool = column->get_pool();
+        auto& pool = column->get_pool();
         pool.reserve(num_objects);
         for (int i = 0; i < num_objects; i++) {
             uint64_t serialized_size = 0;
             buff = read_little_endian_64(buff, &serialized_size);
-            pool.emplace_back(Slice(buff, serialized_size));
+            pool.emplace_back(std::make_shared<BitmapValue>(Slice(buff, serialized_size)));
             buff += serialized_size;
         }
         return buff;

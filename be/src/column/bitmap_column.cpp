@@ -25,7 +25,7 @@ size_t BitmapColumn::byte_size(size_t from, size_t size) const {
     DCHECK_LE(from + size, this->size()) << "Range error";
     size_t byte_size = 0;
     for (size_t i = 0; i < size; ++i) {
-        byte_size += _pool[from + i].serialize_size();
+        byte_size += _pool[from + i]->serialize_size();
     }
     return byte_size;
 }
@@ -43,23 +43,13 @@ void BitmapColumn::assign(size_t n, size_t idx) {
     _pool.reserve(n);
 
     for (size_t i = 1; i < n; ++i) {
-        append(&_pool[0]);
+        append(_pool[0]);
     }
 
     _cache_ok = false;
 }
 
-void BitmapColumn::append(const BitmapValue* object) {
-    _pool.emplace_back(*object);
-    _cache_ok = false;
-}
-
-void BitmapColumn::append(BitmapValue&& object) {
-    _pool.emplace_back(std::move(object));
-    _cache_ok = false;
-}
-
-void BitmapColumn::append(const BitmapValue& object) {
+void BitmapColumn::append(const BitmapValuePtr& object) {
     _pool.emplace_back(object);
     _cache_ok = false;
 }
@@ -84,7 +74,7 @@ void BitmapColumn::append(const Column& src, size_t offset, size_t count) {
 void BitmapColumn::append_shallow_copy(const Column& src, size_t offset, size_t count) {
     const auto& obj_col = down_cast<const BitmapColumn&>(src);
     for (size_t i = offset; i < count + offset; ++i) {
-        append({*obj_col.get_object(i), false});
+        append(obj_col.get_object(i));
     }
 }
 
@@ -100,21 +90,21 @@ void BitmapColumn::append_selective_shallow_copy(const Column& src, const uint32
                                                  uint32_t size) {
     const auto& obj_col = down_cast<const BitmapColumn&>(src);
     for (uint32_t j = 0; j < size; ++j) {
-        append({*obj_col.get_object(indexes[from + j]), false});
+        append(obj_col.get_object(indexes[from + j]));
     }
 }
 
 void BitmapColumn::append_value_multiple_times(const Column& src, uint32_t index, uint32_t size, bool deep_copy) {
     const auto& obj_col = down_cast<const BitmapColumn&>(src);
     for (uint32_t i = 0; i < size; i++) {
-        append({*obj_col.get_object(index), deep_copy});
+        append(obj_col.get_object(index));
     }
 }
 
 bool BitmapColumn::append_strings(const Buffer<starrocks::Slice>& strs) {
     _pool.reserve(_pool.size() + strs.size());
     for (const Slice& s : strs) {
-        _pool.emplace_back(s);
+        _pool.emplace_back(std::make_shared<BitmapValue>(s));
     }
 
     _cache_ok = false;
@@ -126,14 +116,14 @@ void BitmapColumn::append_value_multiple_times(const void* value, size_t count) 
     _pool.reserve(_pool.size() + count);
 
     for (size_t i = 0; i < count; ++i) {
-        _pool.emplace_back(*reinterpret_cast<BitmapValue*>(slice->data));
+        _pool.emplace_back(std::make_shared<BitmapValue>(*reinterpret_cast<BitmapValue*>(slice->data)));
     }
 
     _cache_ok = false;
 }
 
 void BitmapColumn::append_default() {
-    _pool.emplace_back(BitmapValue());
+    _pool.emplace_back(std::make_shared<BitmapValue>());
     _cache_ok = false;
 }
 
@@ -157,7 +147,7 @@ void BitmapColumn::update_rows(const Column& src, const uint32_t* indexes) {
     size_t replace_num = src.size();
     for (size_t i = 0; i < replace_num; i++) {
         DCHECK_LT(indexes[i], _pool.size());
-        _pool[indexes[i]] = *obj_col.get_object(i);
+        _pool[indexes[i]] = obj_col.get_object(i);
     }
     _cache_ok = false;
 }
@@ -219,9 +209,9 @@ int BitmapColumn::compare_at(size_t left, size_t right, const starrocks::Column&
 void BitmapColumn::fnv_hash(uint32_t* hash, uint32_t from, uint32_t to) const {
     std::string s;
     for (uint32_t i = from; i < to; ++i) {
-        s.resize(_pool[i].serialize_size());
+        s.resize(_pool[i]->serialize_size());
         //TODO: May be overflow here if the object is large then 2G.
-        size_t size = _pool[i].serialize(reinterpret_cast<uint8_t*>(s.data()));
+        size_t size = _pool[i]->serialize(reinterpret_cast<uint8_t*>(s.data()));
         hash[i] = HashUtil::fnv_hash(s.data(), static_cast<int32_t>(size), hash[i]);
     }
 }
@@ -247,7 +237,7 @@ void BitmapColumn::_build_slices() const {
     // FIXME(kks): bitmap itself compress is more effective than LZ4 compress?
     // Do we really need compress bitmap here?
     for (size_t i = 0; i < _pool.size(); ++i) {
-        _pool[i].compress();
+        _pool[i]->compress();
     }
 
     size_t size = byte_size();
@@ -255,7 +245,7 @@ void BitmapColumn::_build_slices() const {
     _slices.reserve(_pool.size());
     size_t old_size = 0;
     for (size_t i = 0; i < _pool.size(); ++i) {
-        size_t slice_size = _pool[i].serialize(_buffer.data() + old_size);
+        size_t slice_size = _pool[i]->serialize(_buffer.data() + old_size);
         _slices.emplace_back(_buffer.data() + old_size, slice_size);
         old_size += slice_size;
     }
@@ -274,7 +264,7 @@ ColumnPtr BitmapColumn::clone_shared() const {
 }
 
 std::string BitmapColumn::debug_item(size_t idx) const {
-    return _pool[idx].to_string();
+    return _pool[idx]->to_string();
 }
 
 StatusOr<ColumnPtr> BitmapColumn::upgrade_if_overflow() {

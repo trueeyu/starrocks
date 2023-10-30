@@ -53,6 +53,30 @@ ColumnViewer<Type>::ColumnViewer(const ColumnPtr& column)
     _null_data = _null_column->get_data().data();
 }
 
+template <>
+ColumnViewer<TYPE_OBJECT>::ColumnViewer(const ColumnPtr& column)
+        : _not_const_mask(not_const_mask(column)), _null_mask(null_mask(column)) {
+    if (column->only_null()) {
+        _null_column = ColumnHelper::one_size_null_column;
+        _column = RunTimeColumnType<TYPE_OBJECT>::create();
+        _column->append_default();
+    } else if (column->is_constant()) {
+        auto v = ColumnHelper::as_raw_column<ConstColumn>(column);
+        _column = ColumnHelper::cast_to<TYPE_OBJECT>(v->data_column());
+        _null_column = ColumnHelper::one_size_not_null_column;
+    } else if (column->is_nullable()) {
+        auto v = ColumnHelper::as_raw_column<NullableColumn>(column);
+        _column = ColumnHelper::cast_to<TYPE_OBJECT>(v->data_column());
+        _null_column = ColumnHelper::as_column<NullColumn>(v->null_column());
+    } else {
+        _column = ColumnHelper::cast_to<TYPE_OBJECT>(column);
+        _null_column = ColumnHelper::one_size_not_null_column;
+    }
+
+    _data = _column->get_data().data();
+    _null_data = _null_column->get_data().data();
+}
+
 #define M(TYPE) template class ColumnViewer<TYPE>;
 
 APPLY_FOR_ALL_SCALAR_TYPE_WITH_NULL(M);

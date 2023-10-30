@@ -29,6 +29,7 @@ class BitmapColumn : public ColumnFactory<Column, BitmapColumn> {
 
 public:
     using ValueType = BitmapColumn;
+    using BitmapValuePtr = std::shared_ptr<BitmapValue>;
     using Container = Buffer<ValueType*>;
 
     BitmapColumn() = default;
@@ -37,7 +38,7 @@ public:
 
     BitmapColumn(const BitmapColumn& column) { DCHECK(false) << "Can't copy construct object column"; }
 
-    BitmapColumn(BitmapColumn&& object_column) noexcept : _pool(std::move(object_column._pool)) {}
+    BitmapColumn(BitmapColumn&& bitmap_column) noexcept : _pool(std::move(bitmap_column._pool)) {}
 
     void operator=(const BitmapColumn&) = delete;
 
@@ -78,13 +79,11 @@ public:
 
     void assign(size_t n, size_t idx) override;
 
-    void append(const BitmapValue* object);
+    void append(const BitmapValuePtr& object);
 
-    void append(BitmapValue&& object);
-
-    void append(const BitmapValue& object);
-
-    void append_datum(const Datum& datum) override { append(datum.get<BitmapValue*>()); }
+    void append_datum(const Datum& datum) override {
+        append(std::make_shared<BitmapValue>(*datum.get<BitmapValue*>()));
+    }
 
     void remove_first_n_values(size_t count) override;
 
@@ -148,19 +147,13 @@ public:
 
     std::string get_name() const override { return std::string{"object"}; }
 
-    BitmapValue* get_object(size_t n) const { return const_cast<BitmapValue*>(&_pool[n]); }
+    const BitmapValuePtr& get_object(size_t n) const { return _pool[n]; }
 
-    Buffer<BitmapValue*>& get_data() {
-        _build_cache();
-        return _cache;
-    }
+    Buffer<BitmapValuePtr>& get_data() { return _pool; }
 
-    const Buffer<BitmapValue*>& get_data() const {
-        _build_cache();
-        return _cache;
-    }
+    const Buffer<BitmapValuePtr>& get_data() const { return _pool; }
 
-    Datum get(size_t n) const override { return Datum(get_object(n)); }
+    Datum get(size_t n) const override { return Datum(get_object(n).get()); }
 
     size_t container_memory_usage() const override { return _pool.capacity() * type_size(); }
 
@@ -173,7 +166,6 @@ public:
         std::swap(this->_delete_state, r._delete_state);
         std::swap(this->_pool, r._pool);
         std::swap(this->_cache_ok, r._cache_ok);
-        std::swap(this->_cache, r._cache);
         std::swap(this->_buffer, r._buffer);
         std::swap(this->_slices, r._slices);
     }
@@ -182,19 +174,13 @@ public:
         Column::reset_column();
         _pool.clear();
         _cache_ok = false;
-        _cache.clear();
         _slices.clear();
         _buffer.clear();
     }
 
-    void reset_cache() {
-        _cache_ok = false;
-        _cache.clear();
-    }
+    Buffer<BitmapValuePtr>& get_pool() { return _pool; }
 
-    Buffer<BitmapValue>& get_pool() { return _pool; }
-
-    const Buffer<BitmapValue>& get_pool() const { return _pool; }
+    const Buffer<BitmapValuePtr>& get_pool() const { return _pool; }
 
     std::string debug_item(size_t idx) const override;
 
@@ -233,29 +219,14 @@ private:
     // add this to avoid warning clang-diagnostic-overloaded-virtual
     using Column::append;
 
-    void _build_cache() const {
-        if (_cache_ok) {
-            return;
-        }
-
-        _cache.clear();
-        _cache.reserve(_pool.size());
-        for (int i = 0; i < _pool.size(); ++i) {
-            _cache.emplace_back(const_cast<BitmapValue*>(&_pool[i]));
-        }
-
-        _cache_ok = true;
-    }
-
     // Currently, only for data loading
     void _build_slices() const;
 
     void check_or_die() const override {}
 
 private:
-    Buffer<BitmapValue> _pool;
+    Buffer<BitmapValuePtr> _pool;
     mutable bool _cache_ok = false;
-    mutable Buffer<BitmapValue*> _cache;
 
     // Only for data loading
     mutable Buffer<Slice> _slices;
