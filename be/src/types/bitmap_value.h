@@ -161,6 +161,7 @@ public:
 private:
     void _convert_to_smaller_type();
     void _from_set_to_bitmap();
+    void _copy_on_write();
 
     enum BitmapDataType {
         EMPTY = 0,
@@ -174,5 +175,6 @@ private:
     std::unique_ptr<phmap::flat_hash_set<uint64_t>> _set;
     uint64_t _sv = 0; // store the single value when _type == SINGLE
     BitmapDataType _type{EMPTY};
+    mutable bool _shared = false;
 };
 } // namespace starrocks
