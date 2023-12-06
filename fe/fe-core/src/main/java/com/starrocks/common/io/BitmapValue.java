@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package com.starrocks.load.loadv2.dpp;
+package com.starrocks.common.io;
 
 import com.google.common.base.Objects;
 import org.roaringbitmap.Util;
@@ -27,11 +27,11 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
 /**
- * starrocks's own java version bitmap
- * try to keep compatibility with starrocks be's bitmap_value.h,but still has some difference from bitmap_value.h
+ * StarRocks's own java version bitmap
+ * try to keep compatibility with StarRocks be's bitmap_value.h,but still has some difference from bitmap_value.h
  * major difference from be:
  * 1. java bitmap support integer range [0, Long.MAX],while be's bitmap support range [0, Long.MAX * 2]
- * Now Long.MAX_VALUE is enough for starrocks's spark load and support unsigned integer in java need to pay more
+ * Now Long.MAX_VALUE is enough for StarRocks's spark load and support unsigned integer in java need to pay more
  * 2. getSizeInBytes method is different from fe to be, details description see method comment
  */
 public class BitmapValue {
@@ -52,7 +52,7 @@ public class BitmapValue {
     private Roaring64Map bitmap;
 
     // for single value serialize and deserialize
-    private ByteBuffer buffer;
+    private final ByteBuffer buffer;
 
     public BitmapValue() {
         bitmapType = EMPTY;

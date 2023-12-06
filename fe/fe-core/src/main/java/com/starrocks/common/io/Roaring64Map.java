@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-package com.starrocks.load.loadv2.dpp;
+package com.starrocks.common.io;
 
 import com.starrocks.common.Codec;
 import org.roaringbitmap.BitmapDataProvider;
@@ -65,7 +65,7 @@ public class Roaring64Map {
     // negative long
     private boolean signedLongs = false;
 
-    private BitmapDataProviderSupplier supplier;
+    private final BitmapDataProviderSupplier supplier;
 
     // By default, we cache cardinalities
     private transient boolean doCacheCardinalities = true;
