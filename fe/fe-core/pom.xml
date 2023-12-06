@@ -96,11 +96,6 @@ under the License.
     </profiles>
 
     <dependencies>
-        <dependency>
-            <groupId>com.starrocks</groupId>
-            <artifactId>spark-dpp</artifactId>
-        </dependency>
-
         <!-- https://mvnrepository.com/artifact/commons-cli/commons-cli -->
         <dependency>
             <groupId>commons-cli</groupId>
