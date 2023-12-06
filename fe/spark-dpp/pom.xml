@@ -164,6 +164,12 @@ under the License.
             <artifactId>log4j-slf4j-impl</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.starrocks</groupId>
+            <artifactId>fe-core</artifactId>
+            <version>3.4.0</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
