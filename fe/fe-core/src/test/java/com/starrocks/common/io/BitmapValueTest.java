@@ -17,16 +17,10 @@
 
 package com.starrocks.common.io;
 
-import com.starrocks.common.Codec;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.DataOutput;
-import java.io.DataOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.util.Arrays;
 
 import static org.junit.Assert.assertEquals;
