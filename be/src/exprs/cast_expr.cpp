@@ -1077,7 +1077,9 @@ public:
         // NOTE
         // For json type, it could not be converted from decimal directly, as a workaround we convert decimal
         // to double at first, then convert double to JSON
-        if constexpr (FromType == TYPE_JSON || ToType == TYPE_JSON) {
+        if constexpr (lt_is_string<FromType> && lt_is_binary<ToType>) {
+            result_column = column->clone();
+        } else  if constexpr (FromType == TYPE_JSON || ToType == TYPE_JSON) {
             if constexpr (lt_is_decimal<FromType>) {
                 ColumnPtr double_column;
                 if (context != nullptr && context->error_if_overflow()) {
