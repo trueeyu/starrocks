@@ -25,6 +25,7 @@ import org.apache.log4j.Logger;
 import java.io.Serializable;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 
 // Parser to validate value for different type
@@ -132,8 +133,8 @@ class FloatParser extends ColumnParser {
     @Override
     public boolean parse(String value) {
         try {
-            Float ret = Float.parseFloat(value);
-            return !ret.isNaN() && !ret.isInfinite();
+            float ret = Float.parseFloat(value);
+            return !Float.isNaN(ret) && !Float.isInfinite(ret);
         } catch (NumberFormatException e) {
             return false;
         }
@@ -144,8 +145,8 @@ class DoubleParser extends ColumnParser {
     @Override
     public boolean parse(String value) {
         try {
-            Double ret = Double.parseDouble(value);
-            return !ret.isInfinite() && !ret.isNaN();
+            double ret = Double.parseDouble(value);
+            return !Double.isInfinite(ret) && !Double.isNaN(ret);
         } catch (NumberFormatException e) {
             return false;
         }
@@ -155,12 +156,9 @@ class DoubleParser extends ColumnParser {
 class BooleanParser extends ColumnParser {
     @Override
     public boolean parse(String value) {
-        if (value.equalsIgnoreCase("true")
+        return value.equalsIgnoreCase("true")
                 || value.equalsIgnoreCase("false")
-                || value.equals("0") || value.equals("1")) {
-            return true;
-        }
-        return false;
+                || value.equals("0") || value.equals("1");
     }
 }
 
@@ -190,7 +188,7 @@ class DatetimeParser extends ColumnParser {
 
 class StringParser extends ColumnParser {
 
-    private EtlJobConfig.EtlColumn etlColumn;
+    private final EtlJobConfig.EtlColumn etlColumn;
 
     public StringParser(EtlJobConfig.EtlColumn etlColumn) {
         this.etlColumn = etlColumn;
@@ -199,7 +197,7 @@ class StringParser extends ColumnParser {
     @Override
     public boolean parse(String value) {
         try {
-            return value.getBytes("UTF-8").length <= etlColumn.stringLength;
+            return value.getBytes(StandardCharsets.UTF_8).length <= etlColumn.stringLength;
         } catch (Exception e) {
             throw new RuntimeException("string check failed ", e);
         }
@@ -207,7 +205,7 @@ class StringParser extends ColumnParser {
 }
 
 class BinaryParser extends ColumnParser {
-    private EtlJobConfig.EtlColumn etlColumn;
+    private final EtlJobConfig.EtlColumn etlColumn;
 
     public BinaryParser(EtlJobConfig.EtlColumn etlColumn) {
         this.etlColumn = etlColumn;
@@ -215,7 +213,11 @@ class BinaryParser extends ColumnParser {
 
     @Override
     public boolean parse(String value) {
-        return true;
+        try {
+            return value.getBytes().length <= etlColumn.stringLength;
+        } catch (Exception e) {
+            throw new RuntimeException("binary check failed ", e);
+        }
     }
 }
 
@@ -224,8 +226,8 @@ class DecimalParser extends ColumnParser {
     public static int PRECISION = 27;
     public static int SCALE = 9;
 
-    private BigDecimal maxValue;
-    private BigDecimal minValue;
+    private final BigDecimal maxValue;
+    private final BigDecimal minValue;
 
     public DecimalParser(EtlJobConfig.EtlColumn etlColumn) {
         StringBuilder precisionStr = new StringBuilder();
@@ -236,8 +238,8 @@ class DecimalParser extends ColumnParser {
         for (int i = 0; i < etlColumn.scale; i++) {
             scaleStr.append("9");
         }
-        maxValue = new BigDecimal(precisionStr.toString() + "." + scaleStr.toString());
-        minValue = new BigDecimal("-" + precisionStr.toString() + "." + scaleStr.toString());
+        maxValue = new BigDecimal(precisionStr + "." + scaleStr);
+        minValue = new BigDecimal("-" + precisionStr + "." + scaleStr);
     }
 
     @Override
@@ -263,8 +265,8 @@ class DecimalParser extends ColumnParser {
 
 class LargeIntParser extends ColumnParser {
 
-    private BigInteger maxValue = new BigInteger("170141183460469231731687303715884105727");
-    private BigInteger minValue = new BigInteger("-170141183460469231731687303715884105728");
+    private final BigInteger maxValue = new BigInteger("170141183460469231731687303715884105727");
+    private final BigInteger minValue = new BigInteger("-170141183460469231731687303715884105728");
 
     @Override
     public boolean parse(String value) {
