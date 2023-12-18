@@ -167,6 +167,9 @@ public class DppUtils {
             case "DECIMAL128":
                 dataType = DecimalType.apply(column.precision, column.scale);
                 break;
+            case "VARBINARY":
+                dataType = DataTypes.BinaryType;
+                break;
             default:
                 throw new RuntimeException("Reason: invalid column type:" + column);
         }

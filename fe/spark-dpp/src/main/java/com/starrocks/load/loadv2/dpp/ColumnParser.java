@@ -70,6 +70,8 @@ public abstract class ColumnParser implements Serializable {
             return new DecimalParser(etlColumn);
         } else if (columnType.equalsIgnoreCase("LARGEINT")) {
             return new LargeIntParser();
+        } else if (columnType.equalsIgnoreCase("VARBINARY")) {
+            return new BinaryParser(etlColumn);
         } else {
             throw new SparkDppException("unsupported type:" + columnType);
         }
@@ -201,6 +203,19 @@ class StringParser extends ColumnParser {
         } catch (Exception e) {
             throw new RuntimeException("string check failed ", e);
         }
+    }
+}
+
+class BinaryParser extends ColumnParser {
+    private EtlJobConfig.EtlColumn etlColumn;
+
+    public BinaryParser(EtlJobConfig.EtlColumn etlColumn) {
+        this.etlColumn = etlColumn;
+    }
+
+    @Override
+    public boolean parse(String value) {
+        return true;
     }
 }
 
