@@ -129,8 +129,8 @@ public class QueryQueueManagerTest extends SchedulerTestBase {
 
         GlobalVariable.setEnableGroupLevelQueryQueue(true);
 
-        GlobalVariable.setQueryQueuePendingTimeoutSecond(Config.max_load_timeout_second);
-        connectContext.getSessionVariable().setQueryTimeoutS(Config.max_load_timeout_second);
+        GlobalVariable.setQueryQueuePendingTimeoutSecond(1000_000);
+        connectContext.getSessionVariable().setQueryTimeoutS(1000_000);
 
         mockFrontends(FRONTENDS);
 

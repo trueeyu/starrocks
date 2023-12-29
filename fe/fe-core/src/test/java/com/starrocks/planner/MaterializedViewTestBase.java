@@ -68,9 +68,7 @@ public class MaterializedViewTestBase extends PlanTestBase {
     }
 
     @BeforeClass
-    public static void beforeClass() throws Exception {
-        PlanTestBase.beforeClass();
-
+    public static void setUp() throws Exception {
         FeConstants.runningUnitTest = true;
         Config.enable_experimental_mv = true;
 

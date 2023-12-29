@@ -91,7 +91,6 @@ public class PruneComplexSubfieldTest extends PlanTestNoneDBBase {
 
     @Before
     public void setUp() {
-        super.setUp();
         connectContext.getSessionVariable().setCboPruneSubfield(true);
         connectContext.getSessionVariable().setEnablePruneComplexTypes(false);
         connectContext.getSessionVariable().setOptimizerExecuteTimeout(-1);

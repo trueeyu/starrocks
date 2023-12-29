@@ -25,10 +25,8 @@ import com.starrocks.analysis.NullLiteral;
 import com.starrocks.analysis.SlotDescriptor;
 import com.starrocks.analysis.SlotRef;
 import com.starrocks.analysis.StringLiteral;
-import com.starrocks.analysis.TableName;
 import com.starrocks.analysis.TupleDescriptor;
 import com.starrocks.catalog.Column;
-import com.starrocks.catalog.Database;
 import com.starrocks.catalog.HiveTable;
 import com.starrocks.catalog.IcebergTable;
 import com.starrocks.catalog.KeysType;
@@ -41,7 +39,6 @@ import com.starrocks.catalog.TableFunctionTable;
 import com.starrocks.catalog.Type;
 import com.starrocks.common.Config;
 import com.starrocks.common.Pair;
-import com.starrocks.common.UserException;
 import com.starrocks.common.profile.Timer;
 import com.starrocks.common.profile.Tracers;
 import com.starrocks.planner.BlackHoleTableSink;
@@ -272,21 +269,6 @@ public class InsertPlanner {
                         nullExprInAutoIncrement, enableAutomaticPartition);
                 if (olapTable.getAutomaticBucketSize() > 0) {
                     ((OlapTableSink) dataSink).setAutomaticBucketSize(olapTable.getAutomaticBucketSize());
-                }
-
-                // if sink is OlapTableSink Assigned to Be execute this sql [cn execute OlapTableSink will crash]
-                session.getSessionVariable().setPreferComputeNode(false);
-                session.getSessionVariable().setUseComputeNodes(0);
-                OlapTableSink olapTableSink = (OlapTableSink) dataSink;
-                TableName catalogDbTable = insertStmt.getTableName();
-                Database db = GlobalStateMgr.getCurrentState().getMetadataMgr().getDb(catalogDbTable.getCatalog(),
-                        catalogDbTable.getDb());
-                try {
-                    olapTableSink.init(session.getExecutionId(), insertStmt.getTxnId(), db.getId(),
-                            ConnectContext.get().getSessionVariable().getQueryTimeoutS());
-                    olapTableSink.complete();
-                } catch (UserException e) {
-                    throw new SemanticException(e.getMessage());
                 }
             } else if (insertStmt.getTargetTable() instanceof MysqlTable) {
                 dataSink = new MysqlTableSink((MysqlTable) targetTable);

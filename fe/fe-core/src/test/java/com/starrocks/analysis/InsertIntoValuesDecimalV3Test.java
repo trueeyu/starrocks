@@ -18,7 +18,6 @@ package com.starrocks.analysis;
 import com.starrocks.catalog.PrimitiveType;
 import com.starrocks.catalog.ScalarType;
 import com.starrocks.common.Config;
-import com.starrocks.common.util.UUIDUtil;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.sql.StatementPlanner;
 import com.starrocks.sql.ast.InsertStmt;
@@ -29,7 +28,6 @@ import com.starrocks.thrift.TExplainLevel;
 import com.starrocks.utframe.StarRocksAssert;
 import com.starrocks.utframe.UtFrameUtils;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,7 +44,7 @@ public class InsertIntoValuesDecimalV3Test {
     private static ConnectContext ctx;
 
     @BeforeClass
-    public static void beforeClass() throws Exception {
+    public static void setUp() throws Exception {
         UtFrameUtils.createMinStarRocksCluster();
         String createTblStmtStr =
                 "CREATE TABLE if not exists test_table (\n" +
@@ -74,12 +72,6 @@ public class InsertIntoValuesDecimalV3Test {
                 "\"replication_num\" = \"1\",\n" +
                 "\"in_memory\" = \"false\"\n" +
                 ");");
-    }
-
-    @Before
-    public void setUp() {
-        ctx.setQueryId(UUIDUtil.genUUID());
-        ctx.setExecutionId(UUIDUtil.toTUniqueId(ctx.getQueryId()));
     }
 
     @Test

@@ -32,10 +32,10 @@ import java.util.stream.Stream;
 
 @TestMethodOrder(MethodOrderer.MethodName.class)
 public class MaterializedViewTPCHTest extends MaterializedViewTestBase {
-    @BeforeAll
-    public static void beforeClass() throws Exception {
+    @BeforeClass
+    public static void setUp() throws Exception {
         PlanTestBase.beforeClass();
-        MaterializedViewTestBase.beforeClass();
+        MaterializedViewTestBase.setUp();
         starRocksAssert.useDatabase(MATERIALIZED_DB_NAME);
 
         executeSqlFile("sql/materialized-view/tpch/ddl_tpch.sql");
