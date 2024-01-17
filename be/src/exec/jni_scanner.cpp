@@ -55,8 +55,6 @@ Status JniScanner::do_open(RuntimeState* state) {
     return Status::OK();
 }
 
-void JniScanner::do_update_counter(HdfsScanProfile* profile) {}
-
 void JniScanner::do_close(RuntimeState* runtime_state) noexcept {
     JNIEnv* env = JVMFunctionHelper::getInstance().getEnv();
     if (_jni_scanner_obj.handle() != nullptr) {
@@ -64,12 +62,8 @@ void JniScanner::do_close(RuntimeState* runtime_state) noexcept {
             env->CallVoidMethod(_jni_scanner_obj.handle(), _jni_scanner_close);
         }
         _jni_scanner_obj.clear();
-        _jni_scanner_obj = nullptr;
     }
-    if (_jni_scanner_cls != nullptr) {
-        _jni_scanner_cls->clazz();
-        _jni_scanner_cls = nullptr;
-    }
+    _jni_scanner_cls.reset();
 }
 
 Status JniScanner::_init_jni_method(JNIEnv* env) {
