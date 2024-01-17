@@ -20,6 +20,7 @@
 #include "hdfs_scanner.h"
 #include "jni.h"
 #include "runtime/runtime_state.h"
+#include "udf/java/java_udf.h"
 
 namespace starrocks {
 
@@ -81,8 +82,11 @@ private:
 
     [[nodiscard]] Status _release_off_heap_table(JNIEnv* env);
 
-    jclass _jni_scanner_cls = nullptr;
-    jobject _jni_scanner_obj = nullptr;
+    //jclass _jni_scanner_cls = nullptr;
+    std::unique_ptr<JVMClass> _jni_scanner_cls;
+    //jobject _jni_scanner_obj = nullptr;
+    JavaGlobalRef _jni_scanner_obj = nullptr;
+
     jmethodID _jni_scanner_open = nullptr;
     jmethodID _jni_scanner_get_next_chunk = nullptr;
     jmethodID _jni_scanner_close = nullptr;
