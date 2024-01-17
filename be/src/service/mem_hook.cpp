@@ -272,6 +272,9 @@ DEFINE_SCOPED_FAIL_POINT(mem_alloc_error);
 extern "C" {
 // malloc
 void* my_malloc(size_t size) __THROW {
+    if (size == 0) {
+        size = 1;
+    }
     STARROCKS_REPORT_LARGE_MEM_ALLOC(size);
     if (IS_BAD_ALLOC_CATCHED()) {
         FAIL_POINT_INJECT_MEM_ALLOC_ERROR(nullptr);
@@ -494,4 +497,8 @@ void* valloc(size_t size) __THROW ALIAS(my_valloc);
 void* pvalloc(size_t size) __THROW ALIAS(my_pvalloc);
 int posix_memalign(void** r, size_t a, size_t s) __THROW ALIAS(my_posix_memalign);
 size_t malloc_usable_size(void* ptr) __THROW ALIAS(my_malloc_usebale_size);
+
+void * __libc_memalign(size_t alignment, size_t size) {
+    return memalign(alignment, size);
+}
 }

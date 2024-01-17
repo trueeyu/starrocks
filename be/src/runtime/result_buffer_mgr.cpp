@@ -167,7 +167,7 @@ void ResultBufferMgr::cancel_thread() {
         for (auto& i : query_to_cancel) {
             (void)cancel(i);
         }
-        nap_sleep(1, [this] { return _is_stop; });
+        nap_sleep(1, [this] { return _is_stop.load(); });
     }
 
     LOG(INFO) << "result buffer manager cancel thread finish.";

@@ -616,7 +616,6 @@ void ExecEnv::destroy() {
     SAFE_DELETE(_load_path_mgr);
     SAFE_DELETE(_wg_driver_executor);
     SAFE_DELETE(_brpc_stub_cache);
-    SAFE_DELETE(_udf_call_pool);
     SAFE_DELETE(_pipeline_prepare_pool);
     SAFE_DELETE(_pipeline_sink_io_pool);
     SAFE_DELETE(_query_rpc_pool);
@@ -647,6 +646,7 @@ void ExecEnv::destroy() {
     SAFE_DELETE(_lake_update_manager);
     SAFE_DELETE(_lake_replication_txn_manager);
     SAFE_DELETE(_cache_mgr);
+    SAFE_DELETE(_udf_call_pool);
     _metrics = nullptr;
 }
 
