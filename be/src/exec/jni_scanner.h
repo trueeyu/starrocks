@@ -55,11 +55,7 @@ private:
         bool must_nullable;
     };
 
-    [[nodiscard]] static Status _check_jni_exception(JNIEnv* env, const std::string& message);
-
     [[nodiscard]] Status _init_jni_table_scanner(JNIEnv* env, RuntimeState* runtime_state);
-
-    void _init_profile(const HdfsScannerParams& scanner_params) {}
 
     [[nodiscard]] Status _init_jni_method(JNIEnv* env);
 
@@ -95,9 +91,6 @@ private:
 
     std::map<std::string, std::string> _jni_scanner_params;
     std::string _jni_scanner_factory_class; //com/starrocks/hive/reader/HiveScannerFactory
-
-    const std::set<std::string> _skipped_log_jni_scanner_params = {"native_table", "split_info", "predicate_info",
-                                                                   "access_id",    "access_key", "read_session"};
 
 private:
     long* _chunk_meta_ptr;
