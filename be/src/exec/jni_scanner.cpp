@@ -39,7 +39,7 @@ Status JniScanner::do_init(RuntimeState* runtime_state, const HdfsScannerParams&
     _init_profile(scanner_params);
     SCOPED_RAW_TIMER(&_app_stats.reader_init_ns);
     JNIEnv* env = JVMFunctionHelper::getInstance().getEnv();
-    if (env->EnsureLocalCapacity(_jni_scanner_params.size() * 2 + 6) < 0) {
+    if (env->EnsureLocalCapacity(_jni_scanner_params.size() * 100) < 0) {
         RETURN_IF_ERROR(_check_jni_exception(env, "Failed to ensure the local capacity."));
     }
     RETURN_IF_ERROR(_init_jni_table_scanner(env, runtime_state));
