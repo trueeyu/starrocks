@@ -131,14 +131,6 @@ StatusOr<size_t> HorizontalCompactionTask::_compact_data(int32_t chunk_size, Tab
     auto char_field_indexes = ChunkHelper::get_char_field_indexes(schema);
     auto chunk = ChunkHelper::new_chunk(schema, chunk_size);
     while (LIKELY(!should_stop())) {
-#ifndef BE_TEST
-        status = tls_thread_status.mem_tracker()->check_mem_limit("Compaction");
-        if (!status.ok()) {
-            LOG(WARNING) << "fail to execute compaction: " << status.message() << std::endl;
-            return status;
-        }
-#endif
-
         chunk->reset();
         status = reader.get_next(chunk.get());
         if (!status.ok()) {

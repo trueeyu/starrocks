@@ -43,9 +43,6 @@ Status CompactionState::load(Rowset* rowset) {
             LOG(WARNING) << "load CompactionState error: " << _status
                          << " tablet:" << rowset->rowset_meta()->tablet_id() << " stack:\n"
                          << get_stack_trace();
-            if (_status.is_mem_limit_exceeded()) {
-                LOG(WARNING) << CurrentThread::mem_tracker()->debug_string();
-            }
         }
     });
     return _status;

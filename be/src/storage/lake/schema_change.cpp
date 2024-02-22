@@ -165,9 +165,6 @@ Status DirectSchemaChange::process(RowsetPtr rowset, RowsetMetadata* new_rowset_
         if (UNLIKELY(StorageEngine::instance()->bg_worker_stopped())) {
             return Status::InternalError("bg_worker_stopped");
         }
-#ifndef BE_TEST
-        RETURN_IF_ERROR(CurrentThread::mem_tracker()->check_mem_limit("DirectSchemaChange"));
-#endif
 
         _base_chunk->reset();
         _new_chunk->reset();
@@ -240,16 +237,6 @@ Status SortedSchemaChange::process(RowsetPtr rowset, RowsetMetadata* new_rowset_
         if (UNLIKELY(StorageEngine::instance()->bg_worker_stopped())) {
             return Status::InternalError("bg_worker_stopped");
         }
-#ifndef BE_TEST
-        auto cur_usage = CurrentThread::mem_tracker()->consumption();
-        // we check memory usage exceeds 90% since tablet reader use some memory
-        // it will return fail if memory is exhausted
-        if (cur_usage > CurrentThread::mem_tracker()->limit() * 0.9) {
-            RETURN_IF_ERROR_WITH_WARN(writer->flush(), "failed to flush writer.");
-            VLOG(1) << "SortedSchemaChange memory usage: " << cur_usage << " after writer flush "
-                    << CurrentThread::mem_tracker()->consumption();
-        }
-#endif
 
         _base_chunk->reset();
         _new_chunk->reset();
@@ -293,7 +280,7 @@ Status SchemaChangeHandler::process_alter_tablet(const TAlterTabletReqV2& reques
     Status status = do_process_alter_tablet(request);
     LOG(INFO) << "finish alter tablet. status: " << status.to_string()
               << ", duration: " << timer.elapsed_time() / 1000000 << " ms"
-              << ", peak_mem_usage: " << CurrentThread::mem_tracker()->peak_consumption() << " bytes";
+              << ", peak_mem_usage: " << " bytes";
     return status;
 }
 

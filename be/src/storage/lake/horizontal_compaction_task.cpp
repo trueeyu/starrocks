@@ -72,9 +72,6 @@ Status HorizontalCompactionTask::execute(Progress* progress, CancelFunc cancel_f
         if (cancel_func()) {
             return Status::Cancelled("cancelled");
         }
-#ifndef BE_TEST
-        RETURN_IF_ERROR(tls_thread_status.mem_tracker()->check_mem_limit("Compaction"));
-#endif
         if (auto st = reader.get_next(chunk.get()); st.is_end_of_file()) {
             break;
         } else if (!st.ok()) {

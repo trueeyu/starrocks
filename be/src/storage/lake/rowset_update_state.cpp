@@ -56,9 +56,6 @@ Status RowsetUpdateState::load(const TxnLogPB_OpWrite& op_write, const TabletMet
                 LOG(WARNING) << "load RowsetUpdateState error: " << _status << " tablet:" << _tablet_id << " stack:\n"
                              << get_stack_trace();
             }
-            if (_status.is_mem_limit_exceeded()) {
-                LOG(WARNING) << CurrentThread::mem_tracker()->debug_string();
-            }
         }
     });
     if (need_resolve_conflict && _status.ok()) {

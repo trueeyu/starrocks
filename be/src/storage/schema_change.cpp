@@ -259,14 +259,6 @@ void HeapChunkMerger::_pop_heap() {
 Status LinkedSchemaChange::process(TabletReader* reader, RowsetWriter* new_rowset_writer, TabletSharedPtr new_tablet,
                                    TabletSharedPtr base_tablet, RowsetSharedPtr rowset,
                                    TabletSchemaCSPtr base_tablet_schema) {
-#ifndef BE_TEST
-    Status st = CurrentThread::mem_tracker()->check_mem_limit("LinkedSchemaChange");
-    if (!st.ok()) {
-        LOG(WARNING) << alter_msg_header() << "fail to execute schema change: " << st.message() << std::endl;
-        return st;
-    }
-#endif
-
     Status status =
             new_rowset_writer->add_rowset_for_linked_schema_change(rowset, _chunk_changer->get_schema_mapping());
     if (!status.ok()) {
@@ -436,13 +428,6 @@ Status SchemaChangeDirectly::process(TabletReader* reader, RowsetWriter* new_row
             return Status::InternalError(alter_msg_header() + "bg_worker_stopped");
         }
 
-#ifndef BE_TEST
-        st = CurrentThread::mem_tracker()->check_mem_limit("DirectSchemaChange");
-        if (!st.ok()) {
-            LOG(WARNING) << alter_msg_header() << "fail to execute schema change: " << st.message() << std::endl;
-            return st;
-        }
-#endif
         if (st = reader->do_get_next(base_chunk.get()); !st.ok()) {
             if (is_eos = st.is_end_of_file(); !is_eos) {
                 LOG(WARNING) << alter_msg_header()
@@ -531,19 +516,6 @@ Status SchemaChangeWithSorting::process(TabletReader* reader, RowsetWriter* new_
             return Status::InternalError(alter_msg_header() + "bg_worker_stopped");
         }
 
-#ifndef BE_TEST
-        auto cur_usage = CurrentThread::mem_tracker()->consumption();
-        // we check memory usage exceeds 90% since tablet reader use some memory
-        // it will return fail if memory is exhausted
-        if (cur_usage > CurrentThread::mem_tracker()->limit() * 0.9) {
-            RETURN_IF_ERROR_WITH_WARN(mem_table->finalize(), alter_msg_header() + "failed to finalize mem table");
-            RETURN_IF_ERROR_WITH_WARN(mem_table->flush(), alter_msg_header() + "failed to flush mem table");
-            mem_table = std::make_unique<MemTable>(new_tablet->tablet_id(), &new_schema, &mem_table_sink,
-                                                   max_buffer_size, CurrentThread::mem_tracker());
-            VLOG(1) << alter_msg_header() << "SortSchemaChange memory usage: " << cur_usage << " after mem table flush "
-                    << CurrentThread::mem_tracker()->consumption();
-        }
-#endif
         ChunkPtr base_chunk = ChunkHelper::new_chunk(base_schema, config::vector_chunk_size);
         if (auto status = reader->do_get_next(base_chunk.get()); !status.ok()) {
             if (is_eos = status.is_end_of_file(); !is_eos) {
@@ -642,7 +614,7 @@ Status SchemaChangeHandler::process_alter_tablet_v2(const TAlterTabletReqV2& req
     Status status = _do_process_alter_tablet_v2(request);
     LOG(INFO) << _alter_msg_header << "finished alter tablet process, status=" << status.to_string()
               << " duration: " << timer.elapsed_time() / 1000000
-              << "ms, peak_mem_usage: " << CurrentThread::mem_tracker()->peak_consumption() << " bytes";
+              << "ms, peak_mem_usage: " << " bytes";
     return status;
 }
 

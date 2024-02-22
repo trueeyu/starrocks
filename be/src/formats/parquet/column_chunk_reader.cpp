@@ -137,7 +137,6 @@ Status ColumnChunkReader::_parse_page_data() {
 
 Status ColumnChunkReader::_read_and_decompress_page_data(uint32_t compressed_size, uint32_t uncompressed_size,
                                                          bool is_compressed) {
-    RETURN_IF_ERROR(CurrentThread::mem_tracker()->check_mem_limit("read and decompress page"));
     is_compressed = is_compressed && (_compress_codec != nullptr);
 
     size_t read_size = is_compressed ? compressed_size : uncompressed_size;

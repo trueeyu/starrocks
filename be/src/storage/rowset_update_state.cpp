@@ -52,9 +52,6 @@ Status RowsetUpdateState::load(Tablet* tablet, Rowset* rowset) {
         if (!_status.ok()) {
             LOG(WARNING) << "load RowsetUpdateState error: " << _status << " tablet:" << _tablet_id << " stack:\n"
                          << get_stack_trace();
-            if (_status.is_mem_limit_exceeded()) {
-                LOG(WARNING) << CurrentThread::mem_tracker()->debug_string();
-            }
         }
     });
     return _status;

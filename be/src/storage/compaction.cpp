@@ -184,14 +184,6 @@ Status Compaction::_merge_rowsets_horizontally(size_t segment_iterator_num, Stat
 
     Status status;
     while (!StorageEngine::instance()->bg_worker_stopped()) {
-#ifndef BE_TEST
-        status = tls_thread_status.mem_tracker()->check_mem_limit("Compaction");
-        if (!status.ok()) {
-            LOG(WARNING) << "fail to execute compaction: " << status.message() << std::endl;
-            return status;
-        }
-#endif
-
         chunk->reset();
         status = reader.get_next(chunk.get());
         if (!status.ok()) {
@@ -278,14 +270,6 @@ Status Compaction::_merge_rowsets_vertically(size_t segment_iterator_num, Statis
 
         Status status;
         while (!StorageEngine::instance()->bg_worker_stopped()) {
-#ifndef BE_TEST
-            status = tls_thread_status.mem_tracker()->check_mem_limit("Compaction");
-            if (!status.ok()) {
-                LOG(WARNING) << "fail to execute compaction: " << status.message() << std::endl;
-                return status;
-            }
-#endif
-
             chunk->reset();
             status = reader.get_next(chunk.get(), source_masks.get());
             if (!status.ok()) {
