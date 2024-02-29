@@ -52,21 +52,26 @@ void ObjectColumn<T>::assign(size_t n, size_t idx) {
     for (size_t i = 1; i < n; ++i) {
         append(&_pool[0]);
     }
+
+    _cache_ok = false;
 }
 
 template <typename T>
 void ObjectColumn<T>::append(const T* object) {
     _pool.emplace_back(*object);
+    _cache_ok = false;
 }
 
 template <typename T>
 void ObjectColumn<T>::append(T&& object) {
     _pool.emplace_back(std::move(object));
+    _cache_ok = false;
 }
 
 template <typename T>
 void ObjectColumn<T>::append(const T& object) {
     _pool.emplace_back(object);
+    _cache_ok = false;
 }
 
 template <typename T>
@@ -77,6 +82,7 @@ void ObjectColumn<T>::remove_first_n_values(size_t count) {
     }
 
     _pool.resize(remain_size);
+    _cache_ok = false;
 }
 
 template <typename T>
@@ -111,6 +117,7 @@ bool ObjectColumn<T>::append_strings(const Buffer<starrocks::Slice>& strs) {
         _pool.emplace_back(s);
     }
 
+    _cache_ok = false;
     return true;
 }
 
@@ -122,11 +129,14 @@ void ObjectColumn<T>::append_value_multiple_times(const void* value, size_t coun
     for (size_t i = 0; i < count; ++i) {
         _pool.emplace_back(*reinterpret_cast<T*>(slice->data));
     }
-}
+
+    _cache_ok = false;
+};
 
 template <typename T>
 void ObjectColumn<T>::append_default() {
     _pool.emplace_back(T());
+    _cache_ok = false;
 }
 
 template <typename T>
@@ -143,6 +153,7 @@ void ObjectColumn<T>::fill_default(const Filter& filter) {
             _pool[i] = {};
         }
     }
+    _cache_ok = false;
 }
 
 template <typename T>
@@ -153,6 +164,7 @@ void ObjectColumn<T>::update_rows(const Column& src, const uint32_t* indexes) {
         DCHECK_LT(indexes[i], _pool.size());
         _pool[indexes[i]] = *obj_col.get_object(i);
     }
+    _cache_ok = false;
 }
 
 template <typename T>
