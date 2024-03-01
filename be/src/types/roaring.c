@@ -186,6 +186,7 @@ namespace roaring { namespace internal {  // No extern "C" (contains template)
  * are prior to containers.h, so make a short private alias of `container_t`.
  * Then undefine the awkward macro so it's not used any more than it has to be.
  */
+typedef ROARING_CONTAINER_T container_t;
 #undef ROARING_CONTAINER_T
 
 
@@ -277,6 +278,31 @@ PPDerived movable_CAST_HELPER(Base **ptr_to_ptr) {
 extern "C" { namespace roaring { namespace internal {
 #endif
 
+/*
+ *  Good old binary search.
+ *  Assumes that array is sorted, has logarithmic complexity.
+ *  if the result is x, then:
+ *     if ( x>0 )  you have array[x] = ikey
+ *     if ( x<0 ) then inserting ikey at position -x-1 in array (insuring that array[-x-1]=ikey)
+ *                   keys the array sorted.
+ */
+inline int32_t binarySearch(const uint16_t *array, int32_t lenarray,
+                            uint16_t ikey) {
+    int32_t low = 0;
+    int32_t high = lenarray - 1;
+    while (low <= high) {
+        int32_t middleIndex = (low + high) >> 1;
+        uint16_t middleValue = array[middleIndex];
+        if (middleValue < ikey) {
+            low = middleIndex + 1;
+        } else if (middleValue > ikey) {
+            high = middleIndex - 1;
+        } else {
+            return middleIndex;
+        }
+    }
+    return -(low + 1);
+}
 
 /**
  * Galloping search
@@ -1329,6 +1355,12 @@ STRUCT_CONTAINER(array_container_s) {
     uint16_t *array;
 };
 
+typedef struct array_container_s array_container_t;
+
+#define CAST_array(c)         CAST(array_container_t *, c)  // safer downcast
+#define const_CAST_array(c)   CAST(const array_container_t *, c)
+#define movable_CAST_array(c) movable_CAST(array_container_t **, c)
+
 /* Create a new array with default. Return NULL in case of failure. See also
  * array_container_create_given_capacity. */
 array_container_t *array_container_create(void);
@@ -1804,6 +1836,12 @@ STRUCT_CONTAINER(bitset_container_s) {
     int32_t cardinality;
     uint64_t *words;
 };
+
+typedef struct bitset_container_s bitset_container_t;
+
+#define CAST_bitset(c)         CAST(bitset_container_t *, c)  // safer downcast
+#define const_CAST_bitset(c)   CAST(const bitset_container_t *, c)
+#define movable_CAST_bitset(c) movable_CAST(bitset_container_t **, c)
 
 /* Create a new bitset. Return NULL in case of failure. */
 bitset_container_t *bitset_container_create(void);
@@ -2315,6 +2353,12 @@ STRUCT_CONTAINER(run_container_s) {
     int32_t capacity;
     rle16_t *runs;
 };
+
+typedef struct run_container_s run_container_t;
+
+#define CAST_run(c)         CAST(run_container_t *, c)  // safer downcast
+#define const_CAST_run(c)   CAST(const run_container_t *, c)
+#define movable_CAST_run(c) movable_CAST(run_container_t **, c)
 
 /* Create a new run container. Return NULL in case of failure. */
 run_container_t *run_container_create(void);
@@ -3824,6 +3868,11 @@ extern "C" { namespace roaring { namespace internal {
  * compiler might exploit this ordering).
  */
 
+#define BITSET_CONTAINER_TYPE 1
+#define ARRAY_CONTAINER_TYPE 2
+#define RUN_CONTAINER_TYPE 3
+#define SHARED_CONTAINER_TYPE 4
+
 /**
  * Macros for pairing container type codes, suitable for switch statements.
  * Use PAIR_CONTAINER_TYPES() for the switch, CONTAINER_PAIR() for the cases:
@@ -3849,6 +3898,12 @@ STRUCT_CONTAINER(shared_container_s) {
     croaring_refcount_t counter;  // to be managed atomically
 };
 
+typedef struct shared_container_s shared_container_t;
+
+#define CAST_shared(c)         CAST(shared_container_t *, c)  // safer downcast
+#define const_CAST_shared(c)   CAST(const shared_container_t *, c)
+#define movable_CAST_shared(c) movable_CAST(shared_container_t **, c)
+
 /*
  * With copy_on_write = true
  *  Create a new shared container if the typecode is not SHARED_CONTAINER_TYPE,
@@ -3869,6 +3924,19 @@ clone instances when the counter is higher than one
 */
 container_t *shared_container_extract_copy(shared_container_t *container,
                                            uint8_t *typecode);
+
+/* access to container underneath */
+static inline const container_t *container_unwrap_shared(
+        const container_t *candidate_shared_container, uint8_t *type
+){
+    if (*type == SHARED_CONTAINER_TYPE) {
+        *type = const_CAST_shared(candidate_shared_container)->typecode;
+        assert(*type != SHARED_CONTAINER_TYPE);
+        return const_CAST_shared(candidate_shared_container)->container;
+    } else {
+        return candidate_shared_container;
+    }
+}
 
 
 /* access to container underneath */
@@ -4335,6 +4403,29 @@ static inline container_t *container_remove(
         assert(false);
         roaring_unreachable;
         return NULL;
+    }
+}
+
+/**
+ * Check whether a value is in a container, requires a  typecode
+ */
+static inline bool container_contains(
+        const container_t *c,
+        uint16_t val,
+        uint8_t typecode  // !!! should be second argument?
+){
+    c = container_unwrap_shared(c, &typecode);
+    switch (typecode) {
+    case BITSET_CONTAINER_TYPE:
+        return bitset_container_get(const_CAST_bitset(c), val);
+    case ARRAY_CONTAINER_TYPE:
+        return array_container_contains(const_CAST_array(c), val);
+    case RUN_CONTAINER_TYPE:
+        return run_container_contains(const_CAST_run(c), val);
+    default:
+        assert(false);
+        roaring_unreachable;
+        return false;
     }
 }
 
@@ -6321,6 +6412,15 @@ void ra_clear_without_containers(roaring_array_t *r);
  */
 void ra_clear_containers(roaring_array_t *ra);
 
+/**
+ * Retrieves the container at index i, filling in the typecode
+ */
+inline container_t *ra_get_container_at_index(
+        const roaring_array_t *ra, uint16_t i, uint8_t *typecode
+){
+    *typecode = ra->typecodes[i];
+    return ra->containers[i];
+}
 
 /**
  * Retrieves the key at index i
