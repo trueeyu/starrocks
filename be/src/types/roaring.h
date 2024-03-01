@@ -756,6 +756,33 @@ void bitset_clear(bitset_t *bitset);
 /* Set all bits to one. */
 void bitset_fill(bitset_t *bitset);
 
+
+/*
+ *  Good old binary search.
+ *  Assumes that array is sorted, has logarithmic complexity.
+ *  if the result is x, then:
+ *     if ( x>0 )  you have array[x] = ikey
+ *     if ( x<0 ) then inserting ikey at position -x-1 in array (insuring that array[-x-1]=ikey)
+ *                   keys the array sorted.
+ */
+inline int32_t binarySearch(const uint16_t *array, int32_t lenarray,
+                            uint16_t ikey) {
+    int32_t low = 0;
+    int32_t high = lenarray - 1;
+    while (low <= high) {
+        int32_t middleIndex = (low + high) >> 1;
+        uint16_t middleValue = array[middleIndex];
+        if (middleValue < ikey) {
+            low = middleIndex + 1;
+        } else if (middleValue > ikey) {
+            high = middleIndex - 1;
+        } else {
+            return middleIndex;
+        }
+    }
+    return -(low + 1);
+}
+
 /**
  * Get the index corresponding to a 16-bit key
  */
@@ -1367,6 +1394,91 @@ void roaring_bitmap_remove_many(roaring_bitmap_t *r, size_t n_args,
  * Returns true if a new value was removed, false if the value was not existing.
  */
 bool roaring_bitmap_remove_checked(roaring_bitmap_t *r, uint32_t x);
+
+typedef ROARING_CONTAINER_T container_t;
+
+/**
+ * Retrieves the container at index i, filling in the typecode
+ */
+inline container_t *ra_get_container_at_index(
+        const roaring_array_t *ra, uint16_t i, uint8_t *typecode
+){
+    *typecode = ra->typecodes[i];
+    return ra->containers[i];
+}
+
+
+#define BITSET_CONTAINER_TYPE 1
+#define ARRAY_CONTAINER_TYPE 2
+#define RUN_CONTAINER_TYPE 3
+#define SHARED_CONTAINER_TYPE 4
+
+
+typedef struct shared_container_s shared_container_t;
+
+#define CAST_shared(c)         CAST(shared_container_t *, c)  // safer downcast
+#define const_CAST_shared(c)   CAST(const shared_container_t *, c)
+#define movable_CAST_shared(c) movable_CAST(shared_container_t **, c)
+
+
+/* access to container underneath */
+static inline const container_t *container_unwrap_shared(
+        const container_t *candidate_shared_container, uint8_t *type
+){
+    if (*type == SHARED_CONTAINER_TYPE) {
+        *type = const_CAST_shared(candidate_shared_container)->typecode;
+        assert(*type != SHARED_CONTAINER_TYPE);
+        return const_CAST_shared(candidate_shared_container)->container;
+    } else {
+        return candidate_shared_container;
+    }
+}
+
+
+typedef struct bitset_container_s bitset_container_t;
+
+#define CAST_bitset(c)         CAST(bitset_container_t *, c)  // safer downcast
+#define const_CAST_bitset(c)   CAST(const bitset_container_t *, c)
+#define movable_CAST_bitset(c) movable_CAST(bitset_container_t **, c)
+
+
+typedef struct array_container_s array_container_t;
+
+#define CAST_array(c)         CAST(array_container_t *, c)  // safer downcast
+#define const_CAST_array(c)   CAST(const array_container_t *, c)
+#define movable_CAST_array(c) movable_CAST(array_container_t **, c)
+
+
+typedef struct run_container_s run_container_t;
+
+#define CAST_run(c)         CAST(run_container_t *, c)  // safer downcast
+#define const_CAST_run(c)   CAST(const run_container_t *, c)
+#define movable_CAST_run(c) movable_CAST(run_container_t **, c)
+
+
+/**
+ * Check whether a value is in a container, requires a  typecode
+ */
+static inline bool container_contains(
+        const container_t *c,
+        uint16_t val,
+        uint8_t typecode  // !!! should be second argument?
+){
+    c = container_unwrap_shared(c, &typecode);
+    switch (typecode) {
+    case BITSET_CONTAINER_TYPE:
+        return bitset_container_get(const_CAST_bitset(c), val);
+    case ARRAY_CONTAINER_TYPE:
+        return array_container_contains(const_CAST_array(c), val);
+    case RUN_CONTAINER_TYPE:
+        return run_container_contains(const_CAST_run(c), val);
+    default:
+        assert(false);
+        roaring_unreachable;
+        return false;
+    }
+}
+
 
 /**
  * Check if value is present
