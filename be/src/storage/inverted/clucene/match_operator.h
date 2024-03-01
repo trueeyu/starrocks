@@ -17,7 +17,7 @@
 
 #include "CLucene.h"
 #include "common/status.h"
-#include "roaring/roaring.hh"
+#include "types/roaring.hh"
 #include "storage/inverted/inverted_index_common.hpp"
 
 namespace starrocks {

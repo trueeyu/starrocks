@@ -19,7 +19,7 @@
 #include <CLucene/document/Field.h>
 #include <CLucene/index/IndexWriter.h>
 
-#include <roaring/roaring.hh>
+#include <types/roaring.hh>
 #include <utility>
 
 #include "storage/inverted/inverted_index_option.h"

@@ -14,7 +14,7 @@
 
 #pragma once
 #include "CLucene.h"
-#include "roaring/roaring.hh"
+#include "types/roaring.hh"
 
 namespace starrocks {
 class RoaringHitCollector final : public lucene::search::HitCollector {

@@ -54,14 +54,14 @@
  * SPDX-License-Identifier: MIT
  */
 
-#include "roaring.h"
+#include "types/roaring.h"
 
 /* used for http://dmalloc.com/ Dmalloc - Debug Malloc Library */
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
 
-#include "roaring.h"  /* include public API definitions */
+#include "types/roaring.h"  /* include public API definitions */
 /* begin file include/roaring/isadetection.h */
 #ifndef ROARING_ISADETECTION_H
 #define ROARING_ISADETECTION_H

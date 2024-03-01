@@ -36,7 +36,7 @@
 
 #include <map>
 #include <memory>
-#include <roaring/roaring.hh>
+#include <types/roaring.hh>
 #include <utility>
 
 #include "fs/fs.h"

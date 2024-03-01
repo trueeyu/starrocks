@@ -17,7 +17,7 @@
 #include <utility>
 
 #include "fs/fs_util.h"
-#include "roaring/roaring.hh"
+#include "types/roaring.hh"
 #include "storage/inverted/inverted_index_common.hpp"
 #include "storage/inverted/inverted_index_iterator.h"
 #include "storage/inverted/inverted_index_option.h"

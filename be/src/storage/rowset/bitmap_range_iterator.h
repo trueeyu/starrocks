@@ -34,7 +34,7 @@
 
 #pragma once
 
-#include "roaring/roaring.hh"
+#include "types/roaring.hh"
 
 namespace starrocks {
 
@@ -45,7 +45,7 @@ namespace starrocks {
 //   output ranges: [0,2), [4,8), [10,11), [15,18), [18,20) (when max_range_size=3)
 class BitmapRangeIterator {
 public:
-    explicit BitmapRangeIterator(const Roaring& bitmap) {
+    explicit BitmapRangeIterator(const roaring::Roaring& bitmap) {
         roaring_init_iterator(&bitmap.roaring, &_iter);
         _read_next_batch();
     }

@@ -34,7 +34,7 @@
 
 #pragma once
 
-#include <roaring/roaring.hh>
+#include <types/roaring.hh>
 
 #include "common/status.h"
 #include "fs/fs.h"

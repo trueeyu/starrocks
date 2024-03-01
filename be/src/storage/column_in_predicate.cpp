@@ -17,7 +17,7 @@
 #include "column/column.h"
 #include "column/nullable_column.h"
 #include "gutil/casts.h"
-#include "roaring/roaring.hh"
+#include "types/roaring.hh"
 #include "storage/column_predicate.h"
 #include "storage/in_predicate_utils.h"
 #include "storage/rowset/bitmap_index_reader.h"

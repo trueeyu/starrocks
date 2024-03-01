@@ -42,7 +42,7 @@
 #include <new>
 #include <numeric>
 #include <optional>
-#include <roaring/roaring.hh>
+#include <types/roaring.hh>
 #include <stdexcept>
 #include <string>
 #include <utility>
