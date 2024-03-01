@@ -229,7 +229,7 @@ public:
      * Check if value x is present
      */
     bool contains(uint32_t x) const { return roarings.count(0) == 0 ? false : roarings.at(0).contains(x); }
-    bool contains(uint64_t x) const {
+    inline bool contains(uint64_t x) const {
         return roarings.count(highBytes(x)) == 0 ? false : roarings.at(highBytes(x)).contains(lowBytes(x));
     }
 
