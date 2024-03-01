@@ -40,11 +40,8 @@
 #include <cstdint>
 #include <optional>
 
-#include "roaring/array_util.h"
-#include "roaring/bitset_util.h"
-#include "roaring/containers/containers.h"
-#include "roaring/roaring.h"
-#include "roaring/roaring_array.h"
+#include "types/roaring.hh"
+#include "types/roaring.h"
 #include "util/coding.h"
 
 namespace starrocks {

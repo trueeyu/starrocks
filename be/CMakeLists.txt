@@ -327,8 +327,8 @@ set_target_properties(libs2 PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/l
 add_library(bitshuffle STATIC IMPORTED)
 set_target_properties(bitshuffle PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libbitshuffle.a)
 
-add_library(roaring STATIC IMPORTED)
-set_target_properties(roaring PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libroaring.a)
+#add_library(roaring STATIC IMPORTED)
+#set_target_properties(roaring PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libroaring.a)
 
 add_library(cctz STATIC IMPORTED)
 set_target_properties(cctz PROPERTIES IMPORTED_LOCATION ${THIRDPARTY_DIR}/lib/libcctz.a)
@@ -884,7 +884,7 @@ set(STARROCKS_DEPENDENCIES
     crypto
     leveldb
     bitshuffle
-    roaring
+    #roaring
     brotlicommon
     brotlidec
     brotlienc
