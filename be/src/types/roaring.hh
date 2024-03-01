@@ -265,7 +265,7 @@ public:
     /**
      * Check if value x is present
      */
-    inline bool contains(uint32_t x) const noexcept {
+    bool contains(uint32_t x) const noexcept {
         return api::roaring_bitmap_contains(&roaring, x);
     }
 

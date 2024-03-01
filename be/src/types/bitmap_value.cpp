@@ -555,6 +555,20 @@ BitmapValue& BitmapValue::operator^=(const BitmapValue& rhs) {
     return *this;
 }
 
+// check if value x is present
+bool BitmapValue::contains(uint64_t x) const {
+    switch (_type) {
+    case EMPTY:
+        return false;
+    case SINGLE:
+        return _sv == x;
+    case BITMAP:
+        return _bitmap->contains(x);
+    case SET:
+        return _set->contains(x);
+    }
+    return false;
+}
 
 // TODO should the return type be uint64_t?
 int64_t BitmapValue::cardinality() const {
