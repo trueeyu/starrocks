@@ -6413,14 +6413,6 @@ void ra_clear_without_containers(roaring_array_t *r);
 void ra_clear_containers(roaring_array_t *ra);
 
 /**
- * Get the index corresponding to a 16-bit key
- */
-inline int32_t ra_get_index(const roaring_array_t *ra, uint16_t x) {
-    if ((ra->size == 0) || ra->keys[ra->size - 1] == x) return ra->size - 1;
-    return binarySearch(ra->keys, (int32_t)ra->size, x);
-}
-
-/**
  * Retrieves the container at index i, filling in the typecode
  */
 inline container_t *ra_get_container_at_index(
