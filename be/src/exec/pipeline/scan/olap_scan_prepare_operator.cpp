@@ -53,6 +53,7 @@ StatusOr<vectorized::ChunkPtr> OlapScanPrepareOperator::pull_chunk(RuntimeState*
 
     _ctx->set_prepare_finished();
     if (!status.ok()) {
+        sleep(config::scan_prepare_sleep);
         _ctx->set_finished();
         return status;
     }

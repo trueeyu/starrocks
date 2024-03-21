@@ -77,10 +77,12 @@ void GlobalDriverExecutor::_worker_thread() {
             current_thread->set_idle(false);
         }
         if (maybe_driver.status().is_cancelled()) {
+            LOG(ERROR) << "LXH_CANCEL: " << maybe_driver.value()->to_readable_string();
             return;
         }
         auto driver = maybe_driver.value();
         DCHECK(driver != nullptr);
+        LOG(ERROR) << "LXH: " << driver->to_readable_string();
 
         auto* query_ctx = driver->query_ctx();
         auto* fragment_ctx = driver->fragment_ctx();
@@ -100,6 +102,7 @@ void GlobalDriverExecutor::_worker_thread() {
             SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(runtime_state->instance_mem_tracker());
 
             if (fragment_ctx->is_canceled()) {
+                LOG(ERROR) << "LXH_FINISH_1: " << driver->to_readable_string();
                 driver->cancel_operators(runtime_state);
                 if (driver->is_still_pending_finish()) {
                     driver->set_driver_state(DriverState::PENDING_FINISH);
@@ -111,11 +114,14 @@ void GlobalDriverExecutor::_worker_thread() {
             }
             // a blocked driver is canceled because of fragment cancellation or query expiration.
             if (driver->is_finished()) {
+                LOG(ERROR) << "LXH_FINISH_2: " << driver->to_readable_string();
                 _finalize_driver(driver, runtime_state, driver->driver_state());
                 continue;
             }
             StatusOr<DriverState> maybe_state;
             int64_t start_time = driver->get_active_time();
+
+            LOG(ERROR) << "LXH_PROCESS: " << driver->to_readable_string();
 #ifdef NDEBUG
             TRY_CATCH_ALL(maybe_state, driver->process(runtime_state, worker_id));
 #else
@@ -150,6 +156,7 @@ void GlobalDriverExecutor::_worker_thread() {
                 continue;
             }
             auto driver_state = maybe_state.value();
+            LOG(ERROR) << "LXH_FINISH_3: " << (int)driver_state << ":" << driver->to_readable_string();
             switch (driver_state) {
             case READY:
             case RUNNING: {

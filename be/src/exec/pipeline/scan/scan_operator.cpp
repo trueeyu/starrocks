@@ -210,6 +210,9 @@ Status ScanOperator::set_finishing(RuntimeState* state) {
 }
 
 StatusOr<vectorized::ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
+    LOG(ERROR) << "SCAN_SLEEP_START";
+    sleep(config::scan_sleep);
+    LOG(ERROR) << "SCAN_SLEEP_END";
     RETURN_IF_ERROR(_get_scan_status());
 
     _peak_buffer_size_counter->set(buffer_size());
