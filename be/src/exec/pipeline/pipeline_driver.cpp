@@ -205,6 +205,8 @@ StatusOr<DriverState> PipelineDriver::process(RuntimeState* runtime_state, int w
         scan->begin_driver_process();
     }
 
+    LOG(ERROR) << "LXH PP 0";
+
     while (true) {
         RETURN_IF_LIMIT_EXCEEDED(runtime_state, "Pipeline");
 
@@ -223,11 +225,15 @@ StatusOr<DriverState> PipelineDriver::process(RuntimeState* runtime_state, int w
 
         SCOPED_RAW_TIMER(&process_time_ns);
 
+        LOG(ERROR) << "LXH PP 1: " << _first_unfinished << ":" << num_operators;
+
         for (size_t i = _first_unfinished; i < num_operators - 1; ++i) {
             {
                 SCOPED_RAW_TIMER(&time_spent);
                 auto& curr_op = _operators[i];
                 auto& next_op = _operators[i + 1];
+
+                LOG(ERROR) << "LXH PP 2: " << curr_op->get_plan_node_id();
 
                 // Check curr_op finished firstly
                 if (curr_op->is_finished()) {
@@ -244,14 +250,19 @@ StatusOr<DriverState> PipelineDriver::process(RuntimeState* runtime_state, int w
                     continue;
                 }
 
+                LOG(ERROR) << "LXH PP 3: " << curr_op->get_plan_node_id();
+
                 // try successive operator pairs
                 if (!curr_op->has_output() || !next_op->need_input()) {
                     continue;
                 }
+                LOG(ERROR) << "LXH PP 4: " << curr_op->get_plan_node_id();
 
                 if (_check_fragment_is_canceled(runtime_state)) {
                     return _state;
                 }
+
+                LOG(ERROR) << "LXH PP 5: " << curr_op->get_plan_node_id();
 
                 // pull chunk from current operator and push the chunk onto next
                 // operator

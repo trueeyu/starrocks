@@ -333,7 +333,7 @@ public:
             //  This writing method is a bit tricky, and when there is a better way, replace it
             mark_precondition_ready(_runtime_state);
 
-            check_short_circuit();
+            //check_short_circuit();
             if (_state == DriverState::PENDING_FINISH) {
                 return false;
             }
