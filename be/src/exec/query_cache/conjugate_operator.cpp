@@ -68,14 +68,9 @@ Status ConjugateOperator::set_finishing(RuntimeState* state) {
     return _sink_op->set_finishing(state);
 }
 
-Status ConjugateOperator::set_finished(RuntimeState* state) {
-    auto sink_status = _sink_op->set_finished(state);
-    auto source_status = _source_op->set_finished(state);
-    if (sink_status.ok()) {
-        return source_status;
-    } else {
-        return sink_status;
-    }
+void ConjugateOperator::set_finished(RuntimeState* state) {
+    _sink_op->set_finished(state);
+    _source_op->set_finished(state);
 }
 
 Status ConjugateOperator::set_cancelled(RuntimeState* state) {

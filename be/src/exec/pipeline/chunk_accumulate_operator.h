@@ -42,7 +42,7 @@ public:
     bool ignore_empty_eos() const override { return false; }
 
     Status set_finishing(RuntimeState* state) override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
     Status reset_state(RuntimeState* state, const std::vector<ChunkPtr>& refill_chunks) override;
 

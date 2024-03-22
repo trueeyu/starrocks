@@ -57,7 +57,7 @@ public:
     bool has_output() const override;
     bool need_input() const override;
     bool is_finished() const override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
     Status set_finishing(RuntimeState* state) override;
     LaneArbiterPtr lane_arbiter() { return _lane_arbiter; }
     void set_multilane_operators(MultilaneOperators&& multilane_operators) {

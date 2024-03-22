@@ -48,7 +48,7 @@ public:
     bool is_finished() const override;
     bool has_output() const override;
     bool need_input() const override;
-    Status set_finished(starrocks::RuntimeState* state) override;
+    void set_finished(starrocks::RuntimeState* state) override;
     Status set_finishing(starrocks::RuntimeState* state) override;
     Status reset_state(RuntimeState* state, const std::vector<ChunkPtr>& chunks) override;
 

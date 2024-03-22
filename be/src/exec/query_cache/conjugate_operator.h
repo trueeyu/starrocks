@@ -47,7 +47,7 @@ public:
     bool has_output() const override;
     bool need_input() const override;
     bool is_finished() const override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
     Status set_finishing(RuntimeState* state) override;
     Status set_cancelled(RuntimeState* state) override;
     const pipeline::LocalRFWaitingSet& rf_waiting_set() const override;

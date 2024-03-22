@@ -332,7 +332,7 @@ private:
 
 using CounterPtr = std::shared_ptr<FileScanCounter>;
 
-class TestFileScanSinkOperator : public Operator {
+class TestFileScanSinkOperator final : public Operator {
 public:
     TestFileScanSinkOperator(OperatorFactory* factory, int32_t id, int32_t plan_node_id, int32_t driver_sequence,
                              CounterPtr counter)

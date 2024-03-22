@@ -443,14 +443,13 @@ Status CacheOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status CacheOperator::set_finished(RuntimeState* state) {
+void CacheOperator::set_finished(RuntimeState* state) {
     _is_input_finished = true;
     for (auto& buffer : _per_lane_buffers) {
         buffer->reset();
     }
     _passthrough_chunk.reset();
     DCHECK(is_finished());
-    return Status::OK();
 }
 
 bool CacheOperator::is_finished() const {

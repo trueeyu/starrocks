@@ -74,7 +74,7 @@ public:
     // set_finishing function.
     // It's one of the stages of the operator life cycle（prepare -> finishing -> finished -> [cancelled] -> closed)
     // This method will be exactly invoked once in the whole life cycle
-    virtual Status set_finished(RuntimeState* state) { return Status::OK(); }
+    virtual void set_finished(RuntimeState* state) {}
 
     // It's one of the stages of the operator life cycle（prepare -> finishing -> finished -> [cancelled] -> closed)
     // - When the fragment exits abnormally, the stage operator will become to CANCELLED between FINISHED and CLOSE.

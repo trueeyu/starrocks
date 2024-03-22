@@ -146,7 +146,7 @@ private:
 
 using CounterPtr = std::shared_ptr<Counter>;
 
-class TestOperator : public Operator {
+class TestOperator final : public Operator {
 public:
     TestOperator(OperatorFactory* factory, int32_t id, const std::string& name, int32_t plan_node_id,
                  int32_t driver_sequence, CounterPtr counter)
@@ -164,12 +164,11 @@ public:
         return Status::OK();
     }
 
-    Status set_finished(RuntimeState* state) override {
+    void set_finished(RuntimeState* state) override {
         if (!is_finished()) {
             _counter->process_wrong();
         }
         _counter->process_finished();
-        return Status::OK();
     }
 
     void close(RuntimeState* state) override {

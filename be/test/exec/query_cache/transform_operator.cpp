@@ -37,10 +37,9 @@ Status MapOperator::set_finishing(starrocks::RuntimeState* state) {
     return Status::OK();
 }
 
-Status MapOperator::set_finished(starrocks::RuntimeState* state) {
+vodi MapOperator::set_finished(starrocks::RuntimeState* state) {
     _is_finished = true;
     _cur_chunk = nullptr;
-    return Status::OK();
 }
 
 Status MapOperator::reset_state(RuntimeState* state, const std::vector<ChunkPtr>& chunks) {
