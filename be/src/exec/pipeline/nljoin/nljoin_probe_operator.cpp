@@ -154,8 +154,8 @@ Status NLJoinProbeOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status NLJoinProbeOperator::set_finished(RuntimeState* state) {
-    return _cross_join_context->finish_one_left_prober(state);
+void NLJoinProbeOperator::set_finished(RuntimeState* state) {
+    _cross_join_context->finish_one_left_prober(state);
 }
 
 bool NLJoinProbeOperator::_is_left_join() const {

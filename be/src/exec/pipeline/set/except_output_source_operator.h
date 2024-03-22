@@ -35,7 +35,7 @@ public:
 
     bool is_finished() const override { return _except_ctx->is_probe_finished() && _except_ctx->is_output_finished(); }
 
-    Status set_finished(RuntimeState* state) override { return _except_ctx->set_finished(); }
+    void set_finished(RuntimeState* state) override { _except_ctx->set_finished(); }
 
     StatusOr<ChunkPtr> pull_chunk(RuntimeState* state) override;
 

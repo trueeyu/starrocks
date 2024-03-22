@@ -19,7 +19,7 @@
 #include "exec/pipeline/source_operator.h"
 
 namespace starrocks::pipeline {
-class MetaScanPrepareOperator : public SourceOperator {
+class MetaScanPrepareOperator final : public SourceOperator {
 public:
     MetaScanPrepareOperator(OperatorFactory* factory, int32_t id, int32_t plan_node_id, int32_t driver_sequence,
                             const std::string& operator_name, MetaScanContextPtr scan_ctx);

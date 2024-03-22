@@ -68,7 +68,7 @@ public:
     Status push_chunk(int32_t driver_seq, ChunkPtr chunk);
     StatusOr<ChunkPtr> pull_chunk(int32_t driver_seq);
     Status set_finishing(int32_t driver_seq);
-    Status set_finished(int32_t driver_seq);
+    void set_finished(int32_t driver_seq);
 
     bool is_downstream_ready() const;
     size_t upstream_dop() const { return _upstream_dop; }

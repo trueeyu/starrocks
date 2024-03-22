@@ -35,8 +35,8 @@ Status StreamAggregateOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status StreamAggregateOperator::set_finished(RuntimeState* state) {
-    return _aggregator->set_finished();
+void StreamAggregateOperator::set_finished(RuntimeState* state) {
+    void _aggregator->set_finished();
 }
 
 bool StreamAggregateOperator::is_epoch_finished() const {

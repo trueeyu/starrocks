@@ -172,7 +172,7 @@ public:
     NJJoinBuildInputChannel& input_channel(int32_t sinker_id) { return *_input_channel[sinker_id]; }
 
     Status finish_one_right_sinker(int32_t sinker_id, RuntimeState* state);
-    Status finish_one_left_prober(RuntimeState* state);
+    void finish_one_left_prober(RuntimeState* state);
 
     bool is_right_finished() const { return _all_right_finished.load(std::memory_order_acquire); }
 

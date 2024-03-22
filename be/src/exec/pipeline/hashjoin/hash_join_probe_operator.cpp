@@ -88,10 +88,9 @@ Status HashJoinProbeOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status HashJoinProbeOperator::set_finished(RuntimeState* state) {
+void HashJoinProbeOperator::set_finished(RuntimeState* state) {
     _join_prober->enter_eos_phase();
     _join_builder->set_prober_finished();
-    return Status::OK();
 }
 
 Status HashJoinProbeOperator::_reference_builder_hash_table_once() {

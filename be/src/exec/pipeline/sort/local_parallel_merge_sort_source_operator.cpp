@@ -65,9 +65,9 @@ StatusOr<ChunkPtr> LocalParallelMergeSortSourceOperator::pull_chunk(RuntimeState
     return chunk;
 }
 
-Status LocalParallelMergeSortSourceOperator::set_finished(RuntimeState* state) {
+void LocalParallelMergeSortSourceOperator::set_finished(RuntimeState* state) {
     _sort_context->cancel();
-    return _sort_context->set_finished();
+    _sort_context->set_finished();
 }
 
 Status LocalParallelMergeSortSourceOperatorFactory::prepare(RuntimeState* state) {

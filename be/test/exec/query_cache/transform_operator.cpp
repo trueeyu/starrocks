@@ -171,10 +171,9 @@ Status ReduceSourceOperator::set_finishing(starrocks::RuntimeState* state) {
     return Status::OK();
 }
 
-Status ReduceSourceOperator::set_finished(starrocks::RuntimeState* state) {
+void ReduceSourceOperator::set_finished(starrocks::RuntimeState* state) {
     _reducer->set_source_finished();
     _reducer->set_sink_finished();
-    return Status::OK();
 }
 
 Status ReduceSourceOperator::reset_state(RuntimeState* state, const std::vector<ChunkPtr>& chunks) {

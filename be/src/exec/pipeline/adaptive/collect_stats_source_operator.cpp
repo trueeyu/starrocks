@@ -51,9 +51,9 @@ StatusOr<ChunkPtr> CollectStatsSourceOperator::pull_chunk(RuntimeState* state) {
 Status CollectStatsSourceOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
-Status CollectStatsSourceOperator::set_finished(RuntimeState* state) {
+void CollectStatsSourceOperator::set_finished(RuntimeState* state) {
     _is_finished = true;
-    return _ctx->set_finished(_driver_sequence);
+    _ctx->set_finished(_driver_sequence);
 }
 
 /// CollectStatsSourceOperatorFactory.

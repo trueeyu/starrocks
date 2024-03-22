@@ -70,7 +70,7 @@ public:
 
     void add_morsel(Morsel* morsel) {}
 
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
 private:
     SortContext* const _sort_context;

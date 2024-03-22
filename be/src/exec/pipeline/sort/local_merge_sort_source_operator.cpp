@@ -39,9 +39,9 @@ Status LocalMergeSortSourceOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status LocalMergeSortSourceOperator::set_finished(RuntimeState* state) {
+void LocalMergeSortSourceOperator::set_finished(RuntimeState* state) {
     _sort_context->cancel();
-    return _sort_context->set_finished();
+    _sort_context->set_finished();
 }
 
 bool LocalMergeSortSourceOperator::has_output() const {

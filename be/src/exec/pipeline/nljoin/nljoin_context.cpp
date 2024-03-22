@@ -251,12 +251,11 @@ Status NLJoinContext::finish_one_right_sinker(int32_t sinker_id, RuntimeState* s
     return Status::OK();
 }
 
-Status NLJoinContext::finish_one_left_prober(RuntimeState* state) {
+void NLJoinContext::finish_one_left_prober(RuntimeState* state) {
     if (_num_left_probers == _num_finished_left_probers.fetch_add(1) + 1) {
         // All the probers have finished, so the builders can be short-circuited.
-        RETURN_IF_ERROR(set_finished());
+        set_finished();
     }
-    return Status::OK();
 }
 
 } // namespace starrocks::pipeline

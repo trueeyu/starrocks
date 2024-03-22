@@ -269,9 +269,8 @@ Status CollectStatsContext::set_finishing(int32_t driver_seq) {
     return _state_ref()->set_finishing(driver_seq);
 }
 
-Status CollectStatsContext::set_finished(int32_t driver_seq) {
+void CollectStatsContext::set_finished(int32_t driver_seq) {
     _is_finished_per_driver_seq[driver_seq] = true;
-    return Status::OK();
 }
 
 bool CollectStatsContext::is_downstream_finished(int32_t driver_seq) const {

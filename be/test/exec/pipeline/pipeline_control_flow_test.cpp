@@ -204,10 +204,7 @@ public:
         return Status::OK();
     }
 
-    Status set_finished(RuntimeState* state) override {
-        _counter->process_finished();
-        return Status::OK();
-    }
+    void set_finished(RuntimeState* state) override { _counter->process_finished(); }
 
     void close(RuntimeState* state) override {
         ASSERT_LT(_pending_finish_cnt, 0);

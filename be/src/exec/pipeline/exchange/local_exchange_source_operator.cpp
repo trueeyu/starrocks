@@ -109,7 +109,7 @@ bool LocalExchangeSourceOperator::has_output() const {
            (_is_finished && (_partition_rows_num > 0 || _key_partition_max_rows() > 0)) || _local_buffer_almost_full();
 }
 
-Status LocalExchangeSourceOperator::set_finished(RuntimeState* state) {
+void LocalExchangeSourceOperator::set_finished(RuntimeState* state) {
     std::lock_guard<std::mutex> l(_chunk_lock);
     _is_finished = true;
     // clear _full_chunk_queue
@@ -122,7 +122,6 @@ Status LocalExchangeSourceOperator::set_finished(RuntimeState* state) {
     _memory_manager->update_memory_usage(-_local_memory_usage, -_partition_rows_num);
     _partition_rows_num = 0;
     _local_memory_usage = 0;
-    return Status::OK();
 }
 
 StatusOr<ChunkPtr> LocalExchangeSourceOperator::pull_chunk(RuntimeState* state) {

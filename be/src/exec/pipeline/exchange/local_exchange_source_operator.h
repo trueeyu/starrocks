@@ -107,7 +107,7 @@ public:
 
     bool is_finished() const override;
 
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
     [[nodiscard]] Status set_finishing(RuntimeState* state) override {
         std::lock_guard<std::mutex> l(_chunk_lock);
         _is_finished = true;

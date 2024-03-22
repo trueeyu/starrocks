@@ -23,7 +23,7 @@ class DataStreamRecvr;
 class RowDescriptor;
 class SortExecExprs;
 namespace pipeline {
-class ExchangeMergeSortSourceOperator : public SourceOperator {
+class ExchangeMergeSortSourceOperator final : public SourceOperator {
 public:
     ExchangeMergeSortSourceOperator(OperatorFactory* factory, int32_t id, int32_t plan_node_id, int32_t driver_sequence,
                                     int32_t num_sender, const RowDescriptor& row_desc, SortExecExprs* sort_exec_exprs,

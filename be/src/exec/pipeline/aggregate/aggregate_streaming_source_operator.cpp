@@ -52,8 +52,8 @@ bool AggregateStreamingSourceOperator::is_finished() const {
     return _aggregator->is_sink_complete() && !has_output();
 }
 
-Status AggregateStreamingSourceOperator::set_finished(RuntimeState* state) {
-    return _aggregator->set_finished();
+void AggregateStreamingSourceOperator::set_finished(RuntimeState* state) {
+    _aggregator->set_finished();
 }
 
 void AggregateStreamingSourceOperator::close(RuntimeState* state) {

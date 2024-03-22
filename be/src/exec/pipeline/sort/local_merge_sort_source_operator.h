@@ -50,7 +50,7 @@ public:
     void add_morsel(Morsel* morsel) {}
 
     Status set_finishing(RuntimeState* state) override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
 private:
     bool _is_finished = false;

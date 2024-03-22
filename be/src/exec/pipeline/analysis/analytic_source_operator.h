@@ -20,7 +20,7 @@
 #include "exec/pipeline/source_operator.h"
 
 namespace starrocks::pipeline {
-class AnalyticSourceOperator : public SourceOperator {
+class AnalyticSourceOperator final : public SourceOperator {
 public:
     AnalyticSourceOperator(OperatorFactory* factory, int32_t id, int32_t plan_node_id, int32_t driver_sequence,
                            AnalytorPtr&& analytor)
@@ -33,7 +33,7 @@ public:
     bool has_output() const override;
     bool is_finished() const override;
 
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
     void close(RuntimeState* state) override;
 

@@ -165,9 +165,9 @@ Status SpillableNLJoinProbeOperator::set_finishing(RuntimeState* state) {
     return Status::OK();
 }
 
-Status SpillableNLJoinProbeOperator::set_finished(RuntimeState* state) {
+void SpillableNLJoinProbeOperator::set_finished(RuntimeState* state) {
     _is_finished = true;
-    return _cross_join_context->finish_one_left_prober(state);
+    _cross_join_context->finish_one_left_prober(state);
 }
 
 StatusOr<ChunkPtr> SpillableNLJoinProbeOperator::pull_chunk(RuntimeState* state) {

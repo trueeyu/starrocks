@@ -24,7 +24,7 @@ namespace starrocks::pipeline {
 
 using HashJoiner = starrocks::HashJoiner;
 
-class HashJoinProbeOperator : public OperatorWithDependency {
+class HashJoinProbeOperator final : public OperatorWithDependency {
 public:
     HashJoinProbeOperator(OperatorFactory* factory, int32_t id, const string& name, int32_t plan_node_id,
                           int32_t driver_sequence, HashJoinerPtr join_prober, HashJoinerPtr join_builder);
@@ -39,7 +39,7 @@ public:
 
     bool is_finished() const override;
     Status set_finishing(RuntimeState* state) override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
     bool is_ready() const override;
     std::string get_name() const override {

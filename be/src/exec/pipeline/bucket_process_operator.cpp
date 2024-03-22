@@ -114,10 +114,9 @@ bool BucketProcessSourceOperator::has_output() const {
 bool BucketProcessSourceOperator::is_finished() const {
     return _ctx->finished || (_ctx->all_input_finishing && _ctx->source->is_finished());
 }
-Status BucketProcessSourceOperator::set_finished(RuntimeState* state) {
+void BucketProcessSourceOperator::set_finished(RuntimeState* state) {
     _ctx->finished = true;
-    RETURN_IF_ERROR(_ctx->source->set_finished(state));
-    return Status::OK();
+    _ctx->source->set_finished(state);
 }
 void BucketProcessSourceOperator::close(RuntimeState* state) {
     _ctx->source->close(state);

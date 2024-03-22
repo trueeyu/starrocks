@@ -20,7 +20,7 @@
 #include "exec/pipeline/source_operator.h"
 
 namespace starrocks::pipeline {
-class AggregateBlockingSourceOperator : public SourceOperator {
+class AggregateBlockingSourceOperator final : public SourceOperator {
 public:
     AggregateBlockingSourceOperator(AggregatorPtr aggregator, OperatorFactory* factory, int32_t id,
                                     int32_t plan_node_id, int32_t driver_sequence,
@@ -35,7 +35,7 @@ public:
     bool has_output() const override;
     bool is_finished() const override;
 
-    [[nodiscard]] Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
     void close(RuntimeState* state) override;
 

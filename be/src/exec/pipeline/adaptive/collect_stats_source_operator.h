@@ -32,7 +32,7 @@ public:
     bool is_finished() const override;
 
     Status set_finishing(RuntimeState* state) override;
-    Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
     StatusOr<ChunkPtr> pull_chunk(RuntimeState* state) override;
     Status push_chunk(RuntimeState* state, const ChunkPtr& chunk) override;
 

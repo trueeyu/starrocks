@@ -153,7 +153,7 @@ public:
     StatusOr<ChunkPtr> pull_chunk(starrocks::RuntimeState* state) override;
     Status reset_state(RuntimeState* state, const std::vector<ChunkPtr>& chunks) override;
     Status set_finishing(starrocks::RuntimeState* state) override;
-    Status set_finished(starrocks::RuntimeState* state) override;
+    void set_finished(starrocks::RuntimeState* state) override;
 
 private:
     size_t _current_output_num_rows = 0;

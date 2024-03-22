@@ -28,7 +28,7 @@ namespace starrocks::pipeline {
 //                                   │               │
 //                                   │               │
 //                                   └────► topn ────┘
-class LocalPartitionTopnSourceOperator : public SourceOperator {
+class LocalPartitionTopnSourceOperator final : public SourceOperator {
 public:
     LocalPartitionTopnSourceOperator(OperatorFactory* factory, int32_t id, int32_t plan_node_id,
                                      int32_t driver_sequence, LocalPartitionTopnContext* partition_topn_ctx);

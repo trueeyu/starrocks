@@ -43,7 +43,7 @@ public:
     bool need_input() const override { return !is_finished(); }
     bool is_finished() const override;
     [[nodiscard]] Status set_finishing(RuntimeState* state) override;
-    [[nodiscard]] Status set_finished(RuntimeState* state) override;
+    void set_finished(RuntimeState* state) override;
 
     bool is_epoch_finished() const override;
     [[nodiscard]] Status set_epoch_finishing(RuntimeState* state) override;
