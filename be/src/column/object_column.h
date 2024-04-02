@@ -159,6 +159,10 @@ public:
 
     T* get_object(size_t n) const { return const_cast<T*>(&_pool[n]); }
 
+    const Buffer<T>& get_proxy_data() const {
+        return _pool;
+    }
+
     Buffer<T*>& get_data() {
         _build_cache();
         return _cache;

@@ -228,7 +228,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_from_string(FunctionContext* context
 
 // bitmap_contains
 DEFINE_BINARY_FUNCTION_WITH_IMPL(bitmapContainsImpl, bitmap_ptr, int_value) {
-    return bitmap_ptr->contains(int_value);
+    return bitmap_ptr.contains(int_value);
 }
 
 StatusOr<ColumnPtr> BitmapFunctions::bitmap_contains(FunctionContext* context, const starrocks::Columns& columns) {
@@ -239,7 +239,7 @@ StatusOr<ColumnPtr> BitmapFunctions::bitmap_contains(FunctionContext* context, c
 // bitmap_has_any
 DEFINE_BINARY_FUNCTION_WITH_IMPL(bitmapHasAny, lhs, rhs) {
     BitmapValue bitmap;
-    bitmap |= (*lhs);
+    bitmap |= lhs;
     bitmap &= (*rhs);
 
     return bitmap.cardinality() != 0;
