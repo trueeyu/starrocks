@@ -97,10 +97,11 @@ template <typename T>
 void ObjectColumn<T>::append_selective(const starrocks::Column& src, const uint32_t* indexes, uint32_t from,
                                        uint32_t size) {
     const auto& obj_col = down_cast<const ObjectColumn<T>&>(src);
+    const auto& src_data = obj_col.get_proxy_data();
     uint32_t cur_size = _pool.size();
     _pool.resize(cur_size + size);
     for (uint32_t j = 0; j < size; ++j) {
-        _pool[cur_size+j] = *obj_col.get_object(indexes[from + j]);
+        _pool[cur_size+j] = src_data[indexes[from + j]];
     }
 }
 
