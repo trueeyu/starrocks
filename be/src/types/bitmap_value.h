@@ -73,10 +73,37 @@ public:
     // Construct an empty bitmap.
     BitmapValue() = default;
 
-    BitmapValue(const BitmapValue& other);
-    BitmapValue& operator=(const BitmapValue& other);
+    inline BitmapValue(const BitmapValue& other)
+            : _bitmap(other._bitmap),
+              _set(other._set == nullptr ? nullptr : std::make_unique<phmap::flat_hash_set<uint64_t>>(*other._set)),
+              _sv(other._sv),
+              _mem_usage(other._mem_usage),
+              _type(other._type) {
+        // TODO: _set is usually relatively small, and it needs system performance testing to decide
+        //  whether to change std::unique_ptr to std::shared_ptr and support shallow copy
+    }
 
-    BitmapValue(BitmapValue&& other) noexcept;
+    BitmapValue& operator=(const BitmapValue& other) {
+        if (this != &other) {
+            this->_bitmap = other._bitmap;
+            this->_set = other._set == nullptr ? nullptr : std::make_unique<phmap::flat_hash_set<uint64_t>>(*other._set);
+            this->_sv = other._sv;
+            this->_mem_usage = other._mem_usage;
+            this->_type = other._type;
+        }
+        return *this;
+    }
+
+    inline BitmapValue(BitmapValue&& other) noexcept
+            : _bitmap(std::move(other._bitmap)),
+              _set(std::move(other._set)),
+              _sv(other._sv),
+              _mem_usage(other._mem_usage),
+              _type(other._type) {
+        other._sv = 0;
+        other._mem_usage = 0;
+        other._type = EMPTY;
+    }
 
     BitmapValue& operator=(BitmapValue&& other) noexcept;
 
@@ -148,7 +175,19 @@ public:
     BitmapValue& operator^=(const BitmapValue& rhs);
 
     // check if value x is present
-    bool contains(uint64_t x) const;
+    inline bool contains(uint64_t x) const {
+        switch (_type) {
+        case EMPTY:
+            return false;
+        case SINGLE:
+            return _sv == x;
+        case BITMAP:
+            return _bitmap->contains(x);
+        case SET:
+            return _set->contains(x);
+        }
+        return false;
+    }
 
     // TODO should the return type be uint64_t?
     int64_t cardinality() const;
