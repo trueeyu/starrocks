@@ -108,8 +108,11 @@ void ObjectColumn<T>::append_selective(const starrocks::Column& src, const uint3
 template <typename T>
 void ObjectColumn<T>::append_value_multiple_times(const starrocks::Column& src, uint32_t index, uint32_t size) {
     const auto& obj_col = down_cast<const ObjectColumn<T>&>(src);
+    const auto& src_data = obj_col.get_proxy_data()[index];
+    uint32_t cur_size = _pool.size();
+    _pool.resize(cur_size + size);
     for (uint32_t i = 0; i < size; i++) {
-        append(obj_col.get_object(index));
+        _pool[cur_size+i] = src_data;
     }
 }
 

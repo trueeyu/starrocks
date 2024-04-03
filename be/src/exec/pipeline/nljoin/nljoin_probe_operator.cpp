@@ -425,9 +425,11 @@ ChunkPtr NLJoinProbeOperator::_permute_chunk_for_inner_join(size_t chunk_size) {
         if (left_chunk_size > right_chunk_size) {
             _permute_chunk_base_left(&result_chunk);
             _next_build_row_index_for_inner_join();
+            break;
         } else {
             _permute_chunk_base_right(&result_chunk);
             _next_probe_row_index_for_inner_join();
+            break;
         }
     } while (result_chunk->num_rows() < chunk_size && _probe_chunk != nullptr && _curr_build_chunk != nullptr);
 
@@ -445,7 +447,8 @@ void NLJoinProbeOperator::_permute_chunk_base_left(ChunkPtr* chunk) {
         SlotId slot_id = _col_types[i]->id();
         ColumnPtr& dest_col = (*chunk)->get_column_by_slot_id(slot_id);
         const ColumnPtr& src_col = _curr_build_chunk->get_column_by_slot_id(slot_id);
-        dest_col->append_value_multiple_times(*src_col, _build_row_current, _probe_chunk->num_rows());
+        dest_col->append_value_multiple_times(*src_col, _build_row_current, 1);
+        dest_col = ConstColumn::create(ColumnHelper::get_data_column_ptr(dest_col), _probe_chunk->num_rows());
     }
 }
 

@@ -451,7 +451,10 @@ void ChunkAccumulator::reset() {
 }
 
 Status ChunkAccumulator::push(ChunkPtr&& chunk) {
-    size_t input_rows = chunk->num_rows();
+    //size_t input_rows = chunk->num_rows();
+    _output.emplace_back(std::move(chunk));
+
+    /*
     // TODO: optimize for zero-copy scenario
     // Cut the input chunk into pieces if larger than desired
     for (size_t start = 0; start < input_rows;) {
@@ -471,6 +474,7 @@ Status ChunkAccumulator::push(ChunkPtr&& chunk) {
         }
         start += need_rows;
     }
+    */
     _accumulate_count++;
     return Status::OK();
 }

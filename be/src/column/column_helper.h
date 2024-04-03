@@ -332,6 +332,18 @@ public:
         }
     }
 
+    static const ColumnPtr& get_data_column_ptr(ColumnPtr& column) {
+        if (column->is_nullable()) {
+            auto* nullable_column = down_cast<NullableColumn*>(column.get());
+            return nullable_column->data_column();
+        } else if (column->is_constant()) {
+            auto* const_column = down_cast<ConstColumn*>(column.get());
+            return const_column->data_column();
+        } else {
+            return column;
+        }
+    }
+
     static const Column* get_data_column(const Column* column) {
         if (column->is_nullable()) {
             auto* nullable_column = down_cast<const NullableColumn*>(column);
