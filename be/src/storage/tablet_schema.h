@@ -286,7 +286,7 @@ public:
     int32_t schema_version() const { return _schema_version; }
     void set_schema_version(int32_t version) { _schema_version = version; }
     void clear_columns();
-    void copy_from(const std::shared_ptr<const TabletSchema>& tablet_schema);
+    void copy_from(const TabletSchema& tablet_schema);
 
     // Please call the following function with caution. Most of the time,
     // the following two functions should not be called explicitly.

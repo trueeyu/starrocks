@@ -2978,7 +2978,7 @@ TEST_F(TabletUpdatesTest, test_partial_update_with_lsc) {
         ASSERT_TRUE(st.ok()) << st.to_string();
 
         TabletSchemaSPtr new_tablet_schema = std::make_shared<TabletSchema>();
-        new_tablet_schema->copy_from(_tablet->tablet_schema());
+        new_tablet_schema->copy_from(*_tablet->tablet_schema());
         auto cur_schema_version = new_tablet_schema->schema_version();
         TabletColumn add_col;
         add_col.set_unique_id(3);

@@ -595,7 +595,7 @@ void run_update_schema_task(const std::shared_ptr<UpdateSchemaTaskRequest>& agen
                 continue;
             }
             TabletSchemaSPtr new_schema = std::make_shared<TabletSchema>();
-            new_schema->copy_from(ori_tablet_schema);
+            new_schema->copy_from(*ori_tablet_schema);
             st = new_schema->build_current_tablet_schema(schema_id, schema_version, pcolumn_param, ori_tablet_schema);
             if (!st.ok()) {
                 status_code = TStatusCode::RUNTIME_ERROR;

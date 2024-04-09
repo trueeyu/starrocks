@@ -45,7 +45,7 @@ Status OlapMetaScanner::_init_meta_reader_params() {
     _reader_params.chunk_size = _runtime_state->chunk_size();
     _reader_params.id_to_names = &_parent->_meta_scan_node.id_to_names;
     TabletSchemaSPtr tablet_schema = std::make_shared<TabletSchema>();
-    tablet_schema->copy_from(_tablet->tablet_schema());
+    tablet_schema->copy_from(*_tablet->tablet_schema());
     if (_parent->_meta_scan_node.__isset.columns && !_parent->_meta_scan_node.columns.empty() &&
         _parent->_meta_scan_node.columns[0].col_unique_id > 0) {
         tablet_schema->clear_columns();

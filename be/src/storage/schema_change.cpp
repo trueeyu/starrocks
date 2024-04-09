@@ -718,7 +718,7 @@ Status SchemaChangeHandler::_do_process_alter_tablet_v2(const TAlterTabletReqV2&
 
     // Create a new tablet schema, should merge with dropped columns in light schema change
     TabletSchemaSPtr base_tablet_schema = std::make_shared<TabletSchema>();
-    base_tablet_schema->copy_from(base_tablet->tablet_schema());
+    base_tablet_schema->copy_from(*base_tablet->tablet_schema());
     if (!request.columns.empty() && request.columns[0].col_unique_id >= 0) {
         base_tablet_schema->clear_columns();
         for (const auto& column : request.columns) {

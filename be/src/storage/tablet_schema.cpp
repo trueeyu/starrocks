@@ -302,9 +302,9 @@ void TabletSchema::clear_columns() {
     _sort_key_idxes.clear();
 }
 
-void TabletSchema::copy_from(const std::shared_ptr<const TabletSchema>& tablet_schema) {
+void TabletSchema::copy_from(const TabletSchema& tablet_schema) {
     TabletSchemaPB tablet_schema_pb;
-    tablet_schema->to_schema_pb(&tablet_schema_pb);
+    tablet_schema.to_schema_pb(&tablet_schema_pb);
     _init_from_pb(tablet_schema_pb);
 }
 
@@ -371,7 +371,7 @@ std::shared_ptr<TabletSchema> TabletSchema::create_with_uid(const TabletSchemaCS
 
 std::unique_ptr<TabletSchema> TabletSchema::copy(const std::shared_ptr<const TabletSchema>& tablet_schema) {
     auto t_ptr = std::make_unique<TabletSchema>();
-    t_ptr->copy_from(tablet_schema);
+    t_ptr->copy_from(*tablet_schema);
     return t_ptr;
 }
 
