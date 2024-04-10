@@ -320,11 +320,11 @@ void TabletColumn::add_sub_column(TabletColumn&& sub_column) {
  * TabletSchema
  ******************************************************************/
 
-std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaPB& schema_pb) {
+TabletSchemaSPtr TabletSchema::create(const TabletSchemaPB& schema_pb) {
     return std::make_shared<TabletSchema>(schema_pb);
 }
 
-std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map) {
+TabletSchemaSPtr TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map) {
     return std::make_shared<TabletSchema>(schema_pb, schema_map);
 }
 
@@ -332,8 +332,8 @@ std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaPB& schema_
 // When you use this function to create a new partial tablet schema, please make sure `referenced_column_ids` include
 // all sort key column index of `src_tablet_schema`. Otherwise you need to recalculate the short key columns of the
 // partial tablet schema
-std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaCSPtr& src_tablet_schema,
-                                                   const std::vector<int32_t>& referenced_column_ids) {
+TabletSchemaSPtr TabletSchema::create(const TabletSchemaCSPtr& src_tablet_schema,
+                                      const std::vector<int32_t>& referenced_column_ids) {
     TabletSchemaPB partial_tablet_schema_pb;
     partial_tablet_schema_pb.set_id(src_tablet_schema->id());
     partial_tablet_schema_pb.set_next_column_unique_id(src_tablet_schema->next_column_unique_id());
@@ -357,16 +357,15 @@ std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaCSPtr& src_
     return std::make_shared<TabletSchema>(partial_tablet_schema_pb);
 }
 
-StatusOr<std::shared_ptr<TabletSchema>> TabletSchema::create(const TabletSchema& ori_tablet_schema, int64_t schema_id,
-                                                             int64_t version,
-                                                             const POlapTableColumnParam& column_param) {
+StatusOr<TabletSchemaSPtr> TabletSchema::create(const TabletSchema& ori_tablet_schema, int64_t schema_id,
+                                                int64_t version, const POlapTableColumnParam& column_param) {
     auto new_schema = std::make_shared<TabletSchema>(ori_tablet_schema);
     RETURN_IF_ERROR(new_schema->build_current_tablet_schema(schema_id, version, column_param, ori_tablet_schema));
     return new_schema;
 }
 
-std::shared_ptr<TabletSchema> TabletSchema::create_with_uid(const TabletSchemaCSPtr& tablet_schema,
-                                                            const std::vector<uint32_t>& unique_column_ids) {
+TabletSchemaSPtr TabletSchema::create_with_uid(const TabletSchemaCSPtr& tablet_schema,
+                                               const std::vector<uint32_t>& unique_column_ids) {
     std::unordered_set<int32_t> unique_cid_filter(unique_column_ids.begin(), unique_column_ids.end());
     std::vector<int32_t> column_indexes;
     for (int cid = 0; cid < tablet_schema->columns().size(); cid++) {

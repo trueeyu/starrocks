@@ -237,26 +237,26 @@ class TabletIndex;
 class TabletSchema {
 public:
     using SchemaId = int64_t;
+    using TabletSchemaSPtr = std::shared_ptr<TabletSchema>;
     using TabletSchemaCSPtr = std::shared_ptr<const TabletSchema>;
 
-    static std::shared_ptr<TabletSchema> create(const TabletSchemaPB& schema_pb);
-    static std::shared_ptr<TabletSchema> create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
-    static std::shared_ptr<TabletSchema> create(const TabletSchemaCSPtr& tablet_schema,
-                                                const std::vector<int32_t>& column_indexes);
-    static StatusOr<std::shared_ptr<TabletSchema>> create(const TabletSchema& tablet_schema, int64_t schema_id,
-                                                          int64_t version, const POlapTableColumnParam& column_param);
-    static std::shared_ptr<TabletSchema> create_with_uid(const TabletSchemaCSPtr& tablet_schema,
-                                                         const std::vector<uint32_t>& unique_column_ids);
+    static TabletSchemaSPtr create(const TabletSchemaPB& schema_pb);
+    static TabletSchemaSPtr create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
+    static TabletSchemaSPtr create(const TabletSchemaCSPtr& tablet_schema, const std::vector<int32_t>& column_indexes);
+    static StatusOr<TabletSchemaSPtr> create(const TabletSchema& tablet_schema, int64_t schema_id, int64_t version,
+                                             const POlapTableColumnParam& column_param);
+    static TabletSchemaSPtr create_with_uid(const TabletSchemaCSPtr& tablet_schema,
+                                            const std::vector<uint32_t>& unique_column_ids);
     // Must be consistent with MaterializedIndexMeta.INVALID_SCHEMA_ID defined in
     // file ./fe/fe-core/src/main/java/com/starrocks/catalog/MaterializedIndexMeta.java
     constexpr static SchemaId invalid_id() { return 0; }
 
     TabletSchema() = default;
     explicit TabletSchema(const TabletSchemaPB& schema_pb);
-    TabletSchema(const TabletSchema& tablet_schema);
-    TabletSchema(const TabletSchema& tablet_schema, const std::vector<starrocks::TColumn>& replace_cols);
+    explicit TabletSchema(const TabletSchema& tablet_schema);
+    explicit TabletSchema(const TabletSchema& tablet_schema, const std::vector<starrocks::TColumn>& replace_cols);
     // Does NOT take ownership of |schema_map| and |schema_map| must outlive TabletSchema.
-    TabletSchema(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
+    explicit TabletSchema(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
 
     ~TabletSchema();
 
@@ -375,7 +375,7 @@ private:
 bool operator==(const TabletSchema& a, const TabletSchema& b);
 bool operator!=(const TabletSchema& a, const TabletSchema& b);
 
-using TabletSchemaSPtr = std::shared_ptr<TabletSchema>;
-using TabletSchemaCSPtr = std::shared_ptr<const TabletSchema>;
+using TabletSchemaSPtr = TabletSchema::TabletSchemaSPtr;
+using TabletSchemaCSPtr = TabletSchema::TabletSchemaCSPtr;
 
 } // namespace starrocks
