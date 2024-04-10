@@ -243,6 +243,8 @@ public:
     static std::shared_ptr<TabletSchema> create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
     static std::shared_ptr<TabletSchema> create(const TabletSchemaCSPtr& tablet_schema,
                                                 const std::vector<int32_t>& column_indexes);
+    static StatusOr<std::shared_ptr<TabletSchema>> create(const TabletSchema& tablet_schema, int64_t schema_id, int64_t version,
+                                                          const POlapTableColumnParam& column_param);
     static std::shared_ptr<TabletSchema> create_with_uid(const TabletSchemaCSPtr& tablet_schema,
                                                          const std::vector<uint32_t>& unique_column_ids);
     // Must be consistent with MaterializedIndexMeta.INVALID_SCHEMA_ID defined in
