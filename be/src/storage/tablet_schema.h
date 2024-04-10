@@ -245,8 +245,6 @@ public:
                                                 const std::vector<int32_t>& column_indexes);
     static std::shared_ptr<TabletSchema> create_with_uid(const TabletSchemaCSPtr& tablet_schema,
                                                          const std::vector<uint32_t>& unique_column_ids);
-    static std::unique_ptr<TabletSchema> copy(const TabletSchema& tablet_schema);
-
     // Must be consistent with MaterializedIndexMeta.INVALID_SCHEMA_ID defined in
     // file ./fe/fe-core/src/main/java/com/starrocks/catalog/MaterializedIndexMeta.java
     constexpr static SchemaId invalid_id() { return 0; }
