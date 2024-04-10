@@ -357,10 +357,10 @@ std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaCSPtr& src_
     return std::make_shared<TabletSchema>(partial_tablet_schema_pb);
 }
 
-StatusOr<std::shared_ptr<TabletSchema>> TabletSchema::create(
-        const TabletSchema& ori_tablet_schema, int64_t schema_id, int64_t version,
-        const POlapTableColumnParam& column_param) {
-    auto new_schema = std::make_shared<TabletSchema>(*ori_tablet_schema);
+StatusOr<std::shared_ptr<TabletSchema>> TabletSchema::create(const TabletSchema& ori_tablet_schema, int64_t schema_id,
+                                                             int64_t version,
+                                                             const POlapTableColumnParam& column_param) {
+    auto new_schema = std::make_shared<TabletSchema>(ori_tablet_schema);
     RETURN_IF_ERROR(new_schema->build_current_tablet_schema(schema_id, version, column_param, ori_tablet_schema));
     return new_schema;
 }
@@ -505,15 +505,15 @@ void TabletSchema::_init_from_pb(const TabletSchemaPB& schema) {
 
 Status TabletSchema::build_current_tablet_schema(int64_t schema_id, int32_t version,
                                                  const POlapTableColumnParam& column_param,
-                                                 const TabletSchemaCSPtr& ori_tablet_schema) {
+                                                 const TabletSchema& ori_tablet_schema) {
     // copy from ori_tablet_schema
-    _keys_type = ori_tablet_schema->keys_type();
+    _keys_type = ori_tablet_schema.keys_type();
     _num_short_key_columns = column_param.short_key_column_count();
-    _num_rows_per_row_block = ori_tablet_schema->num_rows_per_row_block();
-    _compression_type = ori_tablet_schema->compression_type();
+    _num_rows_per_row_block = ori_tablet_schema.num_rows_per_row_block();
+    _compression_type = ori_tablet_schema.compression_type();
 
     // todo(yixiu): unique_id
-    _next_column_unique_id = ori_tablet_schema->next_column_unique_id();
+    _next_column_unique_id = ori_tablet_schema.next_column_unique_id();
     // copy from table_schema_param
     _num_key_columns = 0;
     _num_columns = 0;
@@ -538,8 +538,8 @@ Status TabletSchema::build_current_tablet_schema(int64_t schema_id, int32_t vers
         _cols.emplace_back(std::move(column));
         _num_columns++;
     }
-    if (ori_tablet_schema->columns().back().name() == Schema::FULL_ROW_COLUMN) {
-        _cols.emplace_back(ori_tablet_schema->columns().back());
+    if (ori_tablet_schema.columns().back().name() == Schema::FULL_ROW_COLUMN) {
+        _cols.emplace_back(ori_tablet_schema.columns().back());
     }
 
     if (!column_param.sort_key_uid().empty()) {
@@ -562,7 +562,7 @@ Status TabletSchema::build_current_tablet_schema(int64_t schema_id, int32_t vers
     }
     if (has_bf_columns) {
         _has_bf_fpp = true;
-        _bf_fpp = ori_tablet_schema->bf_fpp();
+        _bf_fpp = ori_tablet_schema.bf_fpp();
     } else {
         _has_bf_fpp = false;
         _bf_fpp = BLOOM_FILTER_DEFAULT_FPP;

@@ -243,8 +243,8 @@ public:
     static std::shared_ptr<TabletSchema> create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
     static std::shared_ptr<TabletSchema> create(const TabletSchemaCSPtr& tablet_schema,
                                                 const std::vector<int32_t>& column_indexes);
-    static StatusOr<std::shared_ptr<TabletSchema>> create(const TabletSchema& tablet_schema, int64_t schema_id, int64_t version,
-                                                          const POlapTableColumnParam& column_param);
+    static StatusOr<std::shared_ptr<TabletSchema>> create(const TabletSchema& tablet_schema, int64_t schema_id,
+                                                          int64_t version, const POlapTableColumnParam& column_param);
     static std::shared_ptr<TabletSchema> create_with_uid(const TabletSchemaCSPtr& tablet_schema,
                                                          const std::vector<uint32_t>& unique_column_ids);
     // Must be consistent with MaterializedIndexMeta.INVALID_SCHEMA_ID defined in
@@ -321,7 +321,7 @@ public:
     Schema* schema() const;
 
     Status build_current_tablet_schema(int64_t schema_id, int32_t version, const POlapTableColumnParam& column_param,
-                                       const std::shared_ptr<const TabletSchema>& ori_tablet_schema);
+                                       const TabletSchema& ori_tablet_schema);
 
     const std::vector<TabletIndex>* indexes() const { return &_indexes; }
     Status get_indexes_for_column(int32_t col_unique_id, std::unordered_map<IndexType, TabletIndex>* res) const;
