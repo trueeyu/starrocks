@@ -253,6 +253,8 @@ public:
 
     TabletSchema() = default;
     explicit TabletSchema(const TabletSchemaPB& schema_pb);
+    TabletSchema(const TabletSchema& tablet_schema);
+    TabletSchema(const TabletSchema& tablet_schema, const std::vector<starrocks::TColumn>& replace_cols);
     // Does NOT take ownership of |schema_map| and |schema_map| must outlive TabletSchema.
     TabletSchema(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map);
 

@@ -407,6 +407,25 @@ TabletSchema::TabletSchema(const TabletSchemaPB& schema_pb, TabletSchemaMap* sch
     _init_from_pb(schema_pb);
 }
 
+TabletSchema::TabletSchema(const TabletSchema& tablet_schema) {
+    TabletSchemaPB tablet_schema_pb;
+    tablet_schema.to_schema_pb(&tablet_schema_pb);
+    _init_from_pb(tablet_schema_pb);
+    MEM_TRACKER_SAFE_CONSUME(GlobalEnv::GetInstance()->tablet_schema_mem_tracker(), mem_usage())
+}
+
+TabletSchema::TabletSchema(const TabletSchema& tablet_schema, const std::vector<TColumn>& replace_cols) {
+    TabletSchemaPB tablet_schema_pb;
+    tablet_schema.to_schema_pb(&tablet_schema_pb);
+    _init_from_pb(tablet_schema_pb);
+    clear_columns();
+    for (const auto& col : replace_cols) {
+        append_column(TabletColumn(col));
+    }
+    generate_sort_key_idxes();
+    MEM_TRACKER_SAFE_CONSUME(GlobalEnv::GetInstance()->tablet_schema_mem_tracker(), mem_usage())
+}
+
 TabletSchema::~TabletSchema() {
     if (_schema_map != nullptr) {
         _schema_map->erase(_id);

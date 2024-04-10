@@ -257,7 +257,7 @@ public:
         if (ts_pb.has_id() && ts_pb.id() != TabletSchema::invalid_id()) {
             _schema = GlobalTabletSchemaMap::Instance()->emplace(ts_pb).first;
         } else {
-            _schema = TabletSchemaCSPtr(TabletSchema::copy(*tablet_schema_ptr));
+            _schema = tablet_schema_ptr;
         }
         _has_tablet_schema_pb = true;
     }
