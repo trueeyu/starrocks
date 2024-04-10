@@ -369,9 +369,9 @@ std::shared_ptr<TabletSchema> TabletSchema::create_with_uid(const TabletSchemaCS
     return TabletSchema::create(tablet_schema, column_indexes);
 }
 
-std::unique_ptr<TabletSchema> TabletSchema::copy(const std::shared_ptr<const TabletSchema>& tablet_schema) {
+std::unique_ptr<TabletSchema> TabletSchema::copy(const TabletSchema& tablet_schema) {
     auto t_ptr = std::make_unique<TabletSchema>();
-    t_ptr->copy_from(*tablet_schema);
+    t_ptr->copy_from(tablet_schema);
     return t_ptr;
 }
 

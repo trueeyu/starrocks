@@ -408,7 +408,7 @@ Status OlapChunkSource::_init_olap_reader(RuntimeState* runtime_state) {
     auto scope = IOProfiler::scope(IOProfiler::TAG_QUERY, _scan_range->tablet_id);
 
     auto tablet_schema_ptr = _tablet->tablet_schema();
-    _tablet_schema = TabletSchema::copy(tablet_schema_ptr);
+    _tablet_schema = TabletSchema::copy(*tablet_schema_ptr);
 
     // if column_desc come from fe, reset tablet schema
     if (_scan_node->thrift_olap_scan_node().__isset.columns_desc &&
