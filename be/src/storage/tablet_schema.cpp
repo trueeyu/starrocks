@@ -377,7 +377,7 @@ TabletSchemaSPtr TabletSchema::create_with_uid(const TabletSchemaCSPtr& tablet_s
             column_indexes.push_back(cid);
         }
     }
-    return TabletSchema::create(tablet_schema, column_indexes);
+    return TabletSchema::create(*tablet_schema, column_indexes);
 }
 
 void TabletSchema::_fill_index_map(const TabletIndex& index) {
