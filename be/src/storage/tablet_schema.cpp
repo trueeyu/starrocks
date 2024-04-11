@@ -328,6 +328,10 @@ TabletSchemaSPtr TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSch
     return std::make_shared<TabletSchema>(schema_pb, schema_map);
 }
 
+TabletSchemaSPtr TabletSchema::create(const TabletSchema& tablet_schema) {
+    return std::make_shared<TabletSchema>(tablet_schema);
+}
+
 // Be careful
 // When you use this function to create a new partial tablet schema, please make sure `referenced_column_ids` include
 // all sort key column index of `src_tablet_schema`. Otherwise you need to recalculate the short key columns of the

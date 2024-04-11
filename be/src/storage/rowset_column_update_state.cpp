@@ -709,7 +709,7 @@ Status RowsetColumnUpdateState::finalize(Tablet* tablet, Rowset* rowset, uint32_
             std::vector<uint32_t> selective_unique_update_column_ids =
                     append_fixed_batch(unique_update_column_ids, col_index, BATCH_HANDLE_COLUMN_CNT);
             // 3.2 build partial schema
-            auto partial_tschema = TabletSchema::create(tschema, selective_update_column_ids);
+            auto partial_tschema = TabletSchema::create(*tschema, selective_update_column_ids);
             Schema partial_schema = ChunkHelper::convert_schema(tschema, selective_update_column_uids);
             // 3.3 read from source segment
             ASSIGN_OR_RETURN(auto rowsetid_segid, _find_rowset_seg_id(each.first));
