@@ -455,7 +455,7 @@ Status RowsetUpdateState::_prepare_auto_increment_partial_update_states(Tablet* 
     if (!rowset_meta_pb.txn_meta().partial_update_column_ids().empty()) {
         std::vector<int32_t> update_column_ids(rowset_meta_pb.txn_meta().partial_update_column_ids().begin(),
                                                rowset_meta_pb.txn_meta().partial_update_column_ids().end());
-        schema = TabletSchema::create(rowset->schema() ? rowset->schema() : tablet_schema, update_column_ids);
+        schema = TabletSchema::create(rowset->schema() ? *rowset->schema() : *tablet_schema, update_column_ids);
     }
 
     _auto_increment_partial_update_states[idx].init(rowset, schema != nullptr ? schema : tablet_schema,
