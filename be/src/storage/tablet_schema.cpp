@@ -332,16 +332,16 @@ TabletSchemaSPtr TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSch
 // When you use this function to create a new partial tablet schema, please make sure `referenced_column_ids` include
 // all sort key column index of `src_tablet_schema`. Otherwise you need to recalculate the short key columns of the
 // partial tablet schema
-TabletSchemaSPtr TabletSchema::create(const TabletSchemaCSPtr& src_tablet_schema,
+TabletSchemaSPtr TabletSchema::create(const TabletSchema& src_tablet_schema,
                                       const std::vector<int32_t>& referenced_column_ids) {
     TabletSchemaPB partial_tablet_schema_pb;
-    partial_tablet_schema_pb.set_id(src_tablet_schema->id());
-    partial_tablet_schema_pb.set_next_column_unique_id(src_tablet_schema->next_column_unique_id());
-    partial_tablet_schema_pb.set_num_rows_per_row_block(src_tablet_schema->num_rows_per_row_block());
-    partial_tablet_schema_pb.set_num_short_key_columns(src_tablet_schema->num_short_key_columns());
-    partial_tablet_schema_pb.set_keys_type(src_tablet_schema->keys_type());
-    if (src_tablet_schema->has_bf_fpp()) {
-        partial_tablet_schema_pb.set_bf_fpp(src_tablet_schema->bf_fpp());
+    partial_tablet_schema_pb.set_id(src_tablet_schema.id());
+    partial_tablet_schema_pb.set_next_column_unique_id(src_tablet_schema.next_column_unique_id());
+    partial_tablet_schema_pb.set_num_rows_per_row_block(src_tablet_schema.num_rows_per_row_block());
+    partial_tablet_schema_pb.set_num_short_key_columns(src_tablet_schema.num_short_key_columns());
+    partial_tablet_schema_pb.set_keys_type(src_tablet_schema.keys_type());
+    if (src_tablet_schema.has_bf_fpp()) {
+        partial_tablet_schema_pb.set_bf_fpp(src_tablet_schema.bf_fpp());
     }
     std::vector<ColumnId> sort_key_idxes;
     uint32_t cid = 0;
