@@ -195,7 +195,7 @@ void HashJoinNode::_init_hash_table_param(HashTableParam* param) {
     param->search_ht_timer = _search_ht_timer;
     param->output_build_column_timer = _output_build_column_timer;
     param->output_probe_column_timer = _output_probe_column_timer;
-    param->build_output_slots = _output_slots;
+    param->output_slots = _output_slots;
     param->probe_output_slots = _output_slots;
 
     std::set<SlotId> predicate_slots;

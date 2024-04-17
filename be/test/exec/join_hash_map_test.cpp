@@ -1061,8 +1061,8 @@ TEST_F(JoinHashMapTest, DirectMappingJoinBuildProbeFunc) {
     param.row_desc = row_desc.get();
     param.probe_row_desc = probe_row_desc.get();
     param.build_row_desc = build_row_desc.get();
-    param.build_output_slots.emplace(0);
-    param.build_output_slots.emplace(1);
+    param.output_slots.emplace(0);
+    param.output_slots.emplace(1);
     param.probe_output_slots.emplace(0);
     param.probe_output_slots.emplace(1);
     param.join_keys.emplace_back(JoinKeyDesc{&_tinyint_type, false, nullptr});
@@ -1121,8 +1121,8 @@ TEST_F(JoinHashMapTest, DirectMappingJoinBuildProbeFuncNullable) {
     param.row_desc = row_desc.get();
     param.probe_row_desc = probe_row_desc.get();
     param.build_row_desc = build_row_desc.get();
-    param.build_output_slots.emplace(0);
-    param.build_output_slots.emplace(1);
+    param.output_slots.emplace(0);
+    param.output_slots.emplace(1);
     param.probe_output_slots.emplace(0);
     param.probe_output_slots.emplace(1);
     param.join_keys.emplace_back(JoinKeyDesc{&_tinyint_type, false, nullptr});
