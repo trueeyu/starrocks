@@ -594,19 +594,17 @@ void run_update_schema_task(const std::shared_ptr<UpdateSchemaTaskRequest>& agen
             if (schema_version <= ori_tablet_schema->schema_version()) {
                 continue;
             }
-            TabletSchemaSPtr new_schema = std::make_shared<TabletSchema>();
-            new_schema->copy_from(ori_tablet_schema);
-            st = new_schema->build_current_tablet_schema(schema_id, schema_version, pcolumn_param, ori_tablet_schema);
-            if (!st.ok()) {
+            auto ret = TabletSchema::create(ori_tablet_schema, schema_id, schema_version, pcolumn_param);
+            if (!ret.ok()) {
                 status_code = TStatusCode::RUNTIME_ERROR;
-                std::string msg =
-                        strings::Substitute("update schema fail because build tablet schema fail: $0", st.to_string());
+                std::string msg = strings::Substitute("update schema fail because build tablet schema fail: $0",
+                                                      ret.status().to_string());
                 LOG(WARNING) << msg;
                 error_msgs.emplace_back(msg);
                 error_tablet_ids.push_back(tablet_id);
                 continue;
             }
-            tablet->update_max_version_schema(new_schema);
+            tablet->update_max_version_schema(ret.value());
             VLOG(1) << "update tablet:" << tablet_id << " schema version from " << ori_tablet_schema->schema_version()
                     << " to " << schema_version;
         }

@@ -324,8 +324,16 @@ std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaPB& schema_
     return std::make_shared<TabletSchema>(schema_pb);
 }
 
-std::shared_ptr<TabletSchema> TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map) {
+TabletSchemaSPtr TabletSchema::create(const TabletSchemaPB& schema_pb, TabletSchemaMap* schema_map) {
     return std::make_shared<TabletSchema>(schema_pb, schema_map);
+}
+
+StatusOr<TabletSchemaSPtr> TabletSchema::create(const TabletSchemaCSPtr& src_schema, int64_t schema_id, int32_t version,
+                                                const POlapTableColumnParam& column_param) {
+    TabletSchemaSPtr new_schema = std::make_shared<TabletSchema>();
+    new_schema->copy_from(src_schema);
+    RETURN_IF_ERROR(new_schema->build_current_tablet_schema(schema_id, version, column_param, src_schema));
+    return new_schema;
 }
 
 // Be careful
