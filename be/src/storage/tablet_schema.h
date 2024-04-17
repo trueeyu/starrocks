@@ -301,7 +301,7 @@ public:
     // important actually, because the update segment file does not depend on it and the update
     // segment file will be rewrite to col file after apply. So these function are used to modify
     // the sort_key_idxes and short_key_column_num in partial tablet schema to avoid BE crash so far.
-    void set_sort_key_idxes(std::vector<ColumnId> sort_key_idxes) {
+    void set_sort_key_idxes(const std::vector<ColumnId>& sort_key_idxes) {
         for (auto idx : _sort_key_idxes) {
             _cols[idx].set_is_sort_key(false);
         }

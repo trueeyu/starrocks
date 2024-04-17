@@ -53,7 +53,6 @@ DeltaWriter::DeltaWriter(DeltaWriterOptions opt, MemTracker* mem_tracker, Storag
           _schema_initialized(false),
           _mem_table(nullptr),
           _mem_table_sink(nullptr),
-          _tablet_schema(new TabletSchema),
           _flush_token(nullptr),
           _replicate_token(nullptr),
           _segment_flush_token(nullptr),
