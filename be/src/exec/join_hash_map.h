@@ -264,7 +264,6 @@ struct HashTableParam {
     const RowDescriptor* build_row_desc = nullptr;
     const RowDescriptor* probe_row_desc = nullptr;
     std::set<SlotId> output_slots;
-    std::set<SlotId> probe_output_slots;
     std::set<SlotId> predicate_slots;
     std::vector<JoinKeyDesc> join_keys;
 
