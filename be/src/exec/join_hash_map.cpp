@@ -341,9 +341,9 @@ void JoinHashTable::create(const HashTableParam& param) {
         for (const auto& slot : tuple_desc->slots()) {
             HashTableSlotDescriptor hash_table_slot;
             hash_table_slot.slot = slot;
-            if (param.probe_output_slots.empty() ||
-                std::find(param.probe_output_slots.begin(), param.probe_output_slots.end(), slot->id()) !=
-                        param.probe_output_slots.end() ||
+            if (param.output_slots.empty() ||
+                std::find(param.output_slots.begin(), param.output_slots.end(), slot->id()) !=
+                        param.output_slots.end() ||
                 std::find(param.predicate_slots.begin(), param.predicate_slots.end(), slot->id()) !=
                         param.predicate_slots.end()) {
                 hash_table_slot.need_output = true;

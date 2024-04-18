@@ -1063,8 +1063,6 @@ TEST_F(JoinHashMapTest, DirectMappingJoinBuildProbeFunc) {
     param.build_row_desc = build_row_desc.get();
     param.output_slots.emplace(0);
     param.output_slots.emplace(1);
-    param.probe_output_slots.emplace(0);
-    param.probe_output_slots.emplace(1);
     param.join_keys.emplace_back(JoinKeyDesc{&_tinyint_type, false, nullptr});
     param.search_ht_timer = ADD_TIMER(_runtime_profile, "search_ht");
     param.output_build_column_timer = ADD_TIMER(_runtime_profile, "output_build_column");
@@ -1123,8 +1121,6 @@ TEST_F(JoinHashMapTest, DirectMappingJoinBuildProbeFuncNullable) {
     param.build_row_desc = build_row_desc.get();
     param.output_slots.emplace(0);
     param.output_slots.emplace(1);
-    param.probe_output_slots.emplace(0);
-    param.probe_output_slots.emplace(1);
     param.join_keys.emplace_back(JoinKeyDesc{&_tinyint_type, false, nullptr});
     param.search_ht_timer = ADD_TIMER(_runtime_profile, "search_ht");
     param.output_build_column_timer = ADD_TIMER(_runtime_profile, "output_build_column");
