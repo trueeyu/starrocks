@@ -141,7 +141,6 @@ void HashJoiner::_init_hash_table_param(HashTableParam* param) {
     param->build_row_desc = &_build_row_descriptor;
     param->probe_row_desc = &_probe_row_descriptor;
     param->output_slots = _build_output_slots;
-    param->probe_output_slots = _probe_output_slots;
     param->mor_reader_mode = _mor_reader_mode;
 
     std::set<SlotId> predicate_slots;
