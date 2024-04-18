@@ -341,14 +341,22 @@ void JoinHashTable::create(const HashTableParam& param) {
         for (const auto& slot : tuple_desc->slots()) {
             HashTableSlotDescriptor hash_table_slot;
             hash_table_slot.slot = slot;
-            if (param.probe_output_slots.empty() ||
-                std::find(param.probe_output_slots.begin(), param.probe_output_slots.end(), slot->id()) !=
-                        param.probe_output_slots.end() ||
-                std::find(param.predicate_slots.begin(), param.predicate_slots.end(), slot->id()) !=
-                        param.predicate_slots.end()) {
+
+            if (param.probe_output_slots.empty()) {
+                hash_table_slot.need_output = true;
+            } else if (std::find(param.probe_output_slots.begin(), param.probe_output_slots.end(), slot->id()) !=
+                       param.probe_output_slots.end()) {
                 hash_table_slot.need_output = true;
             } else {
                 hash_table_slot.need_output = false;
+            }
+
+            if (std::find(param.predicate_slots.begin(), param.predicate_slots.end(), slot->id()) !=
+                param.predicate_slots.end()) {
+                hash_table_slot.need_output = true;
+                hash_table_slot.lazy_materialize = false;
+            } else {
+                hash_table_slot.lazy_materialize = true;
             }
 
             _table_items->probe_slots.emplace_back(hash_table_slot);

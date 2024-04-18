@@ -94,6 +94,7 @@ struct JoinKeyDesc {
 struct HashTableSlotDescriptor {
     SlotDescriptor* slot;
     bool need_output;
+    bool lazy_materialize = false;
 };
 
 struct JoinHashTableItems {
