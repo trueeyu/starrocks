@@ -67,13 +67,19 @@ public:
         }
     }
 
+    void merge_batch_single_state(FunctionContext* ctx, AggDataPtr __restrict state, const Column* input, size_t start,
+                                  size_t size) const override {
+        std::vector<BitmapValue*> values;
+        const auto& col = down_cast<const BitmapColumn&>(*input);
+        for (size_t i = start; i < start + size; i++) {
+            values.emplace_back(col.get_data()[i]);
+        }
+        this->data(state).fast_union(values);
+    }
+
     void merge(FunctionContext* ctx, const Column* column, AggDataPtr __restrict state, size_t row_num) const override {
         const auto& col = down_cast<const BitmapColumn&>(*column);
         this->data(state) |= *(col.get_object(row_num));
-    }
-
-    void merge_batch(FunctionContext* ctx, size_t chunk_size, size_t state_offset, const Column* column, AggDataPtr* states) const override {
-
     }
 
     void serialize_to_column(FunctionContext* ctx, ConstAggDataPtr __restrict state, Column* to) const override {
