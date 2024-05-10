@@ -126,6 +126,10 @@ public:
 
     void add_many(size_t n_args, const uint32_t* vals);
 
+    void fast_union(const std::vector<BitmapValue*>& bitmaps);
+
+    void convert_to_bitmap();
+
     // Note: rhs BitmapValue is only readable after this method
     // Compute the union between the current bitmap and the provided bitmap.
     // Possible type transitions are:

@@ -146,6 +146,40 @@ void BitmapValue::_from_set_to_bitmap() {
     _type = BITMAP;
 }
 
+void BitmapValue::convert_to_bitmap() {
+    switch (_type) {
+    case EMPTY:
+        _bitmap = std::make_shared<detail::Roaring64Map>();
+        break;
+    case SINGLE:
+        _bitmap = std::make_shared<detail::Roaring64Map>();
+        _bitmap->add(_sv);
+        break;
+    case SET:
+        _from_set_to_bitmap();
+        break;
+    default:
+        break;
+    }
+    _type = BITMAP;
+}
+
+void BitmapValue::fast_union(const std::vector<BitmapValue*>& bitmaps) {
+    std::vector<detail::Roaring64Map*> roaring64s;
+    for (const auto& bitmap : bitmaps) {
+        if (bitmap->_type != BITMAP) {
+            *this |= *bitmap;
+        } else {
+            roaring64s.emplace_back(bitmap->_bitmap.get());
+        }
+    }
+    if (!roaring64s.empty()) {
+        auto result = detail::Roaring64Map::fastunion(roaring64s.size(), roaring64s.data());
+        convert_to_bitmap();
+        _bitmap |= result;
+    }
+}
+
 // Note: rhs BitmapValue is only readable after this method
 // Compute the union between the current bitmap and the provided bitmap.
 // Possible type transitions are:

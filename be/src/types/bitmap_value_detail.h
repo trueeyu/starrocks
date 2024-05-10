@@ -893,7 +893,7 @@ public:
      * Computes the logical or (union) between "n" bitmaps (referenced by a
      * pointer).
      */
-    static Roaring64Map fastunion(size_t n, const Roaring64Map **inputs) {
+    static Roaring64Map fastunion(size_t n, const Roaring64Map** inputs) {
         // The strategy here is to basically do a "group by" operation.
         // We group the input roarings by key, do a 32-bit
         // roaring_bitmap_or_many on each group, and collect the results.

@@ -72,6 +72,10 @@ public:
         this->data(state) |= *(col.get_object(row_num));
     }
 
+    void merge_batch(FunctionContext* ctx, size_t chunk_size, size_t state_offset, const Column* column, AggDataPtr* states) const override {
+
+    }
+
     void serialize_to_column(FunctionContext* ctx, ConstAggDataPtr __restrict state, Column* to) const override {
         auto* col = down_cast<BitmapColumn*>(to);
         auto& bitmap = const_cast<BitmapValue&>(this->data(state));
