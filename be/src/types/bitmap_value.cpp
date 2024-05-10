@@ -165,7 +165,7 @@ void BitmapValue::convert_to_bitmap() {
 }
 
 void BitmapValue::fast_union(const std::vector<BitmapValue*>& bitmaps) {
-    std::vector<detail::Roaring64Map*> roaring64s;
+    std::vector<const detail::Roaring64Map*> roaring64s;
     for (const auto& bitmap : bitmaps) {
         if (bitmap->_type != BITMAP) {
             *this |= *bitmap;
