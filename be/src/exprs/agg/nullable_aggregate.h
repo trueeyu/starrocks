@@ -724,11 +724,9 @@ public:
     void merge_batch_single_state(FunctionContext* ctx, AggDataPtr __restrict state, const Column* column, size_t start,
                                   size_t size) const override {
         auto fast_call_path = [&](const Column* data_column) {
-            for (size_t i = start; i < start + size; ++i) {
-                auto& state_data = this->data(state);
-                state_data.is_null = false;
-                this->nested_function->merge(ctx, data_column, state_data.mutable_nest_state(), i);
-            }
+            auto& state_data = this->data(state);
+            state_data.is_null = false;
+            this->nested_function->merge_batch_single_state(ctx, state_data.mutable_nest_state(), column, start, size);
         };
         auto slow_call_path = [&](const NullData& null_data, const Column* data_column) {
             for (size_t i = start; i < start + size; ++i) {
