@@ -726,7 +726,8 @@ public:
         auto fast_call_path = [&](const Column* data_column) {
             auto& state_data = this->data(state);
             state_data.is_null = false;
-            this->nested_function->merge_batch_single_state(ctx, state_data.mutable_nest_state(), column, start, size);
+            this->nested_function->merge_batch_single_state(ctx, state_data.mutable_nest_state(), data_column, start,
+                                                            size);
         };
         auto slow_call_path = [&](const NullData& null_data, const Column* data_column) {
             for (size_t i = start; i < start + size; ++i) {
