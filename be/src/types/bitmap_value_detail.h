@@ -273,13 +273,50 @@ public:
      *
      * See also the fastunion function to aggregate many bitmaps more quickly.
      */
-    Roaring64Map& operator|=(const Roaring64Map& r) {
-        for (const auto& map_entry : r.roarings) {
-            if (roarings.count(map_entry.first) == 0) {
-                roarings[map_entry.first] = map_entry.second;
-                roarings[map_entry.first].setCopyOnWrite(copyOnWrite);
-            } else
-                roarings[map_entry.first] |= map_entry.second;
+    Roaring64Map& operator|=(const Roaring64Map& other) {
+        if (this == &other) {
+            // ORing *this with itself is a no-op.
+            return *this;
+        }
+
+        // Logic table summarizing what to do when a given outer key is
+        // present vs. absent from self and other.
+        //
+        // self     other    (self | other)  work to do
+        // --------------------------------------------
+        // absent   absent   empty           None
+        // absent   present  not empty       Copy other to self and set flags
+        // present  absent   unchanged       None
+        // present  present  not empty       self |= other
+        //
+        // Because there is only work to do when a key is present in 'other',
+        // the main for loop iterates over entries in 'other'.
+
+        for (const auto &other_entry : other.roarings) {
+            const auto &other_bitmap = other_entry.second;
+
+            // Try to insert other_bitmap into self at other_key. We take
+            // advantage of the fact that std::map::insert will not overwrite an
+            // existing entry.
+            auto insert_result = roarings.insert(other_entry);
+            auto self_iter = insert_result.first;
+            auto insert_happened = insert_result.second;
+            auto &self_bitmap = self_iter->second;
+
+            if (insert_happened) {
+                // Key was not present in self, so insert was performed above.
+                // In the logic table above, this reflects the case
+                // (self.absent | other.present). Because the copy has already
+                // happened, thanks to the 'insert' operation above, we just
+                // need to set the copyOnWrite flag.
+                self_bitmap.setCopyOnWrite(copyOnWrite);
+                continue;
+            }
+
+            // Both sides have self_key, and the insert was not performed. In
+            // the logic table above, this reflects the case
+            // (self.present & other.present). So OR other into self.
+            self_bitmap |= other_bitmap;
         }
         return *this;
     }

@@ -74,6 +74,12 @@ public:
     // Remove all records and reset the delete state.
     void reset();
 
+    void optimize() {
+        for (auto& col : _columns) {
+            col->optimize();
+        }
+    }
+
     Status upgrade_if_overflow();
 
     Status downgrade();

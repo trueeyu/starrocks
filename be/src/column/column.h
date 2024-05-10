@@ -213,6 +213,8 @@ public:
     // Return false if this is a non-nullable column, i.e, if `is_nullable` return false.
     virtual bool append_nulls(size_t count) = 0;
 
+    virtual void optimize() {};
+
     // Append multiple strings into this column.
     // Return false if the column is not a binary column.
     [[nodiscard]] virtual bool append_strings(const Buffer<Slice>& strs) = 0;

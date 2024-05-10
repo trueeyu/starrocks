@@ -78,6 +78,8 @@ public:
 
     void fill_default(const Filter& filter) override {}
 
+    void optimize() override { return _data_column->optimize(); }
+
     void update_has_null();
 
     bool is_nullable() const override { return true; }

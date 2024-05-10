@@ -232,6 +232,14 @@ public:
 
     void check_or_die() const {}
 
+    void optimize() override {
+        if constexpr (std::is_same_v<T, BitmapValue>) {
+            for (size_t i=0; i<_pool.size(); i++) {
+                _pool[i].compress();
+            }
+        }
+    }
+
 private:
     // add this to avoid warning clang-diagnostic-overloaded-virtual
     using Column::append;

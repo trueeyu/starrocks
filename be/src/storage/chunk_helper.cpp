@@ -505,6 +505,7 @@ Status ChunkAccumulator::push(ChunkPtr&& chunk) {
         }
 
         if (_tmp_chunk->num_rows() >= _desired_size) {
+            _tmp_chunk->optimize();
             _output.emplace_back(std::move(_tmp_chunk));
         }
         start += need_rows;
