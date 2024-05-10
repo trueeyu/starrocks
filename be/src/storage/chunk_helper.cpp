@@ -527,6 +527,7 @@ ChunkPtr ChunkAccumulator::pull() {
         auto res = std::move(_output.front());
         _output.pop_front();
         _accumulate_count = 0;
+        res->optimize();
         return res;
     }
     return nullptr;
