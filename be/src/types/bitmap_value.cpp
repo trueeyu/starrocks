@@ -176,7 +176,7 @@ void BitmapValue::fast_union(const std::vector<BitmapValue*>& bitmaps) {
     if (!roaring64s.empty()) {
         auto result = detail::Roaring64Map::fastunion(roaring64s.size(), roaring64s.data());
         convert_to_bitmap();
-        _bitmap |= result;
+        *_bitmap |= result;
     }
 }
 
