@@ -100,7 +100,7 @@ BitmapValue::BitmapValue(const Slice& src) {
 
 BitmapValue::BitmapValue(const BitmapValue& other)
         : _bitmap(other._bitmap),
-          _set(other._set == nullptr ? nullptr : std::make_unique<phmap::flat_hash_set<uint64_t>>(*other._set)),
+          _set(other._set),
           _sv(other._sv),
           _mem_usage(other._mem_usage),
           _type(other._type) {
@@ -111,7 +111,7 @@ BitmapValue::BitmapValue(const BitmapValue& other)
 BitmapValue& BitmapValue::operator=(const BitmapValue& other) {
     if (this != &other) {
         this->_bitmap = other._bitmap;
-        this->_set = other._set == nullptr ? nullptr : std::make_unique<phmap::flat_hash_set<uint64_t>>(*other._set);
+        this->_set = other._set;
         this->_sv = other._sv;
         this->_mem_usage = other._mem_usage;
         this->_type = other._type;
@@ -187,11 +187,11 @@ BitmapValue& BitmapValue::operator|=(const BitmapValue& rhs) {
     case SET:
         switch (_type) {
         case EMPTY:
-            _set = std::make_unique<phmap::flat_hash_set<uint64_t>>(*rhs._set);
+            _set = std::make_shared<phmap::flat_hash_set<uint64_t>>(*rhs._set);
             _type = SET;
             break;
         case SINGLE:
-            _set = std::make_unique<phmap::flat_hash_set<uint64_t>>(*rhs._set);
+            _set = std::make_shared<phmap::flat_hash_set<uint64_t>>(*rhs._set);
             _type = SET;
             if (_set->size() < 32) {
                 _set->insert(_sv);
@@ -272,7 +272,7 @@ BitmapValue& BitmapValue::operator&=(const BitmapValue& rhs) {
             _from_bitmap_to_smaller_type();
             break;
         case SET: {
-            auto set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            auto set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             for (auto x : *_set) {
                 if (rhs._bitmap->contains(x)) {
                     set->insert(x);
@@ -293,7 +293,7 @@ BitmapValue& BitmapValue::operator&=(const BitmapValue& rhs) {
             }
             break;
         case BITMAP: {
-            auto set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            auto set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             for (auto x : *rhs._set) {
                 if (_bitmap->contains(x)) {
                     set->insert(x);
@@ -305,7 +305,7 @@ BitmapValue& BitmapValue::operator&=(const BitmapValue& rhs) {
             break;
         }
         case SET: {
-            auto set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            auto set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             for (auto x : *rhs._set) {
                 if (_set->contains(x)) {
                     set->insert(x);
@@ -378,7 +378,7 @@ BitmapValue& BitmapValue::operator-=(const BitmapValue& rhs) {
             _from_bitmap_to_smaller_type();
             break;
         case SET: {
-            auto set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            auto set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             for (const auto& x : *_set) {
                 if (!rhs._bitmap->contains(x)) {
                     set->insert(x);
@@ -407,7 +407,7 @@ BitmapValue& BitmapValue::operator-=(const BitmapValue& rhs) {
             break;
         }
         case SET: {
-            auto set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            auto set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             for (auto x : *_set) {
                 if (!rhs._set->contains(x)) {
                     set->insert(x);
@@ -716,6 +716,12 @@ bool BitmapValue::deserialize(const char* src) {
     case BitmapTypeCode::BITMAP64_SERIV2:
         _type = BITMAP;
         _bitmap = std::make_shared<detail::Roaring64Map>(detail::Roaring64Map::read(src));
+        _set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
+        for (auto iter=_bitmap->begin(); iter != _bitmap->end(); iter++) {
+            _set->insert(*iter);
+        }
+        _type = SET;
+        _bitmap.reset();
         break;
     case BitmapTypeCode::SET: {
         _type = SET;

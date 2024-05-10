@@ -105,7 +105,7 @@ public:
                 break;
             }
 
-            _set = std::make_unique<phmap::flat_hash_set<uint64_t>>();
+            _set = std::make_shared<phmap::flat_hash_set<uint64_t>>();
             _set->insert(_sv);
             _set->insert(value);
             _type = SET;
@@ -226,7 +226,7 @@ private:
 
     // Use shared_ptr, not unique_ptr, because we want to avoid unnecessary copy
     std::shared_ptr<detail::Roaring64Map> _bitmap = nullptr;
-    std::unique_ptr<phmap::flat_hash_set<uint64_t>> _set;
+    std::shared_ptr<phmap::flat_hash_set<uint64_t>> _set;
     uint64_t _sv = 0; // store the single value when _type == SINGLE
     mutable int64_t _mem_usage = 0;
     BitmapDataType _type{EMPTY};
