@@ -29,6 +29,8 @@ import java.util.Map;
 public class LogicalDeltaLakeScanOperator extends LogicalScanOperator {
     private ScanOperatorPredicates predicates = new ScanOperatorPredicates();
 
+    private boolean hasUnknownColumn = true;
+
     public LogicalDeltaLakeScanOperator(Table table,
                                         Map<ColumnRefOperator, Column> colRefToColumnMetaMap,
                                         Map<Column, ColumnRefOperator> columnMetaToColRefMap,
@@ -50,6 +52,14 @@ public class LogicalDeltaLakeScanOperator extends LogicalScanOperator {
     @Override
     public ScanOperatorPredicates getScanOperatorPredicates() {
         return this.predicates;
+    }
+
+    public boolean hasUnknownColumn() {
+        return hasUnknownColumn;
+    }
+
+    public void setHasUnknownColumn(boolean hasUnknownColumn) {
+        this.hasUnknownColumn = hasUnknownColumn;
     }
 
     @Override
