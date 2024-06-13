@@ -17,6 +17,8 @@ package com.starrocks.planner;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.starrocks.analysis.DescriptorTable;
 import com.starrocks.analysis.Expr;
 import com.starrocks.analysis.SlotDescriptor;
@@ -47,7 +49,6 @@ import com.starrocks.thrift.TPlanNodeType;
 import com.starrocks.thrift.TScanRange;
 import com.starrocks.thrift.TScanRangeLocation;
 import com.starrocks.thrift.TScanRangeLocations;
-import io.delta.kernel.Scan;
 import io.delta.kernel.ScanBuilder;
 import io.delta.kernel.data.FilteredColumnarBatch;
 import io.delta.kernel.data.Row;
@@ -55,9 +56,11 @@ import io.delta.kernel.engine.Engine;
 import io.delta.kernel.expressions.And;
 import io.delta.kernel.expressions.Predicate;
 import io.delta.kernel.internal.InternalScanFileUtils;
+import io.delta.kernel.internal.ScanImpl;
 import io.delta.kernel.internal.SnapshotImpl;
 import io.delta.kernel.internal.actions.DeletionVectorDescriptor;
 import io.delta.kernel.internal.actions.Metadata;
+import io.delta.kernel.internal.util.VectorUtils;
 import io.delta.kernel.types.StructType;
 import io.delta.kernel.utils.CloseableIterator;
 import io.delta.kernel.utils.FileStatus;
@@ -152,6 +155,18 @@ public class DeltaLakeScanNode extends ScanNode {
         }
     }
 
+    public static String getAddFileStats(Row scanFileInfo) {
+        Row row = getAddFileEntry(scanFileInfo);
+        return row.getString(InternalScanFileUtils.ADD_FILE_STATS_ORDINAL);
+    }
+
+    public static Row getAddFileEntry(Row scanFileInfo) {
+        if (scanFileInfo.isNullAt(InternalScanFileUtils.ADD_FILE_ORDINAL)) {
+            throw new IllegalArgumentException("There is no `add` entry in the scan file row");
+        }
+        return scanFileInfo.getStruct(InternalScanFileUtils.ADD_FILE_ORDINAL);
+    }
+
     public void setupScanRangeLocationsImpl(DescriptorTable descTbl) throws AnalysisException {
         Metadata deltaMetadata = deltaLakeTable.getDeltaMetadata();
         DeltaUtils.checkTableFeatureSupported(((SnapshotImpl) deltaLakeTable.getDeltaSnapshot()).getProtocol(),
@@ -164,11 +179,11 @@ public class DeltaLakeScanNode extends ScanNode {
 
         Engine deltaEngine = deltaLakeTable.getDeltaEngine();
         ScanBuilder scanBuilder = deltaLakeTable.getDeltaSnapshot().getScanBuilder(deltaEngine);
-        Scan scan = deltaLakePredicates.isPresent() ?
+        ScanImpl scan = (ScanImpl) (deltaLakePredicates.isPresent() ?
                 scanBuilder.withFilter(deltaEngine, deltaLakePredicates.get()).build() :
-                scanBuilder.build();
+                scanBuilder.build());
 
-        try (CloseableIterator<FilteredColumnarBatch> scanFilesAsBatches = scan.getScanFiles(deltaEngine)) {
+        try (CloseableIterator<FilteredColumnarBatch> scanFilesAsBatches = scan.getScanFiles(deltaEngine, true)) {
             while (scanFilesAsBatches.hasNext()) {
                 FilteredColumnarBatch scanFileBatch = scanFilesAsBatches.next();
 
@@ -181,6 +196,10 @@ public class DeltaLakeScanNode extends ScanNode {
                                     "Delta table feature [deletion vectors] is not supported");
                         }
                         FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(scanFileRow);
+                        String stats = getAddFileStats(scanFileRow);
+                        JsonObject jsonObject = JsonParser.parseString(stats).getAsJsonObject();
+                        System.out.println("result" + jsonObject.toString());
+
                         Map<String, String> partitionValueMap = InternalScanFileUtils.getPartitionValues(scanFileRow);
                         List<String> partitionValues =
                                 partitionColumnNames.stream().map(partitionValueMap::get).collect(
