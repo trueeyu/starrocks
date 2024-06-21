@@ -68,10 +68,10 @@ public:
             }
         }
 
-        TRY_CATCH_BAD_ALLOC(_hash_map_variant.visit([&](auto& hash_map_with_key) {
-            LOG(ERROR) << "ChunksPartioner offset";
-            FAIL_POINT_TRIGGER_RETURN(chunk_partitioner_offer_bad_alloc, Status::InternalError("alloc mem failed"));
+        LOG(ERROR) << "ChunksPartioner offset";
+        FAIL_POINT_TRIGGER_RETURN(chunk_partitioner_offer_bad_alloc, Status::InternalError("alloc mem failed"));
 
+        TRY_CATCH_BAD_ALLOC(_hash_map_variant.visit([&](auto& hash_map_with_key) {
             _split_chunk_by_partition<EnablePassthrough>(
                     *hash_map_with_key, chunk, std::forward<NewPartitionCallback>(new_partition_cb),
                     std::forward<PartitionChunkConsumer>(partition_chunk_consumer));

@@ -82,8 +82,8 @@ public:
 // Use this macro to define failpoint
 // NOTE: it can only be used in cpp files, the name of failpoint must be globally unique
 #define DEFINE_FAIL_POINT(NAME)                      \
-    starrocks::failpoint::FailPoint fp##NAME(#NAME); \
-    starrocks::failpoint::FailPointRegisterer fpr##NAME(&fp##NAME);
+    static starrocks::failpoint::FailPoint fp##NAME(#NAME); \
+    static starrocks::failpoint::FailPointRegisterer fpr##NAME(&fp##NAME);
 #define DEFINE_SCOPED_FAIL_POINT(NAME)                      \
     starrocks::failpoint::ScopedFailPoint sfp##NAME(#NAME); \
     starrocks::failpoint::FailPointRegisterer fpr##NAME(&sfp##NAME);
