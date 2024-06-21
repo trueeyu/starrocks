@@ -567,9 +567,11 @@ TEST_F(StarRocksColumnToArrowTest, testArrayColumn) {
     convert_to_arrow(array_type_desc, column, arrow_type, memory_pool.get(), &result);
     std::shared_ptr<arrow::Array> array = result->column(0);
 
-    auto s = arrow::ipc::internal::json::ArrayFromJSON(arrow_type, "[[1, 2, 3], [4, null, 5, 6], [], [null, null]]");
+    std::shared_ptr<arrow::Array> expect_array;
+    auto s = arrow::ipc::internal::json::ArrayFromJSON(arrow_type, "[[1, 2, 3], [4, null, 5, 6], [], [null, null]]",
+                                                       &expect_array);
     ASSERT_TRUE(s.ok());
-    ASSERT_TRUE(s.ValueUnsafe()->Equals(array));
+    ASSERT_TRUE(expect_array->Equals(array));
 }
 
 TEST_F(StarRocksColumnToArrowTest, testNullableArrayColumn) {
@@ -594,10 +596,10 @@ TEST_F(StarRocksColumnToArrowTest, testNullableArrayColumn) {
     std::shared_ptr<arrow::Array> array = result->column(0);
 
     std::shared_ptr<arrow::Array> expect_array;
-    auto s = arrow::ipc::internal::json::ArrayFromJSON(arrow_type,
-                                                       "[[1, 2, 3], null, [4, null, 5, 6], [], [null, null]]");
+    auto s = arrow::ipc::internal::json::ArrayFromJSON(
+            arrow_type, "[[1, 2, 3], null, [4, null, 5, 6], [], [null, null]]", &expect_array);
     ASSERT_TRUE(s.ok());
-    ASSERT_TRUE(s.ValueUnsafe()->Equals(array));
+    ASSERT_TRUE(expect_array->Equals(array));
 }
 
 TEST_F(StarRocksColumnToArrowTest, testStructColumn) {
@@ -622,15 +624,17 @@ TEST_F(StarRocksColumnToArrowTest, testStructColumn) {
     convert_to_arrow(struct_type_desc, column, arrow_type, memory_pool.get(), &result);
     std::shared_ptr<arrow::Array> array = result->column(0);
 
+    std::shared_ptr<arrow::Array> expect_array;
     auto s = arrow::ipc::internal::json::ArrayFromJSON(arrow_type,
                                                        R"([
                         {"id": 1, "name": "test1"},
                         {"id": null, "name": "test2"},
                         {"id": 2, "name": null},
                         {"id": null, "name": null}
-                    ])");
+                    ])",
+                                                       &expect_array);
     ASSERT_TRUE(s.ok());
-    ASSERT_TRUE(s.ValueUnsafe()->Equals(array));
+    ASSERT_TRUE(expect_array->Equals(array));
 }
 
 TEST_F(StarRocksColumnToArrowTest, testNullableStructColumn) {
@@ -665,9 +669,10 @@ TEST_F(StarRocksColumnToArrowTest, testNullableStructColumn) {
                         {"id": null, "name": "test2"},
                         {"id": 2, "name": null},
                         {"id": null, "name": null}
-                    ])");
+                    ])",
+                                                       &expect_array);
     ASSERT_TRUE(s.ok());
-    ASSERT_TRUE(s.ValueUnsafe()->Equals(array));
+    ASSERT_TRUE(expect_array->Equals(array));
 }
 
 TEST_F(StarRocksColumnToArrowTest, testMapColumn) {

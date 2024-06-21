@@ -44,7 +44,7 @@
 #include <arrow/status.h>
 #include <arrow/type.h>
 #include <arrow/visitor.h>
-#include <arrow/visitor_generate.h>
+#include <arrow/visitor_inline.h>
 #include <gtest/gtest.h>
 
 #include <cstdio>
