@@ -23,8 +23,11 @@
 #include "exprs/expr_context.h"
 #include "partition_hash_variant.h"
 #include "runtime/current_thread.h"
+#include "util/failpoint/fail_point.h"
 
 namespace starrocks {
+
+DEFINE_FAIL_POINT(chunk_partitioner_offer_bad_alloc)
 
 struct PartitionColumnType {
     TypeDescriptor result_type;
@@ -66,6 +69,9 @@ public:
         }
 
         TRY_CATCH_BAD_ALLOC(_hash_map_variant.visit([&](auto& hash_map_with_key) {
+            LOG(ERROR) << "ChunksPartioner offset";
+            FAIL_POINT_TRIGGER_RETURN(chunk_partitioner_offer_bad_alloc, Status::InternalError("alloc mem failed"));
+
             _split_chunk_by_partition<EnablePassthrough>(
                     *hash_map_with_key, chunk, std::forward<NewPartitionCallback>(new_partition_cb),
                     std::forward<PartitionChunkConsumer>(partition_chunk_consumer));
