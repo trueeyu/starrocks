@@ -278,6 +278,20 @@ void Chunk::append_selective(const Chunk& src, const uint32_t* indexes, uint32_t
     }
 }
 
+void Chunk::append_selective_rand(const Chunk& src, const uint32_t* indexes, uint32_t from, uint32_t size) {
+    DCHECK_EQ(_columns.size(), src.columns().size());
+    for (size_t i = 0; i < _columns.size(); ++i) {
+        if (config::enable_random_fail) {
+            int j = rand() % config::random_size;
+            LOG(ERROR) << "RAND: " << j;
+            if (j == 0) {
+                throw std::bad_alloc();
+            }
+        }
+        _columns[i]->append_selective(*src.columns()[i].get(), indexes, from, size);
+    }
+}
+
 void Chunk::rolling_append_selective(Chunk& src, const uint32_t* indexes, uint32_t from, uint32_t size) {
     size_t num_columns = _columns.size();
     DCHECK_EQ(num_columns, src.columns().size());
