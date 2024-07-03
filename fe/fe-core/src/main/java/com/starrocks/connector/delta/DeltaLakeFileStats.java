@@ -111,6 +111,36 @@ public class DeltaLakeFileStats {
         return recordCount;
     }
 
+    public void fillNonParititionValues(ColumnStatistic.Builder builder, String colName, Type colType,
+                                        DataType deltaDataType) {
+        if (minValues != null) {
+            if (colType.isStringType()) {
+                String minString = minValues.get(colName).toString();
+                builder.setMinString(minString);
+            } else {
+                Optional<Double> res = getBoundStatistic(colName, deltaDataType, minValues);
+                res.ifPresent(builder::setMinValue);
+            }
+        }
+
+        if (maxValues != null) {
+            if (colType.isStringType()) {
+                String maxString = maxValues.get(colName).toString();
+                builder.setMaxString(maxString);
+            } else {
+                Optional<Double> res = getBoundStatistic(colName, deltaDataType, maxValues);
+                res.ifPresent(builder::setMaxValue);
+            }
+        }
+
+        if (nullCounts != null) {
+            Long nullCount = getNullCount(colName);
+            if (nullCount != null) {
+                builder.setNullsFraction(nullCount * 1.0 / Math.max(recordCount, 1));
+            }
+        }
+    }
+
     public ColumnStatistic fillColumnStats(Column col) {
         ColumnStatistic.Builder builder = ColumnStatistic.builder();
         String colName = col.getName();
@@ -129,35 +159,12 @@ public class DeltaLakeFileStats {
         if (field == null) {
             return builder.build();
         }
-        if (!nonPartitionPrimitiveColumns.contains(colName)) {
+        if (nonPartitionPrimitiveColumns.contains(colName)) {
+            fillNonParititionValues(builder, colName, colType, field.getDataType());
+        } else if (partitionPrimitiveColumns.contains(colName)) {
+            //TODO
+        } else {
             return builder.build();
-        }
-
-        if (minValues != null) {
-            if (col.getType().isStringType()) {
-                String minString = minValues.get(colName).toString();
-                builder.setMinString(minString);
-            } else {
-                Optional<Double> res = getBoundStatistic(colName, field.getDataType(), minValues);
-                res.ifPresent(builder::setMinValue);
-            }
-        }
-
-        if (maxValues != null) {
-            if (col.getType().isStringType()) {
-                String maxString = maxValues.get(colName).toString();
-                builder.setMaxString(maxString);
-            } else {
-                Optional<Double> res = getBoundStatistic(colName, field.getDataType(), maxValues);
-                res.ifPresent(builder::setMaxValue);
-            }
-        }
-
-        if (nullCounts != null) {
-            Long nullCount = getNullCount(colName);
-            if (nullCount != null) {
-                builder.setNullsFraction(nullCount * 1.0 / Math.max(recordCount, 1));
-            }
         }
 
         return builder.build();
