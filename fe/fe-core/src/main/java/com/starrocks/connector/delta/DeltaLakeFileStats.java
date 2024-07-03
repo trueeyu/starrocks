@@ -51,6 +51,7 @@ public class DeltaLakeFileStats {
 
     private final StructType schema;
     private final Set<String> nonPartitionPrimitiveColumns;
+    private final Set<String> partitionPrimitiveColumns;
     private long recordCount;
     private long size;
     private final Map<String, Object> minValues;
@@ -60,9 +61,11 @@ public class DeltaLakeFileStats {
     private boolean hasValidColumnMetrics;
 
     public DeltaLakeFileStats(StructType schema, Set<String> nonPartitionPrimitiveColumns,
+                              Set<String> partitionPrimitiveColumns,
                               DeltaLakeAddFileStatsSerDe fileStat, long numRecords, long fileSize) {
         this.schema = schema;
         this.nonPartitionPrimitiveColumns = nonPartitionPrimitiveColumns;
+        this.partitionPrimitiveColumns = partitionPrimitiveColumns;
         this.recordCount = numRecords;
         this.size = fileSize;
 
@@ -94,6 +97,7 @@ public class DeltaLakeFileStats {
     public DeltaLakeFileStats(long recordCount) {
         this.schema = null;
         this.nonPartitionPrimitiveColumns = null;
+        this.partitionPrimitiveColumns = null;
         this.recordCount = recordCount;
         this.size = 0;
         this.minValues = null;

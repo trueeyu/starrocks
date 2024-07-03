@@ -50,7 +50,8 @@ public class DeltaStatisticProvider {
     }
 
     public void updateFileStats(DeltaLakeTable table, PredicateSearchKey key, FileScanTask file,
-                                DeltaLakeAddFileStatsSerDe fileStatsSerDe, Set<String> nonPartitionPrimitiveColumn) {
+                                DeltaLakeAddFileStatsSerDe fileStatsSerDe, Set<String> nonPartitionPrimitiveColumns,
+                                Set<String> partitionPrimitiveColumns) {
         StructType schema = table.getDeltaMetadata().getSchema();
 
         DeltaLakeFileStats fileStats;
@@ -58,8 +59,8 @@ public class DeltaStatisticProvider {
             fileStats = deltaLakeFileStatsMap.get(key);
             fileStats.update(fileStatsSerDe, file.getRecords(), file.getFileSize());
         } else {
-            fileStats = new DeltaLakeFileStats(schema, nonPartitionPrimitiveColumn, fileStatsSerDe,
-                    file.getRecords(), file.getFileSize());
+            fileStats = new DeltaLakeFileStats(schema, nonPartitionPrimitiveColumns, partitionPrimitiveColumns,
+                    fileStatsSerDe, file.getRecords(), file.getFileSize());
             deltaLakeFileStatsMap.put(key, fileStats);
         }
     }

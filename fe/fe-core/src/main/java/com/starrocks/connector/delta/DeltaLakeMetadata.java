@@ -221,7 +221,7 @@ public class DeltaLakeMetadata implements ConnectorMetadata {
 
                             try (Timer ignored = Tracers.watchScope(EXTERNAL, "DELTA_LAKE.updateDeltaLakeFileStats")) {
                                 statisticProvider.updateFileStats(deltaLakeTable, key, pair.first, pair.second,
-                                        nonPartitionPrimitiveColumns);
+                                        nonPartitionPrimitiveColumns, partitionColumns);
                             }
                         } else {
                             Pair<FileScanTask, DeltaLakeAddFileStatsSerDe> pair =
@@ -230,7 +230,7 @@ public class DeltaLakeMetadata implements ConnectorMetadata {
 
                             try (Timer ignored = Tracers.watchScope(EXTERNAL, "DELTA_LAKE.updateDeltaLakeCardinality")) {
                                 statisticProvider.updateFileStats(deltaLakeTable, key, pair.first, pair.second,
-                                        nonPartitionPrimitiveColumns);
+                                        nonPartitionPrimitiveColumns, partitionColumns);
                             }
                         }
                     }
