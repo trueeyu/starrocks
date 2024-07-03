@@ -37,7 +37,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -51,7 +50,7 @@ public class DeltaLakeFileStats {
             DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
     private final StructType schema;
-    private final List<String> nonPartitionPrimitiveColumns;
+    private final Set<String> nonPartitionPrimitiveColumns;
     private long recordCount;
     private long size;
     private final Map<String, Object> minValues;
@@ -60,7 +59,7 @@ public class DeltaLakeFileStats {
     private final Set<String> corruptedStats;
     private boolean hasValidColumnMetrics;
 
-    public DeltaLakeFileStats(StructType schema, List<String> nonPartitionPrimitiveColumns,
+    public DeltaLakeFileStats(StructType schema, Set<String> nonPartitionPrimitiveColumns,
                               DeltaLakeAddFileStatsSerDe fileStat, long numRecords, long fileSize) {
         this.schema = schema;
         this.nonPartitionPrimitiveColumns = nonPartitionPrimitiveColumns;
