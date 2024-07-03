@@ -18,7 +18,6 @@ import com.starrocks.catalog.Column;
 import com.starrocks.catalog.Type;
 import com.starrocks.common.util.DateUtils;
 import com.starrocks.sql.optimizer.statistics.ColumnStatistic;
-import io.delta.kernel.types.BasePrimitiveType;
 import io.delta.kernel.types.BooleanType;
 import io.delta.kernel.types.ByteType;
 import io.delta.kernel.types.DataType;
@@ -38,7 +37,6 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -77,9 +75,15 @@ public class DeltaLakeFileStats {
             this.corruptedStats = null;
             this.hasValidColumnMetrics = false;
         } else {
-            this.minValues = new HashMap<>(fileStat.minValues);
-            this.maxValues = new HashMap<>(fileStat.maxValues);
-            this.nullCounts = new HashMap<>(fileStat.nullCount);
+            this.minValues = fileStat.minValues.entrySet().stream()
+                    .filter(e -> !nonPartitionPrimitiveColumns.contains(e.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            this.maxValues = fileStat.minValues.entrySet().stream()
+                    .filter(e -> !nonPartitionPrimitiveColumns.contains(e.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+            this.nullCounts = fileStat.nullCount.entrySet().stream()
+                    .filter(e -> !nonPartitionPrimitiveColumns.contains(e.getKey()))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
             this.corruptedStats = nonPartitionPrimitiveColumns.stream()
                     .filter(col -> !minValues.containsKey(col) &&
                             (!nullCounts.containsKey(col) || ((Double) nullCounts.get(col)).longValue() != recordCount))
@@ -174,7 +178,7 @@ public class DeltaLakeFileStats {
 
         updateStats(this.minValues, stat.minValues, stat.nullCount, stat.numRecords, i -> (i > 0));
         updateStats(this.maxValues, stat.maxValues, stat.nullCount, stat.numRecords, i -> (i < 0));
-        updateNullCount(stat.nullCount, this.nonPartitionPrimitiveColumns);
+        updateNullCount(stat.nullCount);
     }
 
     private static Object sumNullCount(Object left, Object value) {
@@ -220,12 +224,9 @@ public class DeltaLakeFileStats {
         }
     }
 
-    private void updateNullCount(Map<String, Object> nullCounts, List<String> nonPartitionPrimitiveColumns) {
+    private void updateNullCount(Map<String, Object> nullCounts) {
         for (String col : nonPartitionPrimitiveColumns) {
-            DataType type = schema.get(col).getDataType();
-            if (BasePrimitiveType.isPrimitiveType(type.toString())) {
-                this.nullCounts.merge(col, nullCounts.get(col), DeltaLakeFileStats::sumNullCount);
-            }
+            this.nullCounts.merge(col, nullCounts.get(col), DeltaLakeFileStats::sumNullCount);
         }
     }
 
