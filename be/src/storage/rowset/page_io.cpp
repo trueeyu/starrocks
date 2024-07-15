@@ -50,6 +50,7 @@
 #include "util/faststring.h"
 #include "util/runtime_profile.h"
 #include "util/scoped_cleanup.h"
+#include "runtime/memory/nodump_mem_allocator.h"
 
 namespace starrocks {
 
@@ -168,7 +169,7 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
     // hold compressed page at first, reset to decompressed page later
     // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
 
-    std::unique_ptr<char[]> page(new char[page_size + Column::APPEND_OVERFLOW_MAX_SIZE]);
+    std::unique_ptr<char[], free_delete> page((char*)malloc(page_size + Column::APPEND_OVERFLOW_MAX_SIZE));
     Slice page_slice(page.get(), page_size);
     {
         SCOPED_RAW_TIMER(&opts.stats->io_ns);

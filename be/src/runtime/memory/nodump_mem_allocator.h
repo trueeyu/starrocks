@@ -25,6 +25,10 @@
 
 namespace starrocks {
 
+struct free_delete {
+    void operator()(void* x) { free(x); }
+};
+
 class NodumpMemAllocator {
 public:
     NodumpMemAllocator(std::unique_ptr<extent_hooks_t>&& arena_hooks, unsigned arena_index);
