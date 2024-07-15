@@ -43,6 +43,7 @@
 #include "runtime/exec_env.h"
 #include "util/defer_op.h"
 #include "util/lru_cache.h"
+#include "runtime/memory/nodump_mem_allocator.h"
 
 namespace starrocks {
 
@@ -123,6 +124,7 @@ private:
 
     MemTracker* _mem_tracker = nullptr;
     std::unique_ptr<Cache> _cache = nullptr;
+    NodumpMemAllocator* _allocator = nullptr;
 };
 
 // A handle for StoragePageCache entry. This class make it easy to handle

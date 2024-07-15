@@ -87,6 +87,9 @@ static void init_metrics() {
 
 StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity)
         : _mem_tracker(mem_tracker), _cache(new_lru_cache(capacity, ChargeMode::MEMSIZE)) {
+    std::shared_ptr<NodumpMemAllocator> mem_allocator;
+    Status st = new_nodump_mem_allocator(&mem_allocator);
+    LOG(ERROR) << "new nondump: " << st.to_string();
     init_metrics();
 }
 
