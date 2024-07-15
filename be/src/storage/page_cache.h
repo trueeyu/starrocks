@@ -119,12 +119,14 @@ public:
 
     void prune();
 
+    NodumpMemAllocator* get_allocator() { return _allocator.get(); }
+
 private:
     static StoragePageCache* _s_instance;
 
     MemTracker* _mem_tracker = nullptr;
     std::unique_ptr<Cache> _cache = nullptr;
-    NodumpMemAllocator* _allocator = nullptr;
+    std::shared_ptr<NodumpMemAllocator> _allocator;
 };
 
 // A handle for StoragePageCache entry. This class make it easy to handle
