@@ -170,7 +170,9 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
     // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
 
     NodumpMemAllocator* allocator = cache->get_allocator();
-    std::unique_ptr<char[], free_delete> page((char*)allocator->allocate(page_size + Column::APPEND_OVERFLOW_MAX_SIZE));
+    void* tmp_ptr = allocator->allocate(page_size + Column::APPEND_OVERFLOW_MAX_SIZE);
+
+    std::unique_ptr<char[]> page(new (tmp_ptr) char[page_size + Column::APPEND_OVERFLOW_MAX_SIZE]);
     Slice page_slice(page.get(), page_size);
     {
         SCOPED_RAW_TIMER(&opts.stats->io_ns);
