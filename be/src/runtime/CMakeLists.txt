@@ -100,6 +100,7 @@ set(RUNTIME_FILES
     dictionary_cache_sink.cpp
     type_pack.cpp
     customized_result_writer.cpp
+    memory/nodump_mem_allocator.cpp
 )
 
 set(RUNTIME_FILES ${RUNTIME_FILES}
