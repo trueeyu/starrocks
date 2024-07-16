@@ -215,8 +215,11 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
         }
         SCOPED_RAW_TIMER(&opts.stats->decompress_ns);
         // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
-        std::unique_ptr<char[]> decompressed_page(
-                new char[footer->uncompressed_size() + footer_size + 4 + Column::APPEND_OVERFLOW_MAX_SIZE]);
+
+        size_t tmp_size_2 = footer->uncompressed_size() + footer_size + 4 + Column::APPEND_OVERFLOW_MAX_SIZE;
+        void* tmp_ptr_2 = allocator->allocate(tmp_size_2);
+
+        std::unique_ptr<char[]> decompressed_page(new (tmp_ptr_2) char[tmp_size_2]);
 
         // decompress page body
         Slice compressed_body(page_slice.data, body_size);

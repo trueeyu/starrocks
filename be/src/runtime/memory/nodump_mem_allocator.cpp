@@ -48,6 +48,7 @@ void* NodumpMemAllocator::alloc(extent_hooks_t* extent, void* new_addr, size_t s
     void* result = original_alloc(extent, new_addr, size, alignment, zero, commit, arena_ind);
     if (result != nullptr) {
         int ret = madvise(result, size, MADV_DONTDUMP);
+        LOG(WARNING) << "ALLOC: " << result << ":" << size << ":" << ret;
         if (ret != 0) {
             LOG(FATAL) << "alloc page failed";
         }

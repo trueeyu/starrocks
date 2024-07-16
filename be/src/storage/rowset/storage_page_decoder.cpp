@@ -18,6 +18,7 @@
 #include "gutil/strings/substitute.h"
 #include "storage/rowset/bitshuffle_wrapper.h"
 #include "util/coding.h"
+#include "storage/page_cache.h"
 
 namespace starrocks {
 
@@ -41,10 +42,13 @@ public:
         size_t header_size = _reserve_head_size + BITSHUFFLE_PAGE_HEADER_SIZE;
         size_t data_size = num_element_after_padding * size_of_element;
 
+        auto* allocator = StoragePageCache::instance()->get_allocator();
+        size_t tmp_size = page_slice->size + data_size - (compressed_size - BITSHUFFLE_PAGE_HEADER_SIZE);
+        void* tmp_ptr = allocator->allocate(tmp_size);
+
         // data_size is size of decoded_data
         // compressed_size contains encoded_data size and BITSHUFFLE_PAGE_HEADER_SIZE
-        std::unique_ptr<char[]> decompressed_page(
-                new char[page_slice->size + data_size - (compressed_size - BITSHUFFLE_PAGE_HEADER_SIZE)]);
+        std::unique_ptr<char[]> decompressed_page(new (tmp_ptr) char[tmp_size]);
         memcpy(decompressed_page.get(), page_slice->data, header_size);
 
         Slice compressed_body(page_slice->data + header_size, compressed_size - BITSHUFFLE_PAGE_HEADER_SIZE);

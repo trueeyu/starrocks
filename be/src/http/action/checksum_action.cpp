@@ -56,6 +56,9 @@ const std::string SCHEMA_HASH = "schema_hash";
 
 void ChecksumAction::handle(HttpRequest* req) {
     LOG(INFO) << "accept one request " << req->debug_string();
+    bool retain_enabled;
+    size_t sz = sizeof(retain_enabled);
+    jemallctl("opt.retain", &retain_enabled, &sz, nullptr, 0);
 
     // Get tablet id
     const std::string& tablet_id_str = req->param(TABLET_ID);
