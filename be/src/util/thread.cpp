@@ -54,6 +54,7 @@
 #include "gutil/strings/substitute.h"
 #include "storage/olap_define.h"
 #include "util/scoped_cleanup.h"
+#include "common/config.h"
 
 namespace starrocks {
 
@@ -287,12 +288,38 @@ int64_t Thread::wait_for_tid() const {
     }
 }
 
+void* supervise_thread2(void* arg) {
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
+
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_M_0" << std::endl;
+    }
+
+    sleep(20);
+    return nullptr;
+}
+
 Status Thread::start_thread(const std::string& category, const std::string& name, const ThreadFunctor& functor,
                             uint64_t flags, scoped_refptr<Thread>* holder) {
     GoogleOnceInit(&once, &init_threadmgr);
 
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
+
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_P_1" << std::endl;
+    }
+
     // Temporary reference for the duration of this function.
     scoped_refptr<Thread> t(new Thread(category, name, functor));
+
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_P_2" << std::endl;
+    }
 
     // Optional, and only set if the thread was successfully created.
     //
@@ -316,9 +343,23 @@ Status Thread::start_thread(const std::string& category, const std::string& name
         t->Release();
     });
 
+    int ret2 = pthread_create(&t->_thread, nullptr, &supervise_thread2, nullptr);
+    if (ret2) {
+        return Status::RuntimeError(fmt::format("Could not create thread: {}", strerror(ret2)));
+    }
+    if (config::num_cores2 == 4) {
+        sleep(10);
+        std::cout << "=================" << std::endl;
+    }
+
     int ret = pthread_create(&t->_thread, nullptr, &Thread::supervise_thread, t.get());
     if (ret) {
         return Status::RuntimeError(fmt::format("Could not create thread: {}", strerror(ret)));
+    }
+
+    if (config::num_cores2 == 4) {
+        sleep(10);
+        std::cout << "=================" << std::endl;
     }
 
     // The thread has been created and is now joinable.
@@ -333,7 +374,16 @@ Status Thread::start_thread(const std::string& category, const std::string& name
     return Status::OK();
 }
 
+
 void* Thread::supervise_thread(void* arg) {
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
+
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_M_1" << std::endl;
+    }
+
     auto* t = static_cast<Thread*>(arg);
     int64_t system_tid = Thread::current_thread_id();
     PCHECK(system_tid != -1);
@@ -357,12 +407,22 @@ void* Thread::supervise_thread(void* arg) {
     thread_manager->set_thread_name(t->_name, t->_tid);
     thread_manager->add_thread(pthread_self(), t->_name, t->category(), t->_tid);
 
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_M_2" << std::endl;
+    }
+
     // FinishThread() is guaranteed to run (even if functor_ throws an
     // exception) because pthread_cleanup_push() creates a scoped object
     // whose destructor invokes the provided callback.
     pthread_cleanup_push(&Thread::finish_thread, t);
     t->_functor();
     pthread_cleanup_pop(true);
+
+    if (config::num_cores2 == 4) {
+        system(str.c_str());
+        std::cout << "LXH_M_3" << std::endl;
+    }
 
     return nullptr;
 }

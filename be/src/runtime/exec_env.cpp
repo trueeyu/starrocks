@@ -300,7 +300,17 @@ int64_t GlobalEnv::calc_max_query_memory(int64_t process_mem_limit, int64_t perc
     return process_mem_limit * percent / 100;
 }
 
+void* thread_test(void* args) {
+    while (true) {
+        sleep(5);
+    }
+    return nullptr;
+}
+
 Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
+
     _store_paths = store_paths;
     _external_scan_context_mgr = new ExternalScanContextMgr(this);
     _metrics = StarRocksMetrics::instance()->metrics();
@@ -316,6 +326,18 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     _thread_pool =
             new PriorityThreadPool("table_scan_io", // olap/external table scan thread pool
                                    config::scanner_thread_pool_thread_num, config::scanner_thread_pool_queue_size);
+
+    system(str.c_str());
+    std::cout << "LXH_1_1" << std::endl;
+
+    for (int i = 0; i < 1; i++) {
+        pthread_t ttid;
+        int err = pthread_create(&ttid, nullptr, thread_test, nullptr);
+        LOG(ERROR) << "THREAD: " << err;
+    }
+    sleep(10);
+    system(str.c_str());
+    std::cout << "LXH_1_2" << std::endl;
 
     // Thread pool used for streaming load to scan StreamLoadPipe. The maximum number of
     // threads and queue size are set INT32_MAX which indicate there is no limit for the
@@ -334,8 +356,15 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
                     .build(&streaming_load_pool));
     _streaming_load_thread_pool = streaming_load_pool.release();
 
+    system(str.c_str());
+    std::cout << "LXH_2" << std::endl;
+
     _udf_call_pool = new PriorityThreadPool("udf", config::udf_thread_pool_size, config::udf_thread_pool_size);
+    system(str.c_str());
+    std::cout << "LXH_3" << std::endl;
     _fragment_mgr = new FragmentMgr(this);
+    system(str.c_str());
+    std::cout << "LXH_4" << std::endl;
 
     RETURN_IF_ERROR(ThreadPoolBuilder("automatic_partition") // automatic partition pool
                             .set_min_threads(0)
@@ -343,6 +372,9 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
                             .set_max_queue_size(1000)
                             .set_idle_timeout(MonoDelta::FromMilliseconds(2000))
                             .build(&_automatic_partition_pool));
+
+    system(str.c_str());
+    std::cout << "LXH_4" << std::endl;
 
     int num_prepare_threads = config::pipeline_prepare_thread_pool_thread_num;
     if (num_prepare_threads == 0) {
@@ -360,6 +392,9 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     };
     REGISTER_GAUGE_STARROCKS_METRIC(pipe_prepare_pool_queue_len, task_qlen_fun);
 
+    system(str.c_str());
+    std::cout << "LXH_5" << std::endl;
+
     int num_sink_io_threads = config::pipeline_sink_io_thread_pool_thread_num;
     if (num_sink_io_threads <= 0) {
         num_sink_io_threads = CpuInfo::num_cores();
@@ -369,6 +404,9 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     }
     _pipeline_sink_io_pool =
             new PriorityThreadPool("pip_sink_io", num_sink_io_threads, config::pipeline_sink_io_thread_pool_queue_size);
+
+    system(str.c_str());
+    std::cout << "LXH_6" << std::endl;
 
     int query_rpc_threads = config::internal_service_query_rpc_thread_num;
     if (query_rpc_threads <= 0) {
@@ -384,6 +422,9 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
                             .set_idle_timeout(MonoDelta::FromMilliseconds(2000))
                             .build(&_load_rpc_pool));
     REGISTER_GAUGE_STARROCKS_METRIC(load_rpc_threadpool_size, _load_rpc_pool->num_threads)
+
+    system(str.c_str());
+    std::cout << "LXH_7" << std::endl;
 
     RETURN_IF_ERROR(ThreadPoolBuilder("dictionary_cache") // thread pool for dictionary cache Sink
                             .set_min_threads(1)
@@ -481,6 +522,7 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     _stream_context_mgr = new StreamContextMgr();
     _transaction_mgr = new TransactionMgr(this);
 
+
     _routine_load_task_executor = new RoutineLoadTaskExecutor(this);
     RETURN_IF_ERROR(_routine_load_task_executor->init());
 
@@ -521,6 +563,22 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
         LOG(ERROR) << "load path mgr init failed." << status.message();
         exit(-1);
     }
+
+    ThreadPoolBuilder* builder = new ThreadPoolBuilder("test_thread");
+    builder->set_min_threads(100);
+    builder->set_max_threads(100);
+    std::unique_ptr<ThreadPool> test_pool;
+    (void) builder->build(&test_pool);
+
+    /*
+    for (int i = 0; i < 100; i++) {
+        pthread_t ttid;
+        int err = pthread_create(&ttid, nullptr, thread_test, nullptr);
+        LOG(ERROR) << "THREAD: " << err;
+    }
+    */
+
+    PriorityThreadPool* pool = new PriorityThreadPool("lxh_test", 100, 1024);
 
 #if defined(USE_STAROS) && !defined(BE_TEST)
     _lake_location_provider = new lake::StarletLocationProvider();

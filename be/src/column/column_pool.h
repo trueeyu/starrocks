@@ -255,21 +255,9 @@ public:
 
     // Reduce memory usage on behalf of column if its memory usage is greater
     // than or equal to |limit|.
-    void release_large_columns(size_t limit) {
-        LocalPool* lp = _local_pool;
-        if (lp) {
-            lp->release_large_columns(limit);
-        }
-    }
+    void release_large_columns(size_t limit) {}
 
-    void clear_columns() {
-        LocalPool* lp = _local_pool;
-        if (lp) {
-            _local_pool = nullptr;
-            butil::thread_atexit_cancel(LocalPool::delete_local_pool, lp);
-            delete lp;
-        }
-    }
+    void clear_columns() {}
 
     ColumnPoolInfo describe_column_pool() {
         ColumnPoolInfo info;
@@ -296,41 +284,10 @@ private:
     }
 
     LocalPool* _get_or_new_local_pool() {
-        LocalPool* lp = _local_pool;
-        if (LIKELY(lp != nullptr)) {
-            return lp;
-        }
-        lp = new (std::nothrow) LocalPool(this);
-        if (nullptr == lp) {
-            return nullptr;
-        }
-        std::lock_guard<std::mutex> l(_change_thread_mutex); //avoid race with clear_columns()
-        _local_pool = lp;
-        (void)butil::thread_atexit(LocalPool::delete_local_pool, lp);
-        _nlocal.fetch_add(1, std::memory_order_relaxed);
-        return lp;
+        return nullptr;
     }
 
-    void _clear_from_destructor_of_local_pool() {
-        _local_pool = nullptr;
-
-        // Do nothing if there are active threads.
-        if (_nlocal.fetch_sub(1, std::memory_order_relaxed) != 1) {
-            return;
-        }
-
-        std::lock_guard<std::mutex> l(_change_thread_mutex); // including acquire fence.
-        // Do nothing if there are active threads.
-        if (_nlocal.load(std::memory_order_relaxed) != 0) {
-            return;
-        }
-        // All threads exited and we're holding _change_thread_mutex to avoid
-        // racing with new threads calling get_column().
-
-        // Clear global free list.
-        _first_push_time = 0;
-        release_free_columns(1.0);
-    }
+    void _clear_from_destructor_of_local_pool() {}
 
     bool _push_free_block(const FreeBlock& blk) {
         auto* p = (DynamicFreeBlock*)malloc(offsetof(DynamicFreeBlock, ptrs) + sizeof(*blk.ptrs) * blk.nfree);
@@ -372,7 +329,6 @@ private:
 
     std::shared_ptr<MemTracker> _mem_tracker = nullptr;
 
-    static __thread LocalPool* _local_pool; // NOLINT
     static std::atomic<long> _nlocal;       // NOLINT
     static std::mutex _change_thread_mutex; // NOLINT
 
@@ -387,9 +343,6 @@ using ColumnPoolList =
                  ColumnPool<DoubleColumn>, ColumnPool<BinaryColumn>, ColumnPool<DateColumn>,
                  ColumnPool<TimestampColumn>, ColumnPool<DecimalColumn>, ColumnPool<Decimal32Column>,
                  ColumnPool<Decimal64Column>, ColumnPool<Decimal128Column>>;
-
-template <typename T>
-__thread typename ColumnPool<T>::LocalPool* ColumnPool<T>::_local_pool = nullptr; // NOLINT
 
 template <typename T>
 std::atomic<long> ColumnPool<T>::_nlocal = 0; // NOLINT

@@ -97,10 +97,6 @@ public:
     static const char* str();
     static const char* str(int no);
     static int no();
-
-private:
-    static const int BUF_SIZE = 256;
-    static __thread char _buf[BUF_SIZE];
 };
 
 inline bool is_io_error(const Status& status) {

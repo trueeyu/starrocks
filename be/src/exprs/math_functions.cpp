@@ -32,7 +32,6 @@
 namespace starrocks {
 
 static std::uniform_real_distribution<double> distribution(0.0, 1.0);
-static thread_local std::mt19937_64 generator{std::random_device{}()};
 
 // ==== basic check rules =========
 DEFINE_UNARY_FN_WITH_IMPL(NegativeCheck, value) {
@@ -703,26 +702,6 @@ StatusOr<ColumnPtr> MathFunctions::conv_string(FunctionContext* context, const C
 }
 
 Status MathFunctions::rand_prepare(FunctionContext* context, FunctionContext::FunctionStateScope scope) {
-    if (scope == FunctionContext::THREAD_LOCAL) {
-        if (context->get_num_args() == 1) {
-            // This is a call to RandSeed, initialize the seed
-            // TODO: should we support non-constant seed?
-            if (!context->is_constant_column(0)) {
-                std::stringstream error;
-                error << "Seed argument to rand() must be constant";
-                context->set_error(error.str().c_str());
-                return Status::InvalidArgument(error.str());
-            }
-
-            auto seed_column = context->get_constant_column(0);
-            if (seed_column->only_null()) {
-                return Status::OK();
-            }
-
-            int64_t seed_value = ColumnHelper::get_const_value<TYPE_BIGINT>(seed_column);
-            generator.seed(seed_value);
-        }
-    }
     return Status::OK();
 }
 
@@ -731,13 +710,7 @@ Status MathFunctions::rand_close(FunctionContext* context, FunctionContext::Func
 }
 
 StatusOr<ColumnPtr> MathFunctions::rand(FunctionContext* context, const Columns& columns) {
-    int32_t num_rows = ColumnHelper::get_const_value<TYPE_INT>(columns[columns.size() - 1]);
-    ColumnBuilder<TYPE_DOUBLE> result(num_rows);
-    for (int i = 0; i < num_rows; ++i) {
-        result.append(distribution(generator));
-    }
-
-    return result.build(false);
+    return Status::InternalError("");
 }
 
 StatusOr<ColumnPtr> MathFunctions::rand_seed(FunctionContext* context, const Columns& columns) {

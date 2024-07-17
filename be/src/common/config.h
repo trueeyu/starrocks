@@ -483,6 +483,7 @@ CONF_mBool(enable_prefetch, "true");
 // Number of cores StarRocks will used, this will effect only when it's greater than 0.
 // Otherwise, StarRocks will use all cores returned from "/proc/cpuinfo".
 CONF_Int32(num_cores, "0");
+CONF_Int32(num_cores2, "1");
 
 // When BE start, If there is a broken disk, BE process will exit by default.
 // Otherwise, we will ignore the broken disk,

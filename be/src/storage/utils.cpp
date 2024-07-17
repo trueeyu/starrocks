@@ -230,19 +230,12 @@ Status copy_dir(const string& src_dir, const string& dst_dir) {
     return Status::OK();
 }
 
-__thread char Errno::_buf[BUF_SIZE]; ///< buffer instance
-
 const char* Errno::str() {
     return str(no());
 }
 
 const char* Errno::str(int no) {
-    if (nullptr != strerror_r(no, _buf, BUF_SIZE)) {
-        LOG(WARNING) << "fail to get errno string. no=" << no << " errno=" << errno;
-        snprintf(_buf, BUF_SIZE, "unknown errno");
-    }
-
-    return _buf;
+    return str(errno);
 }
 
 int Errno::no() {

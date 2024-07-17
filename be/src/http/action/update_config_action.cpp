@@ -185,64 +185,17 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
         _config_callback.emplace("starlet_star_cache_mem_size_percent", [&]() { update_staros_starcache(); });
         _config_callback.emplace("starlet_star_cache_mem_size_bytes", [&]() { update_staros_starcache(); });
 #endif
-        _config_callback.emplace("transaction_apply_worker_count", [&]() {
-            int max_thread_cnt = CpuInfo::num_cores();
-            if (config::transaction_apply_worker_count > 0) {
-                max_thread_cnt = config::transaction_apply_worker_count;
-            }
-            (void)StorageEngine::instance()->update_manager()->apply_thread_pool()->update_max_threads(max_thread_cnt);
-        });
-        _config_callback.emplace("get_pindex_worker_count", [&]() {
-            int max_thread_cnt = CpuInfo::num_cores();
-            if (config::get_pindex_worker_count > 0) {
-                max_thread_cnt = config::get_pindex_worker_count;
-            }
-            (void)StorageEngine::instance()->update_manager()->get_pindex_thread_pool()->update_max_threads(
-                    max_thread_cnt);
-        });
-        _config_callback.emplace("drop_tablet_worker_count", [&]() {
-            auto thread_pool = ExecEnv::GetInstance()->agent_server()->get_thread_pool(TTaskType::DROP);
-            (void)thread_pool->update_max_threads(config::drop_tablet_worker_count);
-        });
-        _config_callback.emplace("make_snapshot_worker_count", [&]() {
-            auto thread_pool = ExecEnv::GetInstance()->agent_server()->get_thread_pool(TTaskType::MAKE_SNAPSHOT);
-            (void)thread_pool->update_max_threads(config::make_snapshot_worker_count);
-        });
-        _config_callback.emplace("release_snapshot_worker_count", [&]() {
-            auto thread_pool = ExecEnv::GetInstance()->agent_server()->get_thread_pool(TTaskType::RELEASE_SNAPSHOT);
-            (void)thread_pool->update_max_threads(config::release_snapshot_worker_count);
-        });
-        _config_callback.emplace("pipeline_connector_scan_thread_num_per_cpu", [&]() {
-            LOG(INFO) << "set pipeline_connector_scan_thread_num_per_cpu:"
-                      << config::pipeline_connector_scan_thread_num_per_cpu;
-            ExecEnv::GetInstance()->connector_scan_executor()->change_num_threads(
-                    config::pipeline_connector_scan_thread_num_per_cpu);
-        });
-        _config_callback.emplace("create_tablet_worker_count", [&]() {
-            LOG(INFO) << "set create_tablet_worker_count:" << config::create_tablet_worker_count;
-            auto thread_pool = ExecEnv::GetInstance()->agent_server()->get_thread_pool(TTaskType::CREATE);
-            (void)thread_pool->update_max_threads(config::create_tablet_worker_count);
-        });
-        _config_callback.emplace("number_tablet_writer_threads", [&]() {
-            LOG(INFO) << "set number_tablet_writer_threads:" << config::number_tablet_writer_threads;
-            bthreads::ThreadPoolExecutor* executor = static_cast<bthreads::ThreadPoolExecutor*>(
-                    StorageEngine::instance()->async_delta_writer_executor());
-            (void)executor->get_thread_pool()->update_max_threads(config::number_tablet_writer_threads);
-        });
-        _config_callback.emplace("compact_threads", [&]() {
-            auto tablet_manager = _exec_env->lake_tablet_manager();
-            if (tablet_manager != nullptr) {
-                tablet_manager->compaction_scheduler()->update_compact_threads(config::compact_threads);
-            }
-        });
+        _config_callback.emplace("transaction_apply_worker_count", [&]() {});
+        _config_callback.emplace("get_pindex_worker_count", [&]() {});
+        _config_callback.emplace("drop_tablet_worker_count", [&]() {});
+        _config_callback.emplace("make_snapshot_worker_count", [&]() {});
+        _config_callback.emplace("release_snapshot_worker_count", [&]() {});
+        _config_callback.emplace("pipeline_connector_scan_thread_num_per_cpu", [&]() {});
+        _config_callback.emplace("create_tablet_worker_count", [&]() {});
+        _config_callback.emplace("number_tablet_writer_threads", [&]() {});
+        _config_callback.emplace("compact_threads", [&]() {});
 
-        _config_callback.emplace("default_mv_resource_group_memory_limit", [&]() {
-            LOG(INFO) << "set default_mv_resource_group_memory_limit:"
-                      << config::default_mv_resource_group_memory_limit;
-            workgroup::DefaultWorkGroupInitialization default_wg_initializer;
-            auto default_mv_wg = default_wg_initializer.create_default_mv_workgroup();
-            workgroup::WorkGroupManager::instance()->add_workgroup(default_mv_wg);
-        });
+        _config_callback.emplace("default_mv_resource_group_memory_limit", [&]() {});
         _config_callback.emplace("default_mv_resource_group_cpu_limit", [&]() {
             LOG(INFO) << "set default_mv_resource_group_cpu_limit:" << config::default_mv_resource_group_cpu_limit;
             workgroup::DefaultWorkGroupInitialization default_wg_initializer;

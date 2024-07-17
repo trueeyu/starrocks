@@ -127,6 +127,7 @@ public:
 
     // Instantiate a new ThreadPool with the existing builder arguments.
     [[nodiscard]] Status build(std::unique_ptr<ThreadPool>* pool) const;
+    [[nodiscard]] Status build2(std::unique_ptr<ThreadPool>* pool) const;
 
 private:
     friend class ThreadPool;
@@ -272,6 +273,7 @@ private:
 
     // Initializes the thread pool by starting the minimum number of threads.
     Status init();
+    Status init2();
 
     // Dispatcher responsible for dequeueing and executing the tasks
     void dispatch_thread();
@@ -281,6 +283,7 @@ private:
     // REQUIRES: caller has incremented '_num_threads_pending_start' ahead of this call.
     // NOTE: For performance reasons, _lock should not be held.
     Status create_thread();
+    Status create_thread2();
 
     // Aborts if the current thread is a member of this thread pool.
     void check_not_pool_thread_unlocked();

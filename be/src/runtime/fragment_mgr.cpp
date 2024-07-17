@@ -357,18 +357,35 @@ void FragmentExecState::coordinator_callback(const Status& status, RuntimeProfil
 
 FragmentMgr::FragmentMgr(ExecEnv* exec_env)
         : _exec_env(exec_env), _stop(false), _cancel_thread([this] { cancel_worker(); }) {
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
     Thread::set_thread_name(_cancel_thread, "frag_mgr_cancel");
     REGISTER_GAUGE_STARROCKS_METRIC(plan_fragment_count, [this]() {
         std::lock_guard<std::mutex> lock(_lock);
         return _fragment_map.size();
     });
+    system(str.c_str());
+    std::cout << "LXH_3_1" << std::endl;
     // TODO(zc): we need a better thread-pool
     // now one user can use all the thread pool, others have no resource.
-    auto st = ThreadPoolBuilder("fragment_mgr")
-                      .set_min_threads(config::fragment_pool_thread_num_min)
-                      .set_max_threads(config::fragment_pool_thread_num_max)
-                      .set_max_queue_size(config::fragment_pool_queue_size)
-                      .build(&_thread_pool);
+    auto builder = ThreadPoolBuilder("fragment_mgr");
+    config::num_cores2 = 4;
+    system(str.c_str());
+    std::cout << "LXH_3_2" << std::endl;
+    builder.set_min_threads(1);
+    system(str.c_str());
+    std::cout << "LXH_3_3" << std::endl;
+    builder.set_max_threads(config::fragment_pool_thread_num_max);
+    system(str.c_str());
+    std::cout << "LXH_3_4" << std::endl;
+    builder.set_max_queue_size(config::fragment_pool_queue_size);
+    system(str.c_str());
+    std::cout << "LXH_3_5" << std::endl;
+    auto st = builder.build2(&_thread_pool);
+    system(str.c_str());
+    std::cout << "LXH_3_6" << std::endl;
+    config::num_cores2 = 1;
+
     CHECK(st.ok()) << st;
 }
 

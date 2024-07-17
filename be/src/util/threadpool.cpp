@@ -97,6 +97,20 @@ Status ThreadPoolBuilder::build(std::unique_ptr<ThreadPool>* pool) const {
     return Status::OK();
 }
 
+Status ThreadPoolBuilder::build2(std::unique_ptr<ThreadPool>* pool) const {
+    int pid = getpid();
+    string str = "cat /proc/" + std::to_string(pid) + "/status | grep -e \"VmSize\\|Threads\"";
+    system(str.c_str());
+    std::cout << "LXH_3_7" << std::endl;
+    pool->reset(new ThreadPool(*this));
+    system(str.c_str());
+    std::cout << "LXH_3_8" << std::endl;
+    RETURN_IF_ERROR((*pool)->init2());
+    system(str.c_str());
+    std::cout << "LXH_3_9" << std::endl;
+    return Status::OK();
+}
+
 ThreadPoolToken::ThreadPoolToken(ThreadPool* pool, ThreadPool::ExecutionMode mode)
         : _mode(mode), _pool(pool), _state(State::IDLE), _active_threads(0) {}
 
@@ -267,6 +281,22 @@ Status ThreadPool::init() {
     _num_threads_pending_start = _min_threads;
     for (int i = 0; i < _min_threads; i++) {
         Status status = create_thread();
+        if (!status.ok()) {
+            shutdown();
+            return status;
+        }
+    }
+    return Status::OK();
+}
+
+Status ThreadPool::init2() {
+    if (!_pool_status.is_uninitialized()) {
+        return Status::NotSupported("The thread pool is already initialized");
+    }
+    _pool_status = Status::OK();
+    _num_threads_pending_start = _min_threads;
+    for (int i = 0; i < _min_threads; i++) {
+        Status status = create_thread2();
         if (!status.ok()) {
             shutdown();
             return status;
@@ -618,6 +648,10 @@ void ThreadPool::dispatch_thread() {
 }
 
 Status ThreadPool::create_thread() {
+    return Thread::create("thread pool", _name, &ThreadPool::dispatch_thread, this, nullptr);
+}
+
+Status ThreadPool::create_thread2() {
     return Thread::create("thread pool", _name, &ThreadPool::dispatch_thread, this, nullptr);
 }
 
