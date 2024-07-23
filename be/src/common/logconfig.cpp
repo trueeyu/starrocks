@@ -124,6 +124,9 @@ static void dump_trace_info() {
 
 static void failure_writer(const char* data, int size) {
     dump_trace_info();
+    LOG(ERROR) << "FAIL_START: " << std::endl;
+    int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
+    LOG(ERROR) << "FAIL_END: " << v << std::endl;
     [[maybe_unused]] auto wt = write(STDERR_FILENO, data, size);
 }
 
