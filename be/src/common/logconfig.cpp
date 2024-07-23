@@ -122,21 +122,21 @@ static void dump_trace_info() {
     start_dump = true;
 }
 
+static std::atomic_int already_dump = false;
+
 static void failure_writer(const char* data, int size) {
     dump_trace_info();
-    LOG(ERROR) << "FAIL_START: " << std::endl;
-    int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
-    LOG(ERROR) << "FAIL_END: " << v << std::endl;
+    if (already_dump == false) {
+        LOG(ERROR) << "FAIL_START: " << std::endl;
+        int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
+        LOG(ERROR) << "FAIL_END: " << v << std::endl;
+        already_dump = true;
+    }
     [[maybe_unused]] auto wt = write(STDERR_FILENO, data, size);
 }
 
 static void failure_function() {
     dump_trace_info();
-
-    LOG(ERROR) << "FAIL_START: " << std::endl;
-    int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
-    LOG(ERROR) << "FAIL_END: " << v << std::endl;
-
     std::abort();
 }
 
