@@ -10,32 +10,15 @@ index e6fceaaf..0feeb051 100644
  void arena_cache_bin_fill_small(tsdn_t *tsdn, arena_t *arena,
      cache_bin_t *cache_bin, cache_bin_info_t *cache_bin_info, szind_t binind,
      const unsigned nfill);
-diff --git include/jemalloc/internal/ehooks.h include/jemalloc/internal/ehooks.h
-index 8d9513e2..7016e175 100644
---- include/jemalloc/internal/ehooks.h
-+++ include/jemalloc/internal/ehooks.h
-@@ -243,6 +243,11 @@ ehooks_destroy(tsdn_t *tsdn, ehooks_t *ehooks, void *addr, size_t size,
- 	}
- }
-
-+static inline void
-+ehooks_nodump(void *addr, size_t size) {
-+    madvise(addr, size, MADV_DONTDUMP);
-+}
-+
- static inline bool
- ehooks_commit(tsdn_t *tsdn, ehooks_t *ehooks, void *addr, size_t size,
-     size_t offset, size_t length) {
 diff --git include/jemalloc/internal/extent.h include/jemalloc/internal/extent.h
-index 1d51d410..37a25f7e 100644
+index 1d51d410..1e77caa4 100644
 --- include/jemalloc/internal/extent.h
 +++ include/jemalloc/internal/extent.h
-@@ -29,6 +29,8 @@ void ecache_dalloc(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
+@@ -29,6 +29,7 @@ void ecache_dalloc(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
      ecache_t *ecache, edata_t *edata);
  edata_t *ecache_evict(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
      ecache_t *ecache, size_t npages_min);
-+void
-+ecache_dontdump(tsdn_t *tsdn, ecache_t *ecache);
++void ecache_dontdump(tsdn_t *tsdn, ecache_t *ecache);
 
  void extent_gdump_add(tsdn_t *tsdn, const edata_t *edata);
  void extent_record(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache,
@@ -63,17 +46,17 @@ index 01c4e6af..c5103fec 100644
 
  #endif /* JEMALLOC_INTERNAL_PAC_H */
 diff --git include/jemalloc/internal/typed_list.h include/jemalloc/internal/typed_list.h
-index 6535055a..8d36b9ad 100644
+index 6535055a..77c019ce 100644
 --- include/jemalloc/internal/typed_list.h
 +++ include/jemalloc/internal/typed_list.h
 @@ -50,6 +50,10 @@ list_type##_empty(list_type##_t *list) {				\
  static inline void							\
  list_type##_concat(list_type##_t *list_a, list_type##_t *list_b) {	\
  	ql_concat(&list_a->head, &list_b->head, linkage);		\
-+}                                                  \
-+static inline el_type* \
-+list_type##_next(list_type##_t *list, el_type *item) {   \
-+    return ql_next(&list->head, item, linkage) ;    \
++}                                                                       \
++static inline el_type*                                                  \
++list_type##_next(list_type##_t *list, el_type *item) {                  \
++    return ql_next(&list->head, item, linkage) ;                        \
  }
 
  #endif /* JEMALLOC_INTERNAL_TYPED_LIST_H */
@@ -95,7 +78,7 @@ index 857b27c5..fba416f6 100644
  arena_destroy(tsd_t *tsd, arena_t *arena) {
  	assert(base_ind_get(arena->base) >= narenas_auto);
 diff --git src/ctl.c src/ctl.c
-index 135271ba..2728f37d 100644
+index 135271ba..cd6f8e9f 100644
 --- src/ctl.c
 +++ src/ctl.c
 @@ -162,6 +162,7 @@ CTL_PROTO(arena_i_decay)
@@ -106,44 +89,15 @@ index 135271ba..2728f37d 100644
  CTL_PROTO(arena_i_dss)
  CTL_PROTO(arena_i_oversize_threshold)
  CTL_PROTO(arena_i_dirty_decay_ms)
-@@ -493,7 +494,8 @@ static const ctl_named_node_t arena_i_node[] = {
- 	{NAME("decay"),		CTL(arena_i_decay)},
+@@ -494,6 +495,7 @@ static const ctl_named_node_t arena_i_node[] = {
  	{NAME("purge"),		CTL(arena_i_purge)},
  	{NAME("reset"),		CTL(arena_i_reset)},
--	{NAME("destroy"),	CTL(arena_i_destroy)},
-+        {NAME("destroy"),	CTL(arena_i_destroy)},
+ 	{NAME("destroy"),	CTL(arena_i_destroy)},
 +	{NAME("dontdump"),	CTL(arena_i_dontdump)},
  	{NAME("dss"),		CTL(arena_i_dss)},
  	/*
  	 * Undocumented for now, since we anticipate an arena API in flux after
-@@ -1547,7 +1549,7 @@ ctl_lookup(tsdn_t *tsdn, const ctl_named_node_t *starting_node,
-
- 	ret = 0;
- label_return:
--	return ret;
-+    return ret;
- }
-
- int
-@@ -1584,6 +1586,7 @@ label_return:
- int
- ctl_nametomib(tsd_t *tsd, const char *name, size_t *mibp, size_t *miblenp) {
- 	int ret;
-+    //malloc_printf("%s:%d: %s, search name1=%s\n", __FILE__, __LINE__, __FUNCTION__, name);
-
- 	if (!ctl_initialized && ctl_init(tsd)) {
- 		ret = EAGAIN;
-@@ -1593,7 +1596,8 @@ ctl_nametomib(tsd_t *tsd, const char *name, size_t *mibp, size_t *miblenp) {
- 	ret = ctl_lookup(tsd_tsdn(tsd), super_root_node, name, NULL, mibp,
- 	    miblenp);
- label_return:
--	return(ret);
-+    //malloc_printf("%s:%d: %s, search name2=%s\n", __FILE__, __LINE__, __FUNCTION__, name);
-+    return(ret);
- }
-
- static int
-@@ -2678,6 +2682,69 @@ arena_i_reset_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
+@@ -2678,6 +2680,67 @@ arena_i_reset_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
  	return ret;
  }
 
@@ -195,7 +149,6 @@ index 135271ba..2728f37d 100644
 +static int
 +arena_i_dontdump_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
 +    size_t *oldlenp, void *newp, size_t newlen) {
-+        malloc_printf("%s:%d: %s, start\n", __FILE__, __LINE__, __FUNCTION__);
 +
 +        int ret = 0;
 +        unsigned arena_ind;
@@ -205,7 +158,6 @@ index 135271ba..2728f37d 100644
 +        arena_i_dontdump(tsd_tsdn(tsd), arena_ind);
 +
 +label_return:
-+        malloc_printf("%s:%d: %s, end\n", __FILE__, __LINE__, __FUNCTION__);
 +        return ret;
 +}
 +
