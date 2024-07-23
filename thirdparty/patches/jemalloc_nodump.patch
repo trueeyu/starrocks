@@ -267,3 +267,4 @@ index 53e3d823..f843d5a7 100644
 +pac_dontdump_retain(tsdn_t *tsdn, pac_t *pac) {
 +    ecache_dontdump(tsdn, &pac->ecache_retained);
 +}
++
