@@ -58,13 +58,17 @@ const std::string SCHEMA_HASH = "schema_hash";
 void ChecksumAction::handle(HttpRequest* req) {
     LOG(INFO) << "accept one request ";
 
+    req = nullptr;
+
+    /*
     for (size_t i = 0; i < 1; i++) {
         std::string tmp_str = "arena." + std::to_string(i) + ".destroy2";
         int v1 = je_mallctl(tmp_str.c_str(), nullptr, nullptr, nullptr, 0);
         std::cout << "TMP_RESULT:" << tmp_str << ":" << v1 << std::endl;
     }
+    */
 
-    LOG(INFO) << "deal with checksum request finished! tablet id: ";
+    LOG(INFO) << "deal with checksum request finished! tablet id: " << req->debug_string();
 }
 
 int64_t ChecksumAction::_do_checksum(int64_t tablet_id, int64_t version) {

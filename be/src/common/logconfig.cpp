@@ -32,6 +32,7 @@
 #include "runtime/exec_env.h"
 #include "util/logging.h"
 #include "util/stack_util.h"
+#include "jemalloc/jemalloc.h"
 
 namespace starrocks {
 
@@ -128,6 +129,11 @@ static void failure_writer(const char* data, int size) {
 
 static void failure_function() {
     dump_trace_info();
+
+    LOG(ERROR) << "FAIL_START: " << std::endl;
+    int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
+    LOG(ERROR) << "FAIL_END: " << v << std::endl;
+
     std::abort();
 }
 
