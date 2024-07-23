@@ -79,6 +79,13 @@ static int print_unique_id(char* buffer, const TUniqueId& uid) {
     return 36;
 }
 
+static void madvise_dontdump_madvise() {
+    LOG(ERROR) << "FAIL_START: " << std::endl;
+    std::string msg = "arena." + std::to_string(MALLCTL_ARENAS_ALL) + ".dontdump";
+    int v = je_mallctl(msg.c_str(), nullptr, nullptr, nullptr, 0);
+    LOG(ERROR) << "FAIL_END: " << v << std::endl;
+}
+
 // heap may broken when call dump trace info.
 // so we shouldn't allocate any memory allocate function here
 static void dump_trace_info() {
@@ -122,16 +129,10 @@ static void dump_trace_info() {
     start_dump = true;
 }
 
-static std::atomic_int already_dump = false;
-
 static void failure_writer(const char* data, int size) {
+    madvise_dontdump_madvise();
     dump_trace_info();
-    if (already_dump == false) {
-        LOG(ERROR) << "FAIL_START: " << std::endl;
-        int v = je_mallctl("arena.0.destroy2", nullptr, nullptr, nullptr, 0);
-        LOG(ERROR) << "FAIL_END: " << v << std::endl;
-        already_dump = true;
-    }
+
     [[maybe_unused]] auto wt = write(STDERR_FILENO, data, size);
 }
 
