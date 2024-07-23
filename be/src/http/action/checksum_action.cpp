@@ -45,6 +45,7 @@
 #include "runtime/exec_env.h"
 #include "runtime/mem_tracker.h"
 #include "storage/task/engine_checksum_task.h"
+#include "jemalloc/jemalloc.h"
 
 namespace starrocks {
 
@@ -55,52 +56,15 @@ const std::string TABLET_VERSION = "version";
 const std::string SCHEMA_HASH = "schema_hash";
 
 void ChecksumAction::handle(HttpRequest* req) {
-    LOG(INFO) << "accept one request " << req->debug_string();
+    LOG(INFO) << "accept one request ";
 
-    // Get tablet id
-    const std::string& tablet_id_str = req->param(TABLET_ID);
-    if (tablet_id_str.empty()) {
-        std::string error_msg = std::string("parameter " + TABLET_ID + " not specified in url.");
-
-        HttpChannel::send_reply(req, HttpStatus::BAD_REQUEST, error_msg);
-        return;
+    for (size_t i = 0; i < 1; i++) {
+        std::string tmp_str = "arena." + std::to_string(i) + ".destroy2";
+        int v1 = je_mallctl(tmp_str.c_str(), nullptr, nullptr, nullptr, 0);
+        std::cout << "TMP_RESULT:" << tmp_str << ":" << v1 << std::endl;
     }
 
-    // Get version
-    const std::string& version_str = req->param(TABLET_VERSION);
-    if (version_str.empty()) {
-        std::string error_msg = std::string("parameter " + TABLET_VERSION + " not specified in url.");
-        HttpChannel::send_reply(req, HttpStatus::BAD_REQUEST, error_msg);
-        return;
-    }
-
-    // valid str format
-    int64_t tablet_id;
-    int64_t version;
-    try {
-        tablet_id = boost::lexical_cast<int64_t>(tablet_id_str);
-        version = boost::lexical_cast<int64_t>(version_str);
-    } catch (boost::bad_lexical_cast& e) {
-        std::string error_msg = std::string("param format is invalid: ") + std::string(e.what());
-        HttpChannel::send_reply(req, HttpStatus::BAD_REQUEST, error_msg);
-        return;
-    }
-
-    VLOG_ROW << "get checksum tablet info: " << tablet_id << "-" << version;
-
-    int64_t checksum = _do_checksum(tablet_id, version);
-    if (checksum == -1L) {
-        std::string error_msg = std::string("checksum failed");
-        HttpChannel::send_reply(req, HttpStatus::INTERNAL_SERVER_ERROR, error_msg);
-        return;
-    } else {
-        std::stringstream result;
-        result << checksum;
-        std::string result_str = result.str();
-        HttpChannel::send_reply(req, result_str);
-    }
-
-    LOG(INFO) << "deal with checksum request finished! tablet id: " << tablet_id;
+    LOG(INFO) << "deal with checksum request finished! tablet id: ";
 }
 
 int64_t ChecksumAction::_do_checksum(int64_t tablet_id, int64_t version) {
