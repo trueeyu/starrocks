@@ -1,0 +1,248 @@
+diff --git include/jemalloc/internal/arena_externs.h include/jemalloc/internal/arena_externs.h
+index e6fceaaf..a8dd9fac 100644
+--- include/jemalloc/internal/arena_externs.h
++++ include/jemalloc/internal/arena_externs.h
+@@ -60,6 +60,7 @@ uint64_t arena_time_until_deferred(tsdn_t *tsdn, arena_t *arena);
+ void arena_do_deferred_work(tsdn_t *tsdn, arena_t *arena);
+ void arena_reset(tsd_t *tsd, arena_t *arena);
+ void arena_destroy(tsd_t *tsd, arena_t *arena);
++void arena_nodump(tsd_t *tsd, arena_t *arena);
+ void arena_cache_bin_fill_small(tsdn_t *tsdn, arena_t *arena,
+     cache_bin_t *cache_bin, cache_bin_info_t *cache_bin_info, szind_t binind,
+     const unsigned nfill);
+diff --git include/jemalloc/internal/ehooks.h include/jemalloc/internal/ehooks.h
+index 8d9513e2..c7ef70df 100644
+--- include/jemalloc/internal/ehooks.h
++++ include/jemalloc/internal/ehooks.h
+@@ -243,6 +243,13 @@ ehooks_destroy(tsdn_t *tsdn, ehooks_t *ehooks, void *addr, size_t size,
+ 	}
+ }
+
++static inline void
++ehooks_nodump(void *addr, size_t size) {
++    madvise(addr, size, MADV_DONTDUMP);
++    //malloc_printf("%s:%d: %s, add=%p, size=%ld, ret=%d, step 8\n",
++    //  __FILE__, __LINE__, __FUNCTION__, addr, size, ret);
++}
++
+ static inline bool
+ ehooks_commit(tsdn_t *tsdn, ehooks_t *ehooks, void *addr, size_t size,
+     size_t offset, size_t length) {
+diff --git include/jemalloc/internal/extent.h include/jemalloc/internal/extent.h
+index 1d51d410..bb5a3972 100644
+--- include/jemalloc/internal/extent.h
++++ include/jemalloc/internal/extent.h
+@@ -29,6 +29,8 @@ void ecache_dalloc(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
+     ecache_t *ecache, edata_t *edata);
+ edata_t *ecache_evict(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
+     ecache_t *ecache, size_t npages_min);
++void
++ecache_nodump(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache);
+
+ void extent_gdump_add(tsdn_t *tsdn, const edata_t *edata);
+ void extent_record(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache,
+diff --git include/jemalloc/internal/pa.h include/jemalloc/internal/pa.h
+index 4748a05b..1871baff 100644
+--- include/jemalloc/internal/pa.h
++++ include/jemalloc/internal/pa.h
+@@ -164,6 +164,7 @@ void pa_shard_reset(tsdn_t *tsdn, pa_shard_t *shard);
+  * last step in destroying the shard.
+  */
+ void pa_shard_destroy(tsdn_t *tsdn, pa_shard_t *shard);
++void pa_shard_nodump(tsdn_t *tsdn, pa_shard_t *shard);
+
+ /* Gets an edata for the given allocation. */
+ edata_t *pa_alloc(tsdn_t *tsdn, pa_shard_t *shard, size_t size,
+diff --git include/jemalloc/internal/pac.h include/jemalloc/internal/pac.h
+index 01c4e6af..44abd7e1 100644
+--- include/jemalloc/internal/pac.h
++++ include/jemalloc/internal/pac.h
+@@ -175,5 +175,6 @@ ssize_t pac_decay_ms_get(pac_t *pac, extent_state_t state);
+
+ void pac_reset(tsdn_t *tsdn, pac_t *pac);
+ void pac_destroy(tsdn_t *tsdn, pac_t *pac);
++void pac_nodump(tsdn_t *tsdn, pac_t *pac);
+
+ #endif /* JEMALLOC_INTERNAL_PAC_H */
+diff --git include/jemalloc/internal/typed_list.h include/jemalloc/internal/typed_list.h
+index 6535055a..8d36b9ad 100644
+--- include/jemalloc/internal/typed_list.h
++++ include/jemalloc/internal/typed_list.h
+@@ -50,6 +50,10 @@ list_type##_empty(list_type##_t *list) {				\
+ static inline void							\
+ list_type##_concat(list_type##_t *list_a, list_type##_t *list_b) {	\
+ 	ql_concat(&list_a->head, &list_b->head, linkage);		\
++}                                                  \
++static inline el_type* \
++list_type##_next(list_type##_t *list, el_type *item) {   \
++    return ql_next(&list->head, item, linkage) ;    \
+ }
+
+ #endif /* JEMALLOC_INTERNAL_TYPED_LIST_H */
+diff --git src/arena.c src/arena.c
+index 857b27c5..267a21df 100644
+--- src/arena.c
++++ src/arena.c
+@@ -792,6 +792,12 @@ arena_prepare_base_deletion(tsd_t *tsd, base_t *base_to_destroy) {
+ }
+ #undef ARENA_DESTROY_MAX_DELAYED_MTX
+
++void
++arena_nodump(tsd_t *tsd, arena_t *arena)  {
++    malloc_printf("%s:%d: %s, step 2\n", __FILE__, __LINE__, __FUNCTION__);
++    pa_shard_nodump(tsd_tsdn(tsd), &arena->pa_shard);
++}
++
+ void
+ arena_destroy(tsd_t *tsd, arena_t *arena) {
+ 	assert(base_ind_get(arena->base) >= narenas_auto);
+diff --git src/ctl.c src/ctl.c
+index 135271ba..2b52a6a5 100644
+--- src/ctl.c
++++ src/ctl.c
+@@ -162,6 +162,7 @@ CTL_PROTO(arena_i_decay)
+ CTL_PROTO(arena_i_purge)
+ CTL_PROTO(arena_i_reset)
+ CTL_PROTO(arena_i_destroy)
++CTL_PROTO(arena_i_destroy2)
+ CTL_PROTO(arena_i_dss)
+ CTL_PROTO(arena_i_oversize_threshold)
+ CTL_PROTO(arena_i_dirty_decay_ms)
+@@ -493,7 +494,8 @@ static const ctl_named_node_t arena_i_node[] = {
+ 	{NAME("decay"),		CTL(arena_i_decay)},
+ 	{NAME("purge"),		CTL(arena_i_purge)},
+ 	{NAME("reset"),		CTL(arena_i_reset)},
+-	{NAME("destroy"),	CTL(arena_i_destroy)},
++        {NAME("destroy"),	CTL(arena_i_destroy)},
++	{NAME("destroy2"),	CTL(arena_i_destroy2)},
+ 	{NAME("dss"),		CTL(arena_i_dss)},
+ 	/*
+ 	 * Undocumented for now, since we anticipate an arena API in flux after
+@@ -1547,7 +1549,7 @@ ctl_lookup(tsdn_t *tsdn, const ctl_named_node_t *starting_node,
+
+ 	ret = 0;
+ label_return:
+-	return ret;
++    return ret;
+ }
+
+ int
+@@ -1584,6 +1586,7 @@ label_return:
+ int
+ ctl_nametomib(tsd_t *tsd, const char *name, size_t *mibp, size_t *miblenp) {
+ 	int ret;
++    //malloc_printf("%s:%d: %s, search name1=%s\n", __FILE__, __LINE__, __FUNCTION__, name);
+
+ 	if (!ctl_initialized && ctl_init(tsd)) {
+ 		ret = EAGAIN;
+@@ -1593,7 +1596,8 @@ ctl_nametomib(tsd_t *tsd, const char *name, size_t *mibp, size_t *miblenp) {
+ 	ret = ctl_lookup(tsd_tsdn(tsd), super_root_node, name, NULL, mibp,
+ 	    miblenp);
+ label_return:
+-	return(ret);
++    //malloc_printf("%s:%d: %s, search name2=%s\n", __FILE__, __LINE__, __FUNCTION__, name);
++    return(ret);
+ }
+
+ static int
+@@ -2678,6 +2682,30 @@ arena_i_reset_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
+ 	return ret;
+ }
+
++static int
++arena_i_destroy2_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
++                    size_t *oldlenp, void *newp, size_t newlen) {
++    malloc_printf("%s:%d: %s, step 1\n", __FILE__, __LINE__, __FUNCTION__);
++
++    malloc_mutex_lock(tsd_tsdn(tsd), &ctl_mtx);
++
++    unsigned narenas = ctl_arenas->narenas;
++
++    for (unsigned i = 0; i < narenas; i++) {
++        malloc_printf("%s:%d: %s, %i\n", __FILE__, __LINE__, __FUNCTION__, i);
++
++        arena_t *arena = arena_get(tsd_tsdn(tsd), i, false);
++        if (arena != NULL) {
++            arena_nodump(tsd, arena);
++        }
++    }
++
++    malloc_mutex_unlock(tsd_tsdn(tsd), &ctl_mtx);
++
++    return 0;
++}
++
++
+ static int
+ arena_i_destroy_ctl(tsd_t *tsd, const size_t *mib, size_t miblen, void *oldp,
+     size_t *oldlenp, void *newp, size_t newlen) {
+diff --git src/extent.c src/extent.c
+index cf3d1f31..80b2cea0 100644
+--- src/extent.c
++++ src/extent.c
+@@ -147,6 +147,34 @@ ecache_dalloc(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache,
+ 	extent_record(tsdn, pac, ehooks, ecache, edata);
+ }
+
++void
++extent_nodump(edata_t *edata)  {
++    //malloc_printf("%s:%d: %s, step 7\n", __FILE__, __LINE__, __FUNCTION__);
++    ehooks_nodump(edata_base_get(edata), edata_size_get(edata));
++}
++
++void
++ecache_nodump(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks, ecache_t *ecache) {
++  //malloc_printf("%s:%d: %s, step 5\n", __FILE__, __LINE__, __FUNCTION__);
++  malloc_mutex_lock(tsdn, &ecache->mtx);
++
++  eset_t *eset = &ecache->eset;
++  edata_t *edata = edata_list_inactive_first(&eset->lru);
++
++  //size_t n = eset_npages_get(&ecache->eset);
++  //malloc_printf("%s:%d: %s, size=%d, step 6\n", __FILE__, __LINE__, __FUNCTION__, n);
++  //edata_t* tmp_ptr = eset->lru.head.qlh_first->ql_link_inactive.qre_next;
++  //  for (size_t i = 0; i < 10; i++) {
++  //    malloc_printf("%s:%d: %s, ptr=%p\n", __FILE__, __LINE__, __FUNCTION__, tmp_ptr);
++  //    tmp_ptr = tmp_ptr->ql_link_inactive.qre_next;
++  //}
++
++  while (edata != NULL) {
++        extent_nodump(edata);
++        edata = edata_list_inactive_next(&eset->lru, edata);
++  }
++}
++
+ edata_t *
+ ecache_evict(tsdn_t *tsdn, pac_t *pac, ehooks_t *ehooks,
+     ecache_t *ecache, size_t npages_min) {
+diff --git src/pa.c src/pa.c
+index eb7e4620..8ed10693 100644
+--- src/pa.c
++++ src/pa.c
+@@ -112,6 +112,11 @@ pa_shard_destroy(tsdn_t *tsdn, pa_shard_t *shard) {
+ 	}
+ }
+
++void pa_shard_nodump(tsdn_t *tsdn, pa_shard_t *shard) {
++    //malloc_printf("%s:%d: %s, step 3\n", __FILE__, __LINE__, __FUNCTION__);
++    pac_nodump(tsdn, &shard->pac);
++}
++
+ static pai_t *
+ pa_get_pai(pa_shard_t *shard, edata_t *edata) {
+ 	return (edata_pai_get(edata) == EXTENT_PAI_PAC
+diff --git src/pac.c src/pac.c
+index 53e3d823..2ef5d65a 100644
+--- src/pac.c
++++ src/pac.c
+@@ -585,3 +585,10 @@ pac_destroy(tsdn_t *tsdn, pac_t *pac) {
+ 		extent_destroy_wrapper(tsdn, pac, ehooks, edata);
+ 	}
+ }
++
++void
++pac_nodump(tsdn_t *tsdn, pac_t *pac) {
++//    malloc_printf("%s:%d: %s, step 4\n", __FILE__, __LINE__, __FUNCTION__);
++    ehooks_t *ehooks = pac_ehooks_get(pac);
++    ecache_nodump(tsdn, pac, ehooks, &pac->ecache_retained);
++}
