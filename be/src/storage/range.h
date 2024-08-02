@@ -210,10 +210,6 @@ public:
 
     void split_and_revese(size_t expected_range_cnt, size_t chunk_size);
 
-    // reverse inner-range
-    // if a SparseRange call this function. then the range won't be a normalized range.
-    void reverse();
-
     bool is_sorted() const { return _is_sorted; }
     void set_sorted(bool normalized) { _is_sorted = normalized; }
 
