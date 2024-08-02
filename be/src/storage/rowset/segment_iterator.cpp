@@ -483,7 +483,7 @@ Status SegmentIterator::_try_to_update_ranges_by_runtime_filter() {
                                                                                    CompoundNodeType::AND));
                 size_t prev_size = _scan_range.span_size();
                 SparseRange<> res;
-                res.set_sorted(_scan_range.is_sorted());
+                res.set_is_asc(_scan_range.is_asc());
                 _range_iter = _range_iter.intersection(r, &res);
                 std::swap(res, _scan_range);
                 _range_iter.set_range(&_scan_range);

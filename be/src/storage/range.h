@@ -29,7 +29,7 @@ namespace starrocks {
 
 // Range represent a logical contiguous range of a segment file.
 // Range contains a inclusive start row number and an exclusive end row number.
-template <typename T = starrocks::rowid_t>
+template <typename T = rowid_t>
 class Range {
     using rowid_t = T;
 
@@ -124,7 +124,7 @@ template <typename T>
 class SparseRange;
 
 // SparseRangeIterator used to travel a SparseRange.
-template <typename T = starrocks::rowid_t>
+template <typename T = rowid_t>
 class SparseRangeIterator {
     using rowid_t = T;
 
@@ -165,7 +165,7 @@ private:
 
 // SparseRange represent a set of non-intersected contiguous ranges, or, in other words, represent
 // a single non-contiguous range.
-template <typename T = starrocks::rowid_t>
+template <typename T = rowid_t>
 class SparseRange {
     using rowid_t = T;
 
@@ -210,8 +210,8 @@ public:
 
     void split_and_revese(size_t expected_range_cnt, size_t chunk_size);
 
-    bool is_sorted() const { return _is_sorted; }
-    void set_sorted(bool normalized) { _is_sorted = normalized; }
+    bool is_asc() const { return _is_asc; }
+    void set_is_asc(bool is_asc) { _is_asc = is_asc; }
 
     bool operator==(const SparseRange<T>& rhs) const;
     bool operator!=(const SparseRange<T>& rhs) const;
@@ -238,7 +238,7 @@ private:
     void _add_uncheck(const Range<T>& r);
 
     std::vector<Range<T>> _ranges;
-    bool _is_sorted = true;
+    bool _is_asc = true; // asc or desc
 };
 using SparseRangePtr = std::shared_ptr<SparseRange<>>;
 
@@ -362,10 +362,10 @@ inline void SparseRange<T>::split_and_revese(size_t expected_range_cnt, size_t c
             new_ranges.emplace_back(range);
         }
         std::swap(_ranges, new_ranges);
-        _is_sorted = false;
+        _is_asc = false;
     }
     std::reverse(_ranges.begin(), _ranges.end());
-    _is_sorted = false;
+    _is_asc = false;
 }
 
 template <typename T>
@@ -424,7 +424,7 @@ inline void SparseRangeIterator<T>::next_range(SparseRangeIterator<T>::rowid_t s
         Range r = next(size);
         range->add(r);
         size -= r.span_size();
-        if (!_range->is_sorted()) {
+        if (!_range->is_asc()) {
             break;
         }
     }
@@ -439,10 +439,10 @@ inline SparseRangeIterator<T> SparseRangeIterator<T>::intersection(const SparseR
         return SparseRangeIterator<T>(result);
     }
 
-    bool is_sorted = _range->is_sorted();
+    bool is_asc = _range->is_asc();
     auto ranges = std::vector<Range<T>>(_range->_ranges.begin() + _index, _range->_ranges.end());
     ranges[0] = Range<T>(_next_rowid, ranges[0].end());
-    if (!is_sorted) {
+    if (!is_asc) {
         std::reverse(ranges.begin(), ranges.end());
     }
     DCHECK(std::is_sorted(ranges.begin(), ranges.end(),
@@ -461,7 +461,7 @@ inline SparseRangeIterator<T> SparseRangeIterator<T>::intersection(const SparseR
     }
     DCHECK(std::is_sorted(result->_ranges.begin(), result->_ranges.end(),
                           [](const auto& l, const auto& r) { return l.begin() < r.begin(); }));
-    if (!is_sorted) {
+    if (!is_asc) {
         std::reverse(result->_ranges.begin(), result->_ranges.end());
     }
 
