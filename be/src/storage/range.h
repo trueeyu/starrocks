@@ -65,6 +65,8 @@ public:
 
     void set_begin(T v) { _begin = v; }
 
+    void set_end(T v) { _end = v; }
+
 private:
     T _begin{0};
     T _end{0};
@@ -219,10 +221,10 @@ public:
 
     SparseRange& operator|=(const SparseRange& rhs);
 
+    void add_uncheck(const Range<T>& r);
+
 private:
     friend class SparseRangeIterator<T>;
-
-    void _add_uncheck(const Range<T>& r);
 
     std::vector<Range<T>> _ranges;
     bool _is_sorted = true;
@@ -230,7 +232,7 @@ private:
 using SparseRangePtr = std::shared_ptr<SparseRange<>>;
 
 template <typename T>
-inline void SparseRange<T>::_add_uncheck(const Range<T>& r) {
+inline void SparseRange<T>::add_uncheck(const Range<T>& r) {
     if (!r.empty()) {
         _ranges.emplace_back(r);
     }
@@ -317,7 +319,7 @@ inline SparseRange<T> SparseRange<T>::intersection(const SparseRange<T>& rhs) co
     for (const auto& r1 : _ranges) {
         for (const auto& r2 : rhs._ranges) {
             if (r1.has_intersection(r2)) {
-                result._add_uncheck(r1.intersection(r2));
+                result.add_uncheck(r1.intersection(r2));
             }
         }
     }
@@ -340,14 +342,14 @@ SparseRange<T> SparseRange<T>::remove_for_sorted_range(const SparseRange<T>& rhs
             auto r_range = rhs._ranges[j];
 
             if (l_range.end() <= r_range.begin()) {
-                res._add_uncheck(Range<T>(l_range.begin(), l_range.end()));
+                res.add_uncheck(Range<T>(l_range.begin(), l_range.end()));
                 next_l = true;
                 break;
             } else if (l_range.begin() >= r_range.end()) {
                 j++;
                 continue;
             } else if (l_range.begin() < r_range.begin()) {
-                res._add_uncheck(Range<T>(l_range.begin(), r_range.begin()));
+                res.add_uncheck(Range<T>(l_range.begin(), r_range.begin()));
                 if (l_range.end() < r_range.end()) {
                     next_l = true;
                     break;
@@ -379,7 +381,7 @@ SparseRange<T> SparseRange<T>::remove_for_sorted_range(const SparseRange<T>& rhs
         if (next_l) {
             i++;
         } else if (j == rhs._ranges.size()) {
-            res._add_uncheck(Range<T>(l_range.begin(), l_range.end()));
+            res.add_uncheck(Range<T>(l_range.begin(), l_range.end()));
             i++;
             break;
         } else {
@@ -389,7 +391,7 @@ SparseRange<T> SparseRange<T>::remove_for_sorted_range(const SparseRange<T>& rhs
 
     for (; i < _ranges.size(); i++) {
         auto l_range = _ranges[i];
-        res._add_uncheck(Range<T>(l_range.begin(), l_range.end()));
+        res.add_uncheck(Range<T>(l_range.begin(), l_range.end()));
     }
 
     return res;
@@ -507,7 +509,7 @@ inline SparseRangeIterator<T> SparseRangeIterator<T>::intersection(const SparseR
                 break;
             }
             if (r1.has_intersection(r2)) {
-                result->_add_uncheck(r1.intersection(r2));
+                result->add_uncheck(r1.intersection(r2));
             }
         }
     }

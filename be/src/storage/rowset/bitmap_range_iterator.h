@@ -36,6 +36,8 @@
 
 #include "roaring/roaring.hh"
 
+#include <iostream>
+
 namespace starrocks {
 using Roaring = roaring::Roaring;
 
@@ -59,9 +61,7 @@ public:
 
     ~BitmapRangeIterator() = default;
 
-    bool has_more_range() const { return !_eof; }
-
-    bool next_range(uint32_t max_range_size, uint32_t end, uint32_t* from, uint32_t* to) {
+    bool next_range(uint32_t end, uint32_t* from, uint32_t* to) {
         if (_eof) {
             return false;
         }
@@ -71,33 +71,32 @@ public:
         } else {
             *from = _buf[_buf_pos];
         }
-        return _next_range(max_range_size, from, to);
+        return _next_range(to);
     }
 
     // read next range into [*from, *to) whose size <= max_range_size.
     // return false when there is no more range.
-    bool next_range(uint32_t max_range_size, uint32_t* from, uint32_t* to) {
+    bool next_range(uint32_t* from, uint32_t* to) {
         if (_eof) {
             return false;
         }
         *from = _buf[_buf_pos];
-        return _next_range(max_range_size, from, to);
+        return _next_range(to);
     }
 
 private:
     // read next range into [*from, *to) whose size <= max_range_size.
     // return false when there is no more range.
-    bool _next_range(uint32_t max_range_size, uint32_t* from, uint32_t* to) {
-        uint32_t range_size = 0;
+    bool _next_range(uint32_t* to) {
+        _last_val = _buf[_buf_pos];
         do {
-            _last_val = _buf[_buf_pos];
             _buf_pos++;
-            range_size++;
+            _last_val++;
             if (_buf_pos == _buf_size) { // read next batch
                 _read_next_batch();
             }
-        } while (range_size < max_range_size && !_eof && _buf[_buf_pos] == _last_val + 1);
-        *to = *from + range_size;
+        } while (!_eof && _buf[_buf_pos] == _last_val);
+        *to = _last_val;
         return true;
     }
 
