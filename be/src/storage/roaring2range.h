@@ -32,9 +32,8 @@ static inline SparseRange<> roaring2range(const Roaring& roaring) {
 
 static inline Roaring range2roaring(const SparseRange<>& range) {
     Roaring roaring;
-    for (SparseRangeIterator<> iter = range.new_iterator(); iter.has_more(); /**/) {
-        Range<> r = iter.next(1000000);
-        roaring.addRange(r.begin(), r.end());
+    for (size_t i = 0; i < range.size(); i++) {
+        roaring.addRange(range[i].begin(), range[i].end());
     }
     return roaring;
 }
