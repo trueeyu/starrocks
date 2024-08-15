@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+<<<<<<< HEAD:be/src/runtime/int128_to_double.h
 namespace starrocks {
 extern "C" {
 // origin from llvm-project
@@ -20,3 +21,19 @@ double __wrap___floattidf(__int128 a);
 double __real___floattidf(__int128 a);
 }
 } // namespace starrocks
+=======
+
+#pragma once
+
+#include "cache/block_cache/kv_cache.h"
+#include "gen_cpp/DataCache_types.h"
+
+namespace starrocks {
+
+class DataCacheUtils {
+public:
+    static void set_metrics_from_thrift(TDataCacheMetrics& t_metrics, const DataCacheMetrics& metrics);
+};
+
+} // namespace starrocks
+>>>>>>> f9b711a722... Unify page cache to starcache instance.:be/src/cache/block_cache/datacache_utils.h

@@ -51,6 +51,13 @@ METRIC_DEFINE_UINT_GAUGE(page_cache_capacity, MetricUnit::BYTES);
 
 StoragePageCache* StoragePageCache::_s_instance = nullptr;
 
+void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t capacity) {
+    if (_s_instance == nullptr) {
+        _s_instance = new StoragePageCache(mem_tracker, capacity, ObjectCache::instance());
+        init_metrics();
+    }
+}
+
 static void init_metrics() {
     StarRocksMetrics::instance()->metrics()->register_metric("page_cache_lookup_count", &page_cache_lookup_count);
     StarRocksMetrics::instance()->metrics()->register_hook("page_cache_lookup_count", []() {
@@ -68,22 +75,11 @@ static void init_metrics() {
     });
 }
 
-void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t capacity) {
-    if (_s_instance == nullptr) {
-        _s_instance = new StoragePageCache(mem_tracker, capacity);
-        init_metrics();
+StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity, ObjectCache* obj_cache)
+        : _mem_tracker(mem_tracker), _cache(obj_cache) {
+    if (_cache->capacity() < capacity) {
+        (void)_cache->set_capacity(capacity);
     }
-}
-
-void StoragePageCache::release_global_cache() {
-    if (_s_instance != nullptr) {
-        delete _s_instance;
-        _s_instance = nullptr;
-    }
-}
-
-void StoragePageCache::prune() {
-    _cache->prune();
 }
 
 StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity)
@@ -93,32 +89,44 @@ StoragePageCache::~StoragePageCache() = default;
 
 void StoragePageCache::set_capacity(size_t capacity) {
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
-    _cache->set_capacity(capacity);
+    Status st = _cache->set_capacity(capacity);
+    LOG_IF(INFO, !st.ok()) << "fail to set cache capaicty to " << capacity << ", reason: " << st.message();
 }
 
 size_t StoragePageCache::get_capacity() {
-    return _cache->get_capacity();
+    return _cache->capacity();
 }
 
 uint64_t StoragePageCache::get_lookup_count() {
-    return _cache->get_lookup_count();
+    return _cache->lookup_count();
 }
 
 uint64_t StoragePageCache::get_hit_count() {
-    return _cache->get_hit_count();
+    return _cache->hit_count();
 }
 
 bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
+<<<<<<< HEAD
     return _cache->adjust_capacity(delta, min_capacity);
+=======
+#endif
+    Status st = _cache->adjust_capacity(delta, min_capacity);
+    if (!st.ok()) {
+        LOG_IF(INFO, !st.ok()) << "fail to adjust cache capaicty, delta: " << delta << ", reason: " << st.message();
+        return false;
+    }
+    return true;
+>>>>>>> f9b711a722... Unify page cache to starcache instance.
 }
 
 bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
-    auto* lru_handle = _cache->lookup(key.encode());
-    if (lru_handle == nullptr) {
+    ObjectCacheHandle* obj_handle = nullptr;
+    Status st = _cache->lookup(key.encode(), &obj_handle);
+    if (!st.ok()) {
         return false;
     }
-    *handle = PageCacheHandle(_cache.get(), lru_handle);
+    *handle = PageCacheHandle(_cache, obj_handle);
     return true;
 }
 
@@ -134,14 +142,18 @@ void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheH
 
     auto deleter = [](const starrocks::CacheKey& key, void* value) { delete[](uint8_t*) value; };
 
-    CachePriority priority = CachePriority::NORMAL;
-    if (in_memory) {
-        priority = CachePriority::DURABLE;
-    }
+    ObjectCacheWriteOptions options;
+    options.priority = in_memory ? 1 : 0;
+    ObjectCacheHandle* obj_handle = nullptr;
+    Status st = _cache->insert(key.encode(), data.data, data.size, mem_size, deleter, &obj_handle, &options);
     // Use mem size managed by memory allocator as this record charge size. At the same time, we should record this record size
     // for data fetching when lookup.
+<<<<<<< HEAD
     auto* lru_handle = _cache->insert(key.encode(), data.data, data.size, mem_size, deleter, priority);
     *handle = PageCacheHandle(_cache.get(), lru_handle);
+=======
+    *handle = PageCacheHandle(_cache, obj_handle);
+>>>>>>> f9b711a722... Unify page cache to starcache instance.
 }
 
 } // namespace starrocks

@@ -156,6 +156,7 @@ public:
     MemTracker* jemalloc_metadata_traker() { return _jemalloc_metadata_tracker.get(); }
     std::vector<std::shared_ptr<MemTracker>>& mem_trackers() { return _mem_trackers; }
 
+    void init_storage_page_cache();
     int64_t get_storage_page_cache_size();
     int64_t check_storage_page_cache_size(int64_t storage_cache_limit);
     static int64_t calc_max_query_memory(int64_t process_mem_limit, int64_t percent);
@@ -166,7 +167,6 @@ private:
     Status _init_mem_tracker();
     void _reset_tracker();
 
-    void _init_storage_page_cache();
 
     template <class... Args>
     std::shared_ptr<MemTracker> regist_tracker(Args&&... args);

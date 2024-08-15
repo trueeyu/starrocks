@@ -180,6 +180,10 @@ const DataCacheMetrics BlockCache::cache_metrics(int level) const {
     return _kv_cache->cache_metrics(level);
 }
 
+std::shared_ptr<starcache::StarCache> BlockCache::starcache_instance() {
+    return _kv_cache->starcache_instance();
+}
+
 Status BlockCache::shutdown() {
     if (!_initialized.load(std::memory_order_relaxed)) {
         return Status::OK();

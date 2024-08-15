@@ -11,6 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+namespace starrocks {
+extern "C" {
+// origin from llvm-project
+// https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/builtins/int_to_fp_impl.inc
+// this implementation is 20x faster than gcc
+double __wrap___floattidf(__int128 a);
+double __real___floattidf(__int128 a);
+}
+} // namespace starrocks
 
 #pragma once
 
