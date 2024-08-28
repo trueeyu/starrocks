@@ -241,25 +241,6 @@ ObjectPool* RuntimeState::global_obj_pool() const {
     return _query_ctx->object_pool();
 }
 
-bool RuntimeState::log_error(std::string_view error) {
-    std::lock_guard<std::mutex> l(_error_log_lock);
-
-    if (_error_log.size() < _query_options.max_errors) {
-        _error_log.emplace_back(error);
-        return true;
-    }
-
-    return false;
-}
-
-void RuntimeState::log_error(const Status& status) {
-    if (status.ok()) {
-        return;
-    }
-
-    log_error(status);
-}
-
 bool RuntimeState::use_page_cache() {
     if (config::disable_storage_page_cache) {
         return false;
@@ -305,7 +286,6 @@ Status RuntimeState::set_mem_limit_exceeded(MemTracker* tracker, int64_t failed_
            << PrettyPrinter::print(failed_allocation_size, TUnit::BYTES) << " without exceeding limit." << std::endl;
     }
 
-    log_error(ss.str());
     DCHECK(_process_status.is_mem_limit_exceeded());
     return _process_status;
 }

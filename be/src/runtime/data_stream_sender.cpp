@@ -341,9 +341,7 @@ Status DataStreamSender::Channel::close_internal() {
     return Status::OK();
 }
 
-void DataStreamSender::Channel::close(RuntimeState* state) {
-    state->log_error(close_internal().message());
-}
+void DataStreamSender::Channel::close(RuntimeState* state) {}
 
 void DataStreamSender::Channel::close_wait(RuntimeState* state) {
     if (_need_close) {

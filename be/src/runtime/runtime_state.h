@@ -138,7 +138,6 @@ public:
     const std::string& timezone() const { return _timezone; }
     const cctz::time_zone& timezone_obj() const { return _timezone_obj; }
     const std::string& user() const { return _user; }
-    const std::vector<std::string>& error_log() const { return _error_log; }
     const std::string& last_query_id() const { return _last_query_id; }
     const TUniqueId& query_id() const { return _query_id; }
     const TUniqueId& fragment_instance_id() const { return _fragment_instance_id; }
@@ -170,12 +169,6 @@ public:
         std::lock_guard<std::mutex> l(_process_status_lock);
         return _process_status;
     };
-
-    // Appends error to the _error_log if there is space
-    bool log_error(std::string_view error);
-
-    // If !status.ok(), appends the error to the _error_log
-    void log_error(const Status& status);
 
     bool is_cancelled() const { return _is_cancelled.load(std::memory_order_acquire); }
     void set_is_cancelled(bool v) { _is_cancelled.store(v, std::memory_order_release); }

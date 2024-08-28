@@ -196,9 +196,7 @@ bool FunctionContext::add_warning(const char* warning_msg) {
     std::stringstream ss;
     ss << "UDF WARNING: " << warning_msg;
 
-    if (_state != nullptr) {
-        return _state->log_error(ss.str());
-    } else {
+    if (_state == nullptr) {
         std::cerr << ss.str() << std::endl;
         return true;
     }
