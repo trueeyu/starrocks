@@ -241,11 +241,6 @@ ObjectPool* RuntimeState::global_obj_pool() const {
     return _query_ctx->object_pool();
 }
 
-std::string RuntimeState::error_log() {
-    std::lock_guard<std::mutex> l(_error_log_lock);
-    return boost::algorithm::join(_error_log, "\n");
-}
-
 bool RuntimeState::log_error(std::string_view error) {
     std::lock_guard<std::mutex> l(_error_log_lock);
 
@@ -263,15 +258,6 @@ void RuntimeState::log_error(const Status& status) {
     }
 
     log_error(status);
-}
-
-void RuntimeState::get_unreported_errors(std::vector<std::string>* new_errors) {
-    std::lock_guard<std::mutex> l(_error_log_lock);
-
-    if (_unreported_error_idx < _error_log.size()) {
-        new_errors->assign(_error_log.begin() + _unreported_error_idx, _error_log.end());
-        _unreported_error_idx = _error_log.size();
-    }
 }
 
 bool RuntimeState::use_page_cache() {

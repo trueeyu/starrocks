@@ -177,19 +177,6 @@ public:
     // If !status.ok(), appends the error to the _error_log
     void log_error(const Status& status);
 
-    // Returns true if the error log has not reached _max_errors.
-    bool log_has_space() {
-        std::lock_guard<std::mutex> l(_error_log_lock);
-        return _error_log.size() < _query_options.max_errors;
-    }
-
-    // Returns the error log lines as a string joined with '\n'.
-    std::string error_log();
-
-    // Append all _error_log[_unreported_error_idx+] to new_errors and set
-    // _unreported_error_idx to _errors_log.size()
-    void get_unreported_errors(std::vector<std::string>* new_errors);
-
     bool is_cancelled() const { return _is_cancelled.load(std::memory_order_acquire); }
     void set_is_cancelled(bool v) { _is_cancelled.store(v, std::memory_order_release); }
 
