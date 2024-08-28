@@ -67,8 +67,7 @@ namespace starrocks {
 // for ut only
 RuntimeState::RuntimeState(const TUniqueId& fragment_instance_id, const TQueryOptions& query_options,
                            const TQueryGlobals& query_globals, ExecEnv* exec_env)
-        : _unreported_error_idx(0),
-          _obj_pool(new ObjectPool()),
+        : _obj_pool(new ObjectPool()),
           _is_cancelled(false),
           _per_fragment_instance_idx(0),
           _num_rows_load_total_from_source(0),
@@ -85,8 +84,7 @@ RuntimeState::RuntimeState(const TUniqueId& fragment_instance_id, const TQueryOp
 
 RuntimeState::RuntimeState(const TUniqueId& query_id, const TUniqueId& fragment_instance_id,
                            const TQueryOptions& query_options, const TQueryGlobals& query_globals, ExecEnv* exec_env)
-        : _unreported_error_idx(0),
-          _query_id(query_id),
+        : _query_id(query_id),
           _obj_pool(new ObjectPool()),
           _per_fragment_instance_idx(0),
           _num_rows_load_total_from_source(0),
@@ -102,7 +100,7 @@ RuntimeState::RuntimeState(const TUniqueId& query_id, const TUniqueId& fragment_
 }
 
 RuntimeState::RuntimeState(const TQueryGlobals& query_globals)
-        : _unreported_error_idx(0), _obj_pool(new ObjectPool()), _is_cancelled(false), _per_fragment_instance_idx(0) {
+        : _obj_pool(new ObjectPool()), _is_cancelled(false), _per_fragment_instance_idx(0) {
     _profile = std::make_shared<RuntimeProfile>("<unnamed>");
     _load_channel_profile = std::make_shared<RuntimeProfile>("<unnamed>");
     _query_options.batch_size = DEFAULT_CHUNK_SIZE;

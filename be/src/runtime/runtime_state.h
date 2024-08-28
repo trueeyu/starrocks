@@ -526,18 +526,12 @@ private:
 
     DescriptorTbl* _desc_tbl = nullptr;
 
-    // Lock protecting _error_log and _unreported_error_idx
+    // Lock protecting _error_log
     std::mutex _error_log_lock;
-
-    // Logs error messages.
-    std::vector<std::string> _error_log;
 
     std::mutex _rejected_record_lock;
     std::string _rejected_record_file_path;
     std::unique_ptr<std::ofstream> _rejected_record_file;
-
-    // _error_log[_unreported_error_idx+] has been not reported to the coordinator.
-    int _unreported_error_idx;
 
     // Username of user that is executing the query to which this RuntimeState belongs.
     std::string _user;
