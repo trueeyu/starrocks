@@ -40,20 +40,14 @@ struct EmptyMemGuard {
 };
 
 struct MemTrackerGuard {
-    MemTrackerGuard(MemTracker* scope_tracker_) : scope_tracker(scope_tracker_) {}
-    bool scoped_begin() const {
-        old_tracker = tls_thread_status.set_mem_tracker(scope_tracker);
-        return true;
-    }
-    void scoped_end() const { tls_thread_status.set_mem_tracker(old_tracker); }
-    MemTracker* scope_tracker;
-    mutable MemTracker* old_tracker = nullptr;
+    MemTrackerGuard(MemTracker* scope_tracker_) {}
+    bool scoped_begin() const { return true; }
+    void scoped_end() const {}
 };
 
 template <class... WeakPtrs>
 struct ResourceMemTrackerGuard {
-    ResourceMemTrackerGuard(MemTracker* scope_tracker_, WeakPtrs&&... args)
-            : scope_tracker(scope_tracker_), resources(std::make_tuple(args...)) {}
+    ResourceMemTrackerGuard(MemTracker* scope_tracker_, WeakPtrs&&... args) : resources(std::make_tuple(args...)) {}
 
     bool scoped_begin() const {
         auto res = capture(resources);
@@ -61,14 +55,10 @@ struct ResourceMemTrackerGuard {
             return false;
         }
         captured = std::move(res.value());
-        old_tracker = tls_thread_status.set_mem_tracker(scope_tracker);
         return true;
     }
 
-    void scoped_end() const {
-        tls_thread_status.set_mem_tracker(old_tracker);
-        captured = {};
-    }
+    void scoped_end() const { captured = {}; }
 
 private:
     auto capture(const std::tuple<WeakPtrs...>& weak_tup) const
@@ -82,11 +72,9 @@ private:
         }
     }
 
-    MemTracker* scope_tracker;
     std::tuple<WeakPtrs...> resources;
 
     mutable std::tuple<std::shared_ptr<typename WeakPtrs::element_type>...> captured;
-    mutable MemTracker* old_tracker = nullptr;
 };
 
 struct IOTaskExecutor {

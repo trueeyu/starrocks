@@ -2619,9 +2619,6 @@ Status TabletUpdates::compaction(MemTracker* mem_tracker) {
               << total_rows_after_compaction << " bytes:" << PrettyPrinter::print(total_bytes, TUnit::BYTES) << "->"
               << PrettyPrinter::print(total_bytes_after_compaction, TUnit::BYTES) << "(estimate)";
 
-    MemTracker* prev_tracker = tls_thread_status.set_mem_tracker(mem_tracker);
-    DeferOp op([&] { tls_thread_status.set_mem_tracker(prev_tracker); });
-
     Status st = _do_compaction(&info);
     if (!st.ok()) {
         _compaction_running = false;
@@ -2787,9 +2784,6 @@ Status TabletUpdates::compaction_for_size_tiered(MemTracker* mem_tracker) {
               << " bytes:" << PrettyPrinter::print(total_bytes, TUnit::BYTES) << "->"
               << PrettyPrinter::print(stat.byte_size, TUnit::BYTES) << "(estimate)";
 
-    MemTracker* prev_tracker = tls_thread_status.set_mem_tracker(mem_tracker);
-    DeferOp op([&] { tls_thread_status.set_mem_tracker(prev_tracker); });
-
     Status st = _do_compaction(&info);
     if (!st.ok()) {
         _compaction_running = false;
@@ -2918,9 +2912,6 @@ Status TabletUpdates::compaction(MemTracker* mem_tracker, const vector<uint32_t>
               << "/all:" << all_rowsets.size() << " " << int_list_to_string(info->inputs) << " #rows:" << total_rows
               << "->" << total_rows_after_compaction << " bytes:" << PrettyPrinter::print(total_bytes, TUnit::BYTES)
               << "->" << PrettyPrinter::print(total_bytes_after_compaction, TUnit::BYTES) << "(estimate)";
-
-    MemTracker* prev_tracker = tls_thread_status.set_mem_tracker(mem_tracker);
-    DeferOp op([&] { tls_thread_status.set_mem_tracker(prev_tracker); });
 
     Status st = _do_compaction(&info);
     if (!st.ok()) {

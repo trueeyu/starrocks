@@ -96,14 +96,6 @@ public:
 
     const std::string& get_custom_coredump_msg() const { return _custom_coredump_msg; }
 
-    // Return prev memory tracker.
-    starrocks::MemTracker* set_mem_tracker(starrocks::MemTracker* mem_tracker) {
-        mem_tracker_ctx_shift();
-        auto* prev = tls_mem_tracker;
-        tls_mem_tracker = mem_tracker;
-        return prev;
-    }
-
     bool check_mem_limit() { return _check; }
 
     static starrocks::MemTracker* mem_tracker();
