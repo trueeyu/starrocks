@@ -25,6 +25,8 @@ CurrentThread::~CurrentThread() {
         return;
     }
     mem_tracker_ctx_shift();
+    CHECK(tls_is_thread_status_init == true);
+    CHECK(tls_mem_tracker != nullptr);
     tls_is_thread_status_init = false;
 }
 

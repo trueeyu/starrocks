@@ -35,7 +35,7 @@ class CurrentThread {
 private:
     class MemCacheManager {
     public:
-        MemCacheManager(std::function<MemTracker*()>&& loader) : _loader(std::move(loader)) {}
+        MemCacheManager() = default;
         MemCacheManager(const MemCacheManager&) = delete;
         MemCacheManager(MemCacheManager&&) = delete;
 
@@ -55,7 +55,7 @@ private:
         }
 
         void commit(bool is_ctx_shift) {
-            MemTracker* cur_tracker = _loader();
+            MemTracker* cur_tracker = CurrentThread::mem_tracker();
             if (cur_tracker != nullptr) {
                 cur_tracker->consume(_cache_size);
             }
@@ -67,15 +67,14 @@ private:
     private:
         const static int64_t BATCH_SIZE = 2 * 1024 * 1024;
 
-        std::function<MemTracker*()> _loader;
-
         // Allocated or delocated but not committed memory bytes, can be negative
         int64_t _cache_size = 0;
         int64_t _total_consumed_bytes = 0; // Totally consumed memory bytes
     };
 
 public:
-    CurrentThread() : _mem_cache_manager(mem_tracker) {
+    CurrentThread() {
+        CHECK(tls_is_thread_status_init == false);
         tls_is_thread_status_init = true;
     }
     ~CurrentThread();
