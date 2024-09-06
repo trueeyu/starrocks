@@ -64,7 +64,6 @@ private:
         void consume(int64_t size) {
             size = _consume_from_reserved(size);
             _cache_size += size;
-            _allocated_cache_size += size;
             _total_consumed_bytes += size;
             if (_cache_size >= BATCH_SIZE) {
                 commit(false);
@@ -76,7 +75,6 @@ private:
             int64_t prev_reserved = _reserved_bytes;
             size = _consume_from_reserved(size);
             _cache_size += size;
-            _allocated_cache_size += size;
             _total_consumed_bytes += size;
             if (cur_tracker != nullptr && _cache_size >= BATCH_SIZE) {
                 MemTracker* limit_tracker = cur_tracker->try_consume(_cache_size);
@@ -86,7 +84,6 @@ private:
                 } else {
                     _reserved_bytes = prev_reserved;
                     _cache_size -= size;
-                    _allocated_cache_size -= size;
                     _try_consume_mem_size = size;
                     tls_exceed_mem_tracker = limit_tracker;
                     return false;
@@ -98,7 +95,6 @@ private:
         bool try_mem_consume_with_limited_tracker(int64_t size) {
             MemTracker* cur_tracker = _loader();
             _cache_size += size;
-            _allocated_cache_size += size;
             _total_consumed_bytes += size;
             if (cur_tracker != nullptr && _cache_size >= BATCH_SIZE) {
                 MemTracker* limit_tracker = cur_tracker->try_consume_with_limited(_cache_size);
@@ -107,7 +103,6 @@ private:
                     return true;
                 } else {
                     _cache_size -= size;
-                    _allocated_cache_size -= size;
                     _try_consume_mem_size = size;
                     tls_exceed_mem_tracker = limit_tracker;
                     return false;
@@ -137,7 +132,6 @@ private:
 
         void release(int64_t size) {
             _cache_size -= size;
-            _deallocated_cache_size += size;
             if (_cache_size <= -BATCH_SIZE) {
                 commit(false);
             }
@@ -149,15 +143,6 @@ private:
                 cur_tracker->consume(_cache_size);
             }
             _cache_size = 0;
-            if (is_ctx_shift) {
-                // Flush all cached info
-                if (cur_tracker != nullptr) {
-                    cur_tracker->update_allocation(_allocated_cache_size);
-                    cur_tracker->update_deallocation(_deallocated_cache_size);
-                }
-                _allocated_cache_size = 0;
-                _deallocated_cache_size = 0;
-            }
         }
 
         int64_t try_consume_mem_size() {
@@ -188,10 +173,6 @@ private:
 
         // Allocated or delocated but not committed memory bytes, can be negative
         int64_t _cache_size = 0;
-        // Allocated but not committed memory bytes, always positive
-        int64_t _allocated_cache_size = 0;
-        // Deallocated but not committed memory bytes, always positive
-        int64_t _deallocated_cache_size = 0;
         int64_t _total_consumed_bytes = 0; // Totally consumed memory bytes
         int64_t _try_consume_mem_size = 0; // Last time tried to consumed bytes
     };
