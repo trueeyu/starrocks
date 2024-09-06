@@ -38,7 +38,6 @@ StatusOr<ChunkPtr> ProjectOperator::pull_chunk(RuntimeState* state) {
 }
 
 Status ProjectOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
-    TRY_CATCH_ALLOC_SCOPE_START();
     {
         SCOPED_TIMER(_common_sub_expr_compute_timer);
         for (size_t i = 0; i < _common_sub_column_ids.size(); ++i) {
@@ -80,7 +79,6 @@ Status ProjectOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
     for (size_t i = 0; i < result_columns.size(); ++i) {
         _cur_chunk->append_column(result_columns[i], _column_ids[i]);
     }
-    TRY_CATCH_ALLOC_SCOPE_END()
     return Status::OK();
 }
 

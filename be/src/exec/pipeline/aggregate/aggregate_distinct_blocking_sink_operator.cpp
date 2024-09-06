@@ -76,8 +76,8 @@ Status AggregateDistinctBlockingSinkOperator::push_chunk(RuntimeState* state, co
             }
         }
         RETURN_IF_ERROR(_aggregator->evaluate_groupby_exprs(chunk.get()));
-        TRY_CATCH_BAD_ALLOC(_aggregator->build_hash_set(chunk->num_rows()));
-        TRY_CATCH_BAD_ALLOC(_aggregator->try_convert_to_two_level_set());
+        _aggregator->build_hash_set(chunk->num_rows());
+        _aggregator->try_convert_to_two_level_set();
 
         _aggregator->update_num_input_rows(chunk->num_rows());
     }

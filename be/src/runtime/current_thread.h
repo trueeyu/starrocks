@@ -30,7 +30,6 @@ class TUniqueId;
 
 inline thread_local MemTracker* tls_mem_tracker = nullptr;
 inline thread_local MemTracker* tls_operator_mem_tracker = nullptr;
-inline thread_local MemTracker* tls_exceed_mem_tracker = nullptr;
 inline thread_local bool tls_is_thread_status_init = false;
 
 class CurrentThread {
@@ -50,28 +49,6 @@ private:
             }
         }
 
-        bool try_mem_consume(int64_t size) {
-            MemTracker* cur_tracker = _loader();
-            int64_t prev_reserved = _reserved_bytes;
-            size = _consume_from_reserved(size);
-            _cache_size += size;
-            _total_consumed_bytes += size;
-            if (cur_tracker != nullptr && _cache_size >= BATCH_SIZE) {
-                MemTracker* limit_tracker = cur_tracker->try_consume(_cache_size);
-                if (LIKELY(limit_tracker == nullptr)) {
-                    _cache_size = 0;
-                    return true;
-                } else {
-                    _reserved_bytes = prev_reserved;
-                    _cache_size -= size;
-                    _try_consume_mem_size = size;
-                    tls_exceed_mem_tracker = limit_tracker;
-                    return false;
-                }
-            }
-            return true;
-        }
-
         bool try_mem_consume_with_limited_tracker(int64_t size) {
             MemTracker* cur_tracker = _loader();
             _cache_size += size;
@@ -84,7 +61,6 @@ private:
                 } else {
                     _cache_size -= size;
                     _try_consume_mem_size = size;
-                    tls_exceed_mem_tracker = limit_tracker;
                     return false;
                 }
             }
@@ -158,13 +134,12 @@ private:
     };
 
 public:
-    CurrentThread() : _mem_cache_manager(mem_tracker), _operator_mem_cache_manager(operator_mem_tracker) {
+    CurrentThread() : _mem_cache_manager(mem_tracker) {
         tls_is_thread_status_init = true;
     }
     ~CurrentThread();
 
     void mem_tracker_ctx_shift() { _mem_cache_manager.commit(true); }
-    void operator_mem_tracker_ctx_shift() { _operator_mem_cache_manager.commit(true); }
 
     void set_query_id(const starrocks::TUniqueId& query_id) { _query_id = query_id; }
     const starrocks::TUniqueId& query_id() { return _query_id; }
@@ -189,28 +164,12 @@ public:
         return prev;
     }
 
-    // Return prev memory tracker.
-    starrocks::MemTracker* set_operator_mem_tracker(starrocks::MemTracker* operator_mem_tracker) {
-        operator_mem_tracker_ctx_shift();
-        auto* prev = tls_operator_mem_tracker;
-        tls_operator_mem_tracker = operator_mem_tracker;
-        return prev;
-    }
-
-    bool set_check_mem_limit(bool check) {
-        bool prev_check = _check;
-        _check = check;
-        return prev_check;
-    }
-
     bool check_mem_limit() { return _check; }
 
     static starrocks::MemTracker* mem_tracker();
     static starrocks::MemTracker* operator_mem_tracker();
 
     static CurrentThread& current();
-
-    static void set_exceed_mem_tracker(starrocks::MemTracker* mem_tracker) { tls_exceed_mem_tracker = mem_tracker; }
 
     bool set_is_catched(bool is_catched) {
         bool old = _is_catched;
@@ -222,15 +181,6 @@ public:
 
     void mem_consume(int64_t size) {
         _mem_cache_manager.consume(size);
-        _operator_mem_cache_manager.consume(size);
-    }
-
-    bool try_mem_consume(int64_t size) {
-        if (_mem_cache_manager.try_mem_consume(size)) {
-            _operator_mem_cache_manager.consume(size);
-            return true;
-        }
-        return false;
     }
 
     bool try_mem_reserve(int64_t size) {
@@ -251,7 +201,6 @@ public:
             _mem_cache_manager.release_to_reserved(size);
         } else {
             _mem_cache_manager.release(size);
-            _operator_mem_cache_manager.release(size);
         }
     }
 
@@ -260,19 +209,6 @@ public:
         if (cur_tracker != nullptr && size != 0) {
             cur_tracker->consume(size);
         }
-    }
-
-    static bool try_mem_consume_without_cache(int64_t size) {
-        MemTracker* cur_tracker = mem_tracker();
-        if (cur_tracker != nullptr && size != 0) {
-            MemTracker* limit_tracker = cur_tracker->try_consume(size);
-            if (LIKELY(limit_tracker == nullptr)) {
-                return true;
-            } else {
-                return false;
-            }
-        }
-        return true;
     }
 
     static void mem_release_without_cache(int64_t size) {
@@ -294,7 +230,6 @@ private:
     // is invoked, the frequrency is a little bit high, but it does little harm to performance,
     // because operator's MemTracker, which is a dangling MemTracker(withouth parent), has no concurrency conflicts
     MemCacheManager _mem_cache_manager;
-    MemCacheManager _operator_mem_cache_manager;
     // Store in TLS for diagnose coredump easier
     TUniqueId _query_id;
     TUniqueId _fragment_instance_id;
@@ -306,94 +241,6 @@ private:
 };
 
 inline thread_local CurrentThread tls_thread_status;
-
-class CurrentThreadMemTrackerSetter {
-public:
-    explicit CurrentThreadMemTrackerSetter(MemTracker* new_mem_tracker) {
-        _old_mem_tracker = tls_thread_status.mem_tracker();
-        _is_same = (_old_mem_tracker == new_mem_tracker);
-        if (!_is_same) {
-            tls_thread_status.set_mem_tracker(new_mem_tracker);
-        }
-    }
-
-    ~CurrentThreadMemTrackerSetter() {
-        if (!_is_same) {
-            (void)tls_thread_status.set_mem_tracker(_old_mem_tracker);
-        }
-    }
-
-    CurrentThreadMemTrackerSetter(const CurrentThreadMemTrackerSetter&) = delete;
-    void operator=(const CurrentThreadMemTrackerSetter&) = delete;
-    CurrentThreadMemTrackerSetter(CurrentThreadMemTrackerSetter&&) = delete;
-    void operator=(CurrentThreadMemTrackerSetter&&) = delete;
-
-private:
-    MemTracker* _old_mem_tracker;
-    bool _is_same;
-};
-
-class CurrentThreadOperatorMemTrackerSetter {
-public:
-    explicit CurrentThreadOperatorMemTrackerSetter(MemTracker* new_mem_tracker) {
-        // operator's mem tracker must have no parent
-        DCHECK(new_mem_tracker == nullptr || new_mem_tracker->parent() == nullptr);
-        _old_mem_tracker = tls_thread_status.operator_mem_tracker();
-        _is_same = (_old_mem_tracker == new_mem_tracker);
-        if (!_is_same) {
-            tls_thread_status.set_operator_mem_tracker(new_mem_tracker);
-        }
-    }
-
-    ~CurrentThreadOperatorMemTrackerSetter() {
-        if (!_is_same) {
-            (void)tls_thread_status.set_operator_mem_tracker(_old_mem_tracker);
-        }
-    }
-
-    CurrentThreadOperatorMemTrackerSetter(const CurrentThreadOperatorMemTrackerSetter&) = delete;
-    void operator=(const CurrentThreadOperatorMemTrackerSetter&) = delete;
-    CurrentThreadOperatorMemTrackerSetter(CurrentThreadOperatorMemTrackerSetter&&) = delete;
-    void operator=(CurrentThreadMemTrackerSetter&&) = delete;
-
-private:
-    MemTracker* _old_mem_tracker;
-    bool _is_same;
-};
-
-class CurrentThreadCheckMemLimitSetter {
-public:
-    explicit CurrentThreadCheckMemLimitSetter(bool check) {
-        _prev_check = tls_thread_status.set_check_mem_limit(check);
-    }
-
-    ~CurrentThreadCheckMemLimitSetter() { (void)tls_thread_status.set_check_mem_limit(_prev_check); }
-
-    CurrentThreadCheckMemLimitSetter(const CurrentThreadCheckMemLimitSetter&) = delete;
-    void operator=(const CurrentThreadCheckMemLimitSetter&) = delete;
-    CurrentThreadCheckMemLimitSetter(CurrentThreadCheckMemLimitSetter&&) = delete;
-    void operator=(CurrentThreadCheckMemLimitSetter&&) = delete;
-
-private:
-    bool _prev_check;
-};
-
-class CurrentThreadCatchSetter {
-public:
-    explicit CurrentThreadCatchSetter(bool catched) { _prev_catched = tls_thread_status.set_is_catched(catched); }
-
-    ~CurrentThreadCatchSetter() { (void)tls_thread_status.set_is_catched(_prev_catched); }
-
-    CurrentThreadCatchSetter(const CurrentThreadCatchSetter&) = delete;
-    void operator=(const CurrentThreadCatchSetter&) = delete;
-    CurrentThreadCatchSetter(CurrentThreadCheckMemLimitSetter&&) = delete;
-    void operator=(CurrentThreadCatchSetter&&) = delete;
-
-private:
-    bool _prev_catched;
-};
-
-#define SCOPED_SET_CATCHED(catched) auto VARNAME_LINENUM(catched_setter) = CurrentThreadCatchSetter(catched)
 
 #define RELEASE_RESERVED_GUARD() \
     auto VARNAME_LINENUM(defer) = DeferOp([] { CurrentThread::current().release_reserved(); });
@@ -415,33 +262,6 @@ private:
 #define SCOPED_SET_CUSTOM_COREDUMP_MSG(custom_coredump_msg)                \
     CurrentThread::current().set_custom_coredump_msg(custom_coredump_msg); \
     auto VARNAME_LINENUM(defer) = DeferOp([] { CurrentThread::current().set_custom_coredump_msg({}); });
-
-#define TRY_CATCH_ALLOC_SCOPE_START() \
-    try {                             \
-        SCOPED_SET_CATCHED(true);
-
-#define TRY_CATCH_ALLOC_SCOPE_END()                                                                                    \
-    }                                                                                                                  \
-    catch (std::bad_alloc const&) {                                                                                    \
-        MemTracker* exceed_tracker = tls_exceed_mem_tracker;                                                           \
-        tls_exceed_mem_tracker = nullptr;                                                                              \
-        tls_thread_status.set_is_catched(false);                                                                       \
-        if (LIKELY(exceed_tracker != nullptr)) {                                                                       \
-            return Status::MemoryLimitExceeded(                                                                        \
-                    exceed_tracker->err_msg(fmt::format("try consume:{}", tls_thread_status.try_consume_mem_size()))); \
-        } else {                                                                                                       \
-            return Status::MemoryLimitExceeded("Mem usage has exceed the limit of BE");                                \
-        }                                                                                                              \
-    }                                                                                                                  \
-    catch (std::runtime_error const& e) {                                                                              \
-        return Status::RuntimeError(fmt::format("Runtime error: {}", e.what()));                                       \
-    }
-
-#define TRY_CATCH_BAD_ALLOC(stmt)               \
-    do {                                        \
-        TRY_CATCH_ALLOC_SCOPE_START() { stmt; } \
-        TRY_CATCH_ALLOC_SCOPE_END()             \
-    } while (0)
 
 // TRY_CATCH_ALL will not set catched=true, only used for catch unexpected crash,
 // cannot be used to control memory usage.
