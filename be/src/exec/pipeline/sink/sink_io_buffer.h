@@ -123,7 +123,6 @@ public:
             return 0;
         }
         auto* sink_io_buffer = static_cast<SinkIOBuffer*>(meta);
-        SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(sink_io_buffer->_state->query_mem_tracker_ptr().get());
         for (; iter; ++iter) {
             TEST_SYNC_POINT_CALLBACK("sink_io_buffer_before_process_chunk", iter->get());
             sink_io_buffer->_process_chunk(iter);

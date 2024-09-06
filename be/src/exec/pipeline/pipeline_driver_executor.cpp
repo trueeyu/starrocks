@@ -118,7 +118,6 @@ void GlobalDriverExecutor::_worker_thread() {
         auto runtime_state_ptr = fragment_ctx->runtime_state_ptr();
         auto* runtime_state = runtime_state_ptr.get();
         {
-            SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(runtime_state->instance_mem_tracker());
             if (fragment_ctx->is_canceled()) {
                 driver->cancel_operators(runtime_state);
                 if (driver->is_still_pending_finish()) {

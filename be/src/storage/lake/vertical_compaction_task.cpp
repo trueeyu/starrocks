@@ -36,8 +36,6 @@ Status VerticalCompactionTask::execute(Progress* progress, CancelFunc cancel_fun
         return Status::InvalidArgument("progress is null");
     }
 
-    SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker.get());
-
     ASSIGN_OR_RETURN(_tablet_schema, _tablet->get_schema());
     for (auto& rowset : _input_rowsets) {
         _total_num_rows += rowset->num_rows();

@@ -859,7 +859,6 @@ bool TabletUpdates::need_apply() const {
 }
 
 void TabletUpdates::do_apply() {
-    SCOPED_THREAD_LOCAL_CHECK_MEM_LIMIT_SETTER(false);
     // only 1 thread at max is running this method
     bool first = true;
     while (!_apply_stopped) {

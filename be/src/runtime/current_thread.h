@@ -24,26 +24,6 @@
 #include "util/defer_op.h"
 #include "util/uid_util.h"
 
-#define SCOPED_THREAD_LOCAL_MEM_SETTER(mem_tracker, check)                             \
-    auto VARNAME_LINENUM(tracker_setter) = CurrentThreadMemTrackerSetter(mem_tracker); \
-    auto VARNAME_LINENUM(check_setter) = CurrentThreadCheckMemLimitSetter(check);
-
-#define SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(mem_tracker) \
-    auto VARNAME_LINENUM(tracker_setter) = CurrentThreadMemTrackerSetter(mem_tracker)
-
-#define SCOPED_THREAD_LOCAL_OPERATOR_MEM_TRACKER_SETTER(operator) \
-    auto VARNAME_LINENUM(tracker_setter) = CurrentThreadOperatorMemTrackerSetter(operator->mem_tracker())
-
-#define SCOPED_THREAD_LOCAL_CHECK_MEM_LIMIT_SETTER(check) \
-    auto VARNAME_LINENUM(check_setter) = CurrentThreadCheckMemLimitSetter(check)
-
-#define CHECK_MEM_LIMIT(err_msg)                                                              \
-    do {                                                                                      \
-        if (tls_thread_status.check_mem_limit() && CurrentThread::mem_tracker() != nullptr) { \
-            RETURN_IF_ERROR(CurrentThread::mem_tracker()->check_mem_limit(err_msg));          \
-        }                                                                                     \
-    } while (0)
-
 namespace starrocks {
 
 class TUniqueId;

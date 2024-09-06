@@ -327,8 +327,6 @@ StatusOr<ChunkIteratorPtr> Segment::new_iterator(const Schema& schema, const Seg
 
 Status Segment::load_index(bool skip_fill_local_cache) {
     auto res = success_once(_load_index_once, [&] {
-        SCOPED_THREAD_LOCAL_CHECK_MEM_LIMIT_SETTER(false);
-
         Status st = _load_index(skip_fill_local_cache);
         if (st.ok()) {
             MEM_TRACKER_SAFE_CONSUME(GlobalEnv::GetInstance()->short_key_index_mem_tracker(),
