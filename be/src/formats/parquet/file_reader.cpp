@@ -24,8 +24,7 @@
 #include <utility>
 #include <vector>
 
-#include "cache/block_cache/block_cache.h"
-#include "cache/block_cache/kv_cache.h"
+#include "cache/object_cache/object_cache.h"
 #include "column/chunk.h"
 #include "column/column.h"
 #include "column/column_helper.h"
@@ -72,8 +71,8 @@ Status FileReader::init(HdfsScannerContext* ctx) {
     _scanner_ctx = ctx;
 #ifdef WITH_STARCACHE
     // Only support file metacache in starcache engine
-    if (ctx->use_file_metacache && config::datacache_enable) {
-        _cache = BlockCache::instance();
+    if (ctx->use_file_metacache && ObjectCache::instance()->available()) {
+        _cache = ObjectCache::instance();
     }
 #endif
     // parse FileMetadata
