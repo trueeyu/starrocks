@@ -161,7 +161,7 @@ Status init_object_cache(GlobalEnv* global_env) {
     if (object_cache->initialized()) {
         return Status::OK();
     }
-    if (config::storage_page_cache_based_on_datacache) {
+    if (config::construct_object_cache_based_on_datacache) {
         BlockCache* block_cache = BlockCache::instance();
         return object_cache->init(block_cache->starcache_instance());
     } else {
