@@ -107,17 +107,12 @@ uint64_t StoragePageCache::get_hit_count() {
 
 bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
-<<<<<<< HEAD
-    return _cache->adjust_capacity(delta, min_capacity);
-=======
-#endif
     Status st = _cache->adjust_capacity(delta, min_capacity);
     if (!st.ok()) {
         LOG_IF(INFO, !st.ok()) << "fail to adjust cache capaicty, delta: " << delta << ", reason: " << st.message();
         return false;
     }
     return true;
->>>>>>> f9b711a722... Unify page cache to starcache instance.
 }
 
 bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
@@ -130,7 +125,7 @@ bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
     return true;
 }
 
-void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory) {
+Status StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory) {
 #ifndef BE_TEST
     int64_t mem_size = malloc_usable_size(data.data);
     tls_thread_status.mem_release(mem_size);
@@ -148,12 +143,11 @@ void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheH
     Status st = _cache->insert(key.encode(), data.data, data.size, mem_size, deleter, &obj_handle, &options);
     // Use mem size managed by memory allocator as this record charge size. At the same time, we should record this record size
     // for data fetching when lookup.
-<<<<<<< HEAD
     auto* lru_handle = _cache->insert(key.encode(), data.data, data.size, mem_size, deleter, priority);
-    *handle = PageCacheHandle(_cache.get(), lru_handle);
-=======
-    *handle = PageCacheHandle(_cache, obj_handle);
->>>>>>> f9b711a722... Unify page cache to starcache instance.
+    if (st.ok()) {
+        *handle = PageCacheHandle(_cache, obj_handle);
+    }
+    return st;
 }
 
 } // namespace starrocks
