@@ -210,10 +210,12 @@ typedef struct LRUHandle {
     size_t charge;
     size_t key_length;
     bool in_cache; // Whether entry is in the cache.
+    bool in_extent = false;
     uint32_t refs;
     uint32_t hash; // Hash of key(); used for fast sharding and comparisons
     CachePriority priority = CachePriority::NORMAL;
     size_t value_size;
+    size_t loading_cost = 0;
     char key_data[1]; // Beginning of key
 
     CacheKey key() const {
@@ -272,7 +274,7 @@ public:
     ~LRUCache() noexcept;
 
     // Separate from constructor so caller can easily make an array of LRUCache
-    void set_capacity(size_t capacity);
+    void set_capacity(size_t base_capacity);
 
     // Like Cache methods, but with an extra "hash" parameter.
     Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
@@ -293,15 +295,18 @@ private:
     void _lru_append(LRUHandle* list, LRUHandle* e);
     bool _unref(LRUHandle* e);
     void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
-    void _evict_one_entry(LRUHandle* e);
+
+    void _evict_one_entry_from_base_list(LRUHandle* e);
+    void _evict_one_entry_from_extent_list(LRUHandle* e);
 
     // Initialized before use.
-    size_t _capacity = 0;
-    size_t _extend_capacity = 0;
+    size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
-    size_t _usage{0};
+    size_t _base_usage = 0;
+    size_t _extent_usage = 0;
 
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
@@ -348,7 +353,7 @@ private:
     LRUCache _shards[kNumShards];
     std::mutex _mutex;
     uint64_t _last_id;
-    size_t _capacity;
+    size_t _base_capacity;
     ChargeMode _charge_mode;
 };
 
