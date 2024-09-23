@@ -154,6 +154,9 @@ LRUCache::LRUCache() {
     // Make empty circular linked list
     _lru.next = &_lru;
     _lru.prev = &_lru;
+
+    _extend_lru.next = &_lru;
+    _extend_lru.prev = &_lru;
 }
 
 LRUCache::~LRUCache() noexcept {
