@@ -305,7 +305,7 @@ private:
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
     // Entries have refs==1 and in_cache==true.
-    LRUHandle _lru;
+    LRUHandle _base_lru;
 
     HandleTable _table;
 

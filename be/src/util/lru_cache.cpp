@@ -152,8 +152,8 @@ bool HandleTable::_resize() {
 
 LRUCache::LRUCache() {
     // Make empty circular linked list
-    _lru.next = &_lru;
-    _lru.prev = &_lru;
+    _base_lru.next = &_base_lru;
+    _base_lru.prev = &_base_lru;
 }
 
 LRUCache::~LRUCache() noexcept {
@@ -252,7 +252,7 @@ void LRUCache::release(Cache::Handle* handle) {
                 last_ref = true;
             } else {
                 // put it to LRU free list
-                _lru_append(&_lru, e);
+                _lru_append(&_base_lru, e);
             }
         }
     }
@@ -264,9 +264,9 @@ void LRUCache::release(Cache::Handle* handle) {
 }
 
 void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
-    LRUHandle* cur = &_lru;
+    LRUHandle* cur = &_base_lru;
     // 1. evict normal cache entries
-    while (_usage + charge > _capacity && cur->next != &_lru) {
+    while (_usage + charge > _capacity && cur->next != &_base_lru) {
         LRUHandle* old = cur->next;
         if (old->priority == CachePriority::DURABLE) {
             cur = cur->next;
@@ -276,8 +276,8 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
         deleted->push_back(old);
     }
     // 2. evict durable cache entries if need
-    while (_usage + charge > _capacity && _lru.next != &_lru) {
-        LRUHandle* old = _lru.next;
+    while (_usage + charge > _capacity && _base_lru.next != &_base_lru) {
+        LRUHandle* old = _base_lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
         _evict_one_entry(old);
         deleted->push_back(old);
@@ -371,8 +371,8 @@ int LRUCache::prune() {
     std::vector<LRUHandle*> last_ref_list;
     {
         std::lock_guard l(_mutex);
-        while (_lru.next != &_lru) {
-            LRUHandle* old = _lru.next;
+        while (_base_lru.next != &_base_lru) {
+            LRUHandle* old = _base_lru.next;
             DCHECK(old->in_cache);
             DCHECK(old->refs == 1); // LRU list contains elements which may be evicted
             _lru_remove(old);
