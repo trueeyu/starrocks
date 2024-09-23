@@ -180,11 +180,11 @@ void LRUCache::_lru_append(LRUHandle* list, LRUHandle* e) {
     e->next->prev = e;
 }
 
-void LRUCache::set_capacity(size_t capacity) {
+void LRUCache::set_capacity(size_t base_capacity) {
     std::vector<LRUHandle*> last_ref_list;
     {
         std::lock_guard l(_mutex);
-        _capacity = capacity;
+        _base_capacity = base_capacity;
         _evict_from_lru(0, &last_ref_list);
     }
 
@@ -210,7 +210,7 @@ size_t LRUCache::get_usage() const {
 
 size_t LRUCache::get_capacity() const {
     std::lock_guard l(_mutex);
-    return _capacity;
+    return _base_capacity;
 }
 
 Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
@@ -243,7 +243,7 @@ void LRUCache::release(Cache::Handle* handle) {
             _usage -= e->charge;
         } else if (e->in_cache && e->refs == 1) {
             // only exists in cache
-            if (_usage > _capacity) {
+            if (_usage > _base_capacity) {
                 // take this opportunity and remove the item
                 _table.remove(e->key(), e->hash);
                 e->in_cache = false;
@@ -266,7 +266,7 @@ void LRUCache::release(Cache::Handle* handle) {
 void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
     LRUHandle* cur = &_base_lru;
     // 1. evict normal cache entries
-    while (_usage + charge > _capacity && cur->next != &_base_lru) {
+    while (_usage + charge > _base_capacity && cur->next != &_base_lru) {
         LRUHandle* old = cur->next;
         if (old->priority == CachePriority::DURABLE) {
             cur = cur->next;
@@ -276,7 +276,7 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
         deleted->push_back(old);
     }
     // 2. evict durable cache entries if need
-    while (_usage + charge > _capacity && _base_lru.next != &_base_lru) {
+    while (_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
         LRUHandle* old = _base_lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
         _evict_one_entry(old);

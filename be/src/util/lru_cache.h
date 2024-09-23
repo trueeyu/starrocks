@@ -272,7 +272,7 @@ public:
     ~LRUCache() noexcept;
 
     // Separate from constructor so caller can easily make an array of LRUCache
-    void set_capacity(size_t capacity);
+    void set_capacity(size_t base_capacity);
 
     // Like Cache methods, but with an extra "hash" parameter.
     Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
@@ -296,7 +296,7 @@ private:
     void _evict_one_entry(LRUHandle* e);
 
     // Initialized before use.
-    size_t _capacity{0};
+    size_t _base_capacity = 0;
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
