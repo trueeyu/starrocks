@@ -185,6 +185,7 @@ void LRUCache::set_capacity(size_t base_capacity) {
     {
         std::lock_guard l(_mutex);
         _base_capacity = base_capacity;
+        _base_capacity = _base_capacity * 0.1;
         _evict_from_lru(0, &last_ref_list);
     }
 
@@ -203,12 +204,12 @@ uint64_t LRUCache::get_hit_count() const {
     return _hit_count;
 }
 
-size_t LRUCache::get_usage() const {
+size_t LRUCache::get_base_usage() const {
     std::lock_guard l(_mutex);
     return _base_usage;
 }
 
-size_t LRUCache::get_capacity() const {
+size_t LRUCache::get_base_capacity() const {
     std::lock_guard l(_mutex);
     return _base_capacity;
 }
@@ -474,7 +475,7 @@ size_t ShardedLRUCache::_get_stat(size_t (LRUCache::*mem_fun)() const) const {
     return n;
 }
 size_t ShardedLRUCache::get_capacity() const {
-    return _get_stat(&LRUCache::get_capacity);
+    return _get_stat(&LRUCache::get_base_capacity);
 }
 
 void ShardedLRUCache::prune() {
@@ -486,7 +487,7 @@ void ShardedLRUCache::prune() {
 }
 
 size_t ShardedLRUCache::get_memory_usage() const {
-    return _get_stat(&LRUCache::get_usage);
+    return _get_stat(&LRUCache::get_base_usage);
 }
 
 size_t ShardedLRUCache::get_lookup_count() const {
@@ -501,8 +502,8 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
     size_t shard_count = sizeof(_shards) / sizeof(LRUCache);
 
     for (uint32_t i = 0; i < shard_count; ++i) {
-        size_t capacity = _shards[i].get_capacity();
-        size_t usage = _shards[i].get_usage();
+        size_t capacity = _shards[i].get_base_capacity();
+        size_t usage = _shards[i].get_base_usage();
         rapidjson::Value shard_info(rapidjson::kObjectType);
         shard_info.AddMember("capacity", static_cast<double>(capacity), document->GetAllocator());
         shard_info.AddMember("usage", static_cast<double>(usage), document->GetAllocator());

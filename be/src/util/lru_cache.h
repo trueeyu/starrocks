@@ -285,8 +285,8 @@ public:
 
     uint64_t get_lookup_count() const;
     uint64_t get_hit_count() const;
-    size_t get_usage() const;
-    size_t get_capacity() const;
+    size_t get_base_usage() const;
+    size_t get_base_capacity() const;
 
 private:
     void _lru_remove(LRUHandle* e);
@@ -297,15 +297,18 @@ private:
 
     // Initialized before use.
     size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
     size_t _base_usage = 0;
+    size_t _extent_usage = 0;
 
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
     // Entries have refs==1 and in_cache==true.
     LRUHandle _base_lru;
+    LRUHandle _extent_lru;
 
     HandleTable _table;
 
