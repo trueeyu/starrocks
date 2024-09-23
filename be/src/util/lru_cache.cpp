@@ -205,7 +205,7 @@ uint64_t LRUCache::get_hit_count() const {
 
 size_t LRUCache::get_usage() const {
     std::lock_guard l(_mutex);
-    return _usage;
+    return _base_usage;
 }
 
 size_t LRUCache::get_capacity() const {
@@ -240,15 +240,15 @@ void LRUCache::release(Cache::Handle* handle) {
         std::lock_guard l(_mutex);
         last_ref = _unref(e);
         if (last_ref) {
-            _usage -= e->charge;
+            _base_usage -= e->charge;
         } else if (e->in_cache && e->refs == 1) {
             // only exists in cache
-            if (_usage > _base_capacity) {
+            if (_base_usage > _base_capacity) {
                 // take this opportunity and remove the item
                 _table.remove(e->key(), e->hash);
                 e->in_cache = false;
                 _unref(e);
-                _usage -= e->charge;
+                _base_usage -= e->charge;
                 last_ref = true;
             } else {
                 // put it to LRU free list
@@ -266,7 +266,7 @@ void LRUCache::release(Cache::Handle* handle) {
 void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
     LRUHandle* cur = &_base_lru;
     // 1. evict normal cache entries
-    while (_usage + charge > _base_capacity && cur->next != &_base_lru) {
+    while (_base_usage + charge > _base_capacity && cur->next != &_base_lru) {
         LRUHandle* old = cur->next;
         if (old->priority == CachePriority::DURABLE) {
             cur = cur->next;
@@ -276,7 +276,7 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
         deleted->push_back(old);
     }
     // 2. evict durable cache entries if need
-    while (_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
+    while (_base_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
         LRUHandle* old = _base_lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
         _evict_one_entry(old);
@@ -291,7 +291,7 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
     _table.remove(e->key(), e->hash);
     e->in_cache = false;
     _unref(e);
-    _usage -= e->charge;
+    _base_usage -= e->charge;
 }
 
 Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
@@ -321,11 +321,11 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
         // note that the cache might get larger than its capacity if not enough
         // space was freed
         auto old = _table.insert(e);
-        _usage += charge;
+        _base_usage += charge;
         if (old != nullptr) {
             old->in_cache = false;
             if (_unref(old)) {
-                _usage -= old->charge;
+                _base_usage -= old->charge;
                 // old is on LRU because it's in cache and its reference count
                 // was just 1 (Unref returned 0)
                 _lru_remove(old);
@@ -352,7 +352,7 @@ void LRUCache::erase(const CacheKey& key, uint32_t hash) {
         if (e != nullptr) {
             last_ref = _unref(e);
             if (last_ref) {
-                _usage -= e->charge;
+                _base_usage -= e->charge;
                 if (e->in_cache) {
                     // locate in free list
                     _lru_remove(e);
@@ -379,7 +379,7 @@ int LRUCache::prune() {
             _table.remove(old->key(), old->hash);
             old->in_cache = false;
             _unref(old);
-            _usage -= old->charge;
+            _base_usage -= old->charge;
             last_ref_list.push_back(old);
         }
     }
