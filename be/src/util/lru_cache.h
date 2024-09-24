@@ -210,6 +210,7 @@ typedef struct LRUHandle {
     size_t charge;
     size_t key_length;
     bool in_cache; // Whether entry is in the cache.
+    bool in_extent;
     uint32_t refs;
     uint32_t hash; // Hash of key(); used for fast sharding and comparisons
     CachePriority priority = CachePriority::NORMAL;
@@ -227,7 +228,9 @@ typedef struct LRUHandle {
     }
 
     void free() {
-        (*deleter)(key(), value);
+        if (!in_extent) {
+            (*deleter)(key(), value);
+        }
         ::free(this);
     }
 
@@ -293,7 +296,8 @@ private:
     void _lru_append(LRUHandle* list, LRUHandle* e);
     bool _unref(LRUHandle* e);
     void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
-    void _evict_one_entry(LRUHandle* e);
+    void _evict_one_entry_from_base_list(LRUHandle* e);
+    void _evict_one_entry_from_extent_list(LRUHandle* e);
 
     // Initialized before use.
     size_t _base_capacity = 0;
