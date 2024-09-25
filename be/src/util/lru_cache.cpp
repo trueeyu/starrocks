@@ -185,7 +185,7 @@ void LRUCache::set_capacity(size_t base_capacity) {
     {
         std::lock_guard l(_mutex);
         _base_capacity = base_capacity;
-        _base_capacity = _base_capacity * 0.1;
+        _extent_capacity = _base_capacity * 0.1;
         _evict_from_lru(0, &last_ref_list);
     }
 
