@@ -152,8 +152,8 @@ bool HandleTable::_resize() {
 
 LRUCache::LRUCache() {
     // Make empty circular linked list
-    _base_lru.next = &_base_lru;
-    _base_lru.prev = &_base_lru;
+    _lru.next = &_lru;
+    _lru.prev = &_lru;
 }
 
 LRUCache::~LRUCache() noexcept {
@@ -180,12 +180,12 @@ void LRUCache::_lru_append(LRUHandle* list, LRUHandle* e) {
     e->next->prev = e;
 }
 
-void LRUCache::set_capacity(size_t base_capacity) {
+void LRUCache::set_capacity(size_t capacity) {
     std::vector<LRUHandle*> last_ref_list;
     {
         std::lock_guard l(_mutex);
-        _base_capacity = base_capacity;
-        _extent_capacity = _base_capacity * 0.1;
+        _capacity = capacity;
+        _extent_capacity = _capacity * 0.1;
         _evict_from_lru(0, &last_ref_list);
     }
 
@@ -204,14 +204,14 @@ uint64_t LRUCache::get_hit_count() const {
     return _hit_count;
 }
 
-size_t LRUCache::get_base_usage() const {
+size_t LRUCache::get_usage() const {
     std::lock_guard l(_mutex);
-    return _base_usage;
+    return _usage;
 }
 
-size_t LRUCache::get_base_capacity() const {
+size_t LRUCache::get_capacity() const {
     std::lock_guard l(_mutex);
-    return _base_capacity;
+    return _capacity;
 }
 
 Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
@@ -241,11 +241,11 @@ void LRUCache::release(Cache::Handle* handle) {
         std::unique_lock l(_mutex);
         last_ref = _unref(e);
         if (last_ref) {
-            _base_usage -= e->charge;
+            _usage -= e->charge;
         } else if (e->in_cache && e->refs == 1) {
             // put it to LRU free list
-            _lru_append(&_base_lru, e);
-            if (_base_usage > _base_capacity) {
+            _lru_append(&_lru, e);
+            if (_usage > _capacity) {
                 std::vector<LRUHandle*> deleted;
                 _evict_from_lru(0, &deleted);
                 l.release();
@@ -264,23 +264,23 @@ void LRUCache::release(Cache::Handle* handle) {
 }
 
 void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
-    LRUHandle* cur = &_base_lru;
+    LRUHandle* cur = &_lru;
 
     // 1. evict normal cache entries
-    while (_base_usage + charge > _base_capacity && cur->next != &_base_lru) {
+    while (_usage + charge > _capacity && cur->next != &_lru) {
         LRUHandle* old = cur->next;
         if (old->priority == CachePriority::DURABLE) {
             cur = cur->next;
             continue;
         }
-        _evict_one_entry_from_base_list(old);
+        _evict_one_entry_from_list(old);
     }
 
     // 2. evict durable cache entries if need
-    while (_base_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
-        LRUHandle* old = _base_lru.next;
+    while (_usage + charge > _capacity && _lru.next != &_lru) {
+        LRUHandle* old = _lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
-        _evict_one_entry_from_base_list(old);
+        _evict_one_entry_from_list(old);
     }
 
     // 3. evict from extent page zone
@@ -291,14 +291,14 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
     }
 }
 
-void LRUCache::_evict_one_entry_from_base_list(LRUHandle* e) {
+void LRUCache::_evict_one_entry_from_list(LRUHandle* e) {
     DCHECK(e->in_cache);
     DCHECK(e->refs == 1); // LRU list contains elements which may be evicted
 
     _lru_remove(e);
     _lru_append(&_extent_lru, e);
 
-    _base_usage -= e->charge;
+    _usage -= e->charge;
     _extent_usage += e->charge;
 }
 
@@ -344,7 +344,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
         // note that the cache might get larger than its capacity if not enough
         // space was freed
         auto old = _table.insert(e);
-        _base_usage += charge;
+        _usage += charge;
         if (old != nullptr) {
             old->in_cache = false;
             if (_unref(old)) {
@@ -354,7 +354,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
                 if (old->in_extent) {
                     _extent_usage -= old->charge;
                 } else {
-                    _base_usage -= old->charge;
+                    _usage -= old->charge;
                     last_ref_list.push_back(old);
                 }
             }
@@ -386,7 +386,7 @@ void LRUCache::erase(const CacheKey& key, uint32_t hash) {
                         _lru_remove(e);
                     }
                 } else {
-                    _base_usage -= e->charge;
+                    _usage -= e->charge;
                     if (e->in_cache) {
                         // locate in free list
                         _lru_remove(e);
@@ -406,15 +406,15 @@ int LRUCache::prune() {
     std::vector<LRUHandle*> last_ref_list;
     {
         std::lock_guard l(_mutex);
-        while (_base_lru.next != &_base_lru) {
-            LRUHandle* old = _base_lru.next;
+        while (_lru.next != &_lru) {
+            LRUHandle* old = _lru.next;
             DCHECK(old->in_cache);
             DCHECK(old->refs == 1); // LRU list contains elements which may be evicted
             _lru_remove(old);
             _table.remove(old->key(), old->hash);
             old->in_cache = false;
             _unref(old);
-            _base_usage -= old->charge;
+            _usage -= old->charge;
             last_ref_list.push_back(old);
         }
 
@@ -448,34 +448,34 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
 }
 
 ShardedLRUCache::ShardedLRUCache(size_t capacity, ChargeMode charge_mode)
-        : _last_id(0), _base_capacity(capacity), _charge_mode(charge_mode) {
-    const size_t per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
+        : _last_id(0), _capacity(capacity), _charge_mode(charge_mode) {
+    const size_t per_shard = (_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
         _shard.set_capacity(per_shard);
     }
 }
 
-void ShardedLRUCache::_set_capacity(size_t base_capacity) {
-    const size_t base_per_shard = (base_capacity + (kNumShards - 1)) / kNumShards;
+void ShardedLRUCache::_set_capacity(size_t capacity) {
+    const size_t per_shard = (capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
-        _shard.set_capacity(base_per_shard);
+        _shard.set_capacity(per_shard);
     }
-    _base_capacity = base_capacity;
+    _capacity = capacity;
 }
 
-void ShardedLRUCache::set_capacity(size_t base_capacity) {
+void ShardedLRUCache::set_capacity(size_t capacity) {
     // Maybe multi client try to set capactity, we protect it using mutex.
     std::lock_guard l(_mutex);
-    _set_capacity(base_capacity);
+    _set_capacity(capacity);
 }
 
-bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_base_capacity) {
+bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_capacity) {
     std::lock_guard l(_mutex);
-    int64_t new_base_capacity = _base_capacity + delta;
-    if (new_base_capacity < static_cast<int64_t>(min_base_capacity)) {
+    int64_t new_capacity = _capacity + delta;
+    if (new_capacity < static_cast<int64_t>(min_capacity)) {
         return false;
     }
-    _set_capacity(new_base_capacity);
+    _set_capacity(new_capacity);
     return true;
 }
 
@@ -524,7 +524,7 @@ size_t ShardedLRUCache::_get_stat(size_t (LRUCache::*mem_fun)() const) const {
     return n;
 }
 size_t ShardedLRUCache::get_capacity() const {
-    return _get_stat(&LRUCache::get_base_capacity);
+    return _get_stat(&LRUCache::get_capacity);
 }
 
 void ShardedLRUCache::prune() {
@@ -536,7 +536,7 @@ void ShardedLRUCache::prune() {
 }
 
 size_t ShardedLRUCache::get_memory_usage() const {
-    return _get_stat(&LRUCache::get_base_usage);
+    return _get_stat(&LRUCache::get_usage);
 }
 
 size_t ShardedLRUCache::get_lookup_count() const {
@@ -551,8 +551,8 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
     size_t shard_count = sizeof(_shards) / sizeof(LRUCache);
 
     for (uint32_t i = 0; i < shard_count; ++i) {
-        size_t capacity = _shards[i].get_base_capacity();
-        size_t usage = _shards[i].get_base_usage();
+        size_t capacity = _shards[i].get_capacity();
+        size_t usage = _shards[i].get_usage();
         rapidjson::Value shard_info(rapidjson::kObjectType);
         shard_info.AddMember("capacity", static_cast<double>(capacity), document->GetAllocator());
         shard_info.AddMember("usage", static_cast<double>(usage), document->GetAllocator());
