@@ -157,6 +157,12 @@ public:
 
     Cache* cache() const { return _cache; }
     Slice data() const { return _cache->value_slice(_handle); }
+    bool is_data_in_cache() const {
+        return !reinterpret_cast<LRUHandle*>(_handle)->in_extent;
+    }
+    bool is_data_in_extent() const {
+        return reinterpret_cast<LRUHandle*>(_handle)->in_extent;
+    }
 
 private:
     Cache* _cache = nullptr;

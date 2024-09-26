@@ -150,6 +150,8 @@ public:
     // longer needed.
     virtual Handle* lookup(const CacheKey& key) = 0;
 
+    virtual bool is_data_in_cache(const Handle& handle) const = 0;
+
     // Release a mapping returned by a previous Lookup().
     // REQUIRES: handle must not have been released yet.
     // REQUIRES: handle must have been returned by a method on *this.
@@ -190,6 +192,7 @@ public:
     virtual size_t get_memory_usage() const = 0;
     virtual size_t get_lookup_count() const = 0;
     virtual size_t get_hit_count() const = 0;
+    virtual void inc_extent_miss_cost(const CacheKey& key, uint64_t cost) = 0;
 
     //  Decrease or increase cache capacity.
     virtual bool adjust_capacity(int64_t delta, size_t min_capacity = 0) = 0;
@@ -291,6 +294,10 @@ public:
     size_t get_usage() const;
     size_t get_capacity() const;
 
+    void inc_extent_miss_cost(uint64_t cost) {
+        _extent_miss_cost += cost;
+    }
+
 private:
     void _lru_remove(LRUHandle* e);
     void _lru_append(LRUHandle* list, LRUHandle* e);
@@ -318,6 +325,10 @@ private:
 
     uint64_t _lookup_count{0};
     uint64_t _hit_count{0};
+
+    uint64_t _extent_lookup_count = 0;
+    uint64_t _extent_hit_count = 0;
+    std::atomic<uint64_t> _extent_miss_cost = 0; //us
 };
 
 static const int kNumShardBits = 5;
@@ -343,6 +354,13 @@ public:
     uint64_t get_lookup_count() const override;
     uint64_t get_hit_count() const override;
     bool adjust_capacity(int64_t delta, size_t min_capacity = 0) override;
+    bool is_data_in_cache(const Handle& handle) const override {
+        !reinterpret_cast<const LRUHandle&>(handle).in_extent;
+    }
+    void inc_extent_miss_cost(const CacheKey& key, uint64_t cost) override {
+        const uint32_t hash = _hash_slice(key);
+        return _shards[_shard(hash)].inc_extent_miss_cost(cost);
+    }
 
 private:
     static uint32_t _hash_slice(const CacheKey& s);
