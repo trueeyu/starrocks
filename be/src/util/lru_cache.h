@@ -337,23 +337,24 @@ public:
     uint64_t new_id() override;
     void prune() override;
     void get_cache_status(rapidjson::Document* document) override;
-    void set_capacity(size_t capacity) override;
+    void set_capacity(size_t base_capacity) override;
     size_t get_memory_usage() const override;
     size_t get_capacity() const override;
     uint64_t get_lookup_count() const override;
     uint64_t get_hit_count() const override;
-    bool adjust_capacity(int64_t delta, size_t min_capacity = 0) override;
+    bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) override;
 
 private:
     static uint32_t _hash_slice(const CacheKey& s);
     static uint32_t _shard(uint32_t hash);
-    void _set_capacity(size_t capacity);
+    void _set_capacity(size_t base_capacity);
     size_t _get_stat(size_t (LRUCache::*mem_fun)() const) const;
 
     LRUCache _shards[kNumShards];
     std::mutex _mutex;
     uint64_t _last_id;
-    size_t _capacity;
+    size_t _base_capacity;
+    size_t _extent_capacity = 0;
     ChargeMode _charge_mode;
 };
 

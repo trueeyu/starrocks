@@ -448,34 +448,34 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
 }
 
 ShardedLRUCache::ShardedLRUCache(size_t capacity, ChargeMode charge_mode)
-        : _last_id(0), _capacity(capacity), _charge_mode(charge_mode) {
-    const size_t per_shard = (_capacity + (kNumShards - 1)) / kNumShards;
+        : _last_id(0), _base_capacity(capacity), _charge_mode(charge_mode) {
+    const size_t per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
         _shard.set_capacity(per_shard);
     }
 }
 
-void ShardedLRUCache::_set_capacity(size_t capacity) {
-    const size_t per_shard = (capacity + (kNumShards - 1)) / kNumShards;
+void ShardedLRUCache::_set_capacity(size_t base_capacity) {
+    const size_t base_per_shard = (base_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
-        _shard.set_capacity(per_shard);
+        _shard.set_capacity(base_per_shard);
     }
-    _capacity = capacity;
+    _base_capacity = base_capacity;
 }
 
-void ShardedLRUCache::set_capacity(size_t capacity) {
+void ShardedLRUCache::set_capacity(size_t base_capacity) {
     // Maybe multi client try to set capactity, we protect it using mutex.
     std::lock_guard l(_mutex);
-    _set_capacity(capacity);
+    _set_capacity(base_capacity);
 }
 
-bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_capacity) {
+bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_base_capacity) {
     std::lock_guard l(_mutex);
-    int64_t new_capacity = _capacity + delta;
-    if (new_capacity < static_cast<int64_t>(min_capacity)) {
+    int64_t new_base_capacity = _base_capacity + delta;
+    if (new_base_capacity < static_cast<int64_t>(min_base_capacity)) {
         return false;
     }
-    _set_capacity(new_capacity);
+    _set_capacity(new_base_capacity);
     return true;
 }
 
