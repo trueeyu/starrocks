@@ -69,6 +69,8 @@ struct WriteCacheOptions {
     // When allow_zero_copy=true, it means the caller can ensure the target buffer not be released before
     // the write finish. So the cache library can use the buffer directly without copying it to another buffer.
     bool allow_zero_copy = false;
+    int64_t cost = 0;
+    int64_t extent = false;
     std::function<void(int, const std::string&)> callback = nullptr;
 
     // The probability to evict other items if the cache space is full, which can help avoid frequent cache replacement
@@ -84,6 +86,7 @@ struct WriteCacheOptions {
 
 struct ReadCacheOptions {
     bool use_adaptor = false;
+    bool extent = false;
 
     struct Stats {
         int64_t read_mem_bytes = 0;
