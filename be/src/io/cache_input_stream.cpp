@@ -188,6 +188,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
         // Everytime read at most one buffer size
         const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
+        int64_t cost = 0;
         char* src = nullptr;
 
         // check [read_offset_cursor, read_size) is already in SharedBuffer
@@ -197,10 +198,10 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
         if (ret.ok()) {
             sb = ret.value();
             const uint8_t* buffer = nullptr;
-            RETURN_IF_ERROR(_sb_stream->get_bytes(&buffer, read_offset_cursor, read_size, sb));
+            RETURN_IF_ERROR(_sb_stream->get_bytes_with_cost(&buffer, read_offset_cursor, read_size, sb, &cost));
             src = (char*)buffer;
         } else {
-            RETURN_IF_ERROR(_sb_stream->read_at_fully(read_offset_cursor, _buffer.data(), read_size));
+            RETURN_IF_ERROR(_sb_stream->read_at_fully_with_cost(read_offset_cursor, _buffer.data(), read_size, &cost));
             src = _buffer.data();
         }
 
@@ -230,7 +231,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
 }
 
 Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t size, char* src,
-                                            const SharedBufferPtr& sb) {
+                                            const SharedBufferPtr& sb, int64_t cost) {
     SCOPED_RAW_TIMER(&_stats.write_cache_ns);
     const int64_t write_end_offset = offset + size;
     char* src_cursor = src;

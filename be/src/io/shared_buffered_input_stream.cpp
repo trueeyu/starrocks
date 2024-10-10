@@ -232,6 +232,33 @@ Status SharedBufferedInputStream::get_bytes(const uint8_t** buffer, size_t offse
     return Status::OK();
 }
 
+Status SharedBufferedInputStream::get_bytes_with_cost(const uint8_t** buffer, size_t offset, size_t count,
+                                                      SharedBufferPtr shared_buffer, int64_t* cost) {
+    if (!shared_buffer) {
+        ASSIGN_OR_RETURN(auto ret, find_shared_buffer(offset, count));
+        shared_buffer = ret;
+    }
+
+    SharedBuffer& sb = *shared_buffer;
+    if (sb.buffer.capacity() == 0) {
+        int64_t start = _shared_io_timer;
+        RETURN_IF_ERROR(CurrentThread::mem_tracker()->check_mem_limit("read into shared buffer"));
+        SCOPED_RAW_TIMER(&_shared_io_timer);
+        _shared_io_count += 1;
+        _shared_io_bytes += sb.size;
+        if (sb.size > sb.raw_size) {
+            // after called _deduplicate_shared_buffer(), sb.size maybe is larger than sb.raw_size
+            // we will count how many extra bytes we read because of alignment.
+            _shared_align_io_bytes += sb.size - sb.raw_size;
+        }
+        sb.buffer.reserve(sb.size);
+        RETURN_IF_ERROR(_stream->read_at_fully(sb.offset, sb.buffer.data(), sb.size));
+        *cost = _shared_io_timer - start;
+    }
+    *buffer = sb.buffer.data() + offset - sb.offset;
+    return Status::OK();
+}
+
 void SharedBufferedInputStream::release() {
     _map.clear();
 }
@@ -241,18 +268,35 @@ void SharedBufferedInputStream::release_to_offset(int64_t offset) {
     _map.erase(_map.begin(), it);
 }
 
-Status SharedBufferedInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
+Status SharedBufferedInputStream::read_at_fully(int64_t offset, void* data, int64_t count) {
     auto st = find_shared_buffer(offset, count);
     if (!st.ok()) {
         SCOPED_RAW_TIMER(&_direct_io_timer);
         _direct_io_count += 1;
         _direct_io_bytes += count;
-        RETURN_IF_ERROR(_stream->read_at_fully(offset, out, count));
+        RETURN_IF_ERROR(_stream->read_at_fully(offset, data, count));
         return Status::OK();
     }
     const uint8_t* buffer = nullptr;
     RETURN_IF_ERROR(get_bytes(&buffer, offset, count, st.value()));
-    strings::memcpy_inlined(out, buffer, count);
+    strings::memcpy_inlined(data, buffer, count);
+    return Status::OK();
+}
+
+Status SharedBufferedInputStream::read_at_fully_with_cost(int64_t offset, void* data, int64_t count, int64_t* cost) {
+    auto st = find_shared_buffer(offset, count);
+    if (!st.ok()) {
+        int64_t start = _direct_io_timer;
+        SCOPED_RAW_TIMER(&_direct_io_timer);
+        _direct_io_count += 1;
+        _direct_io_bytes += count;
+        RETURN_IF_ERROR(_stream->read_at_fully(offset, data, count));
+        *cost = _direct_io_timer - start;
+        return Status::OK();
+    }
+    const uint8_t* buffer = nullptr;
+    RETURN_IF_ERROR(get_bytes_with_cost(&buffer, offset, count, st.value(), cost));
+    strings::memcpy_inlined(data, buffer, count);
     return Status::OK();
 }
 

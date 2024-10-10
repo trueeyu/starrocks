@@ -77,10 +77,11 @@ protected:
         for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
             // Everytime read at most one buffer size
             const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
-            RETURN_IF_ERROR(_sb_stream->read_at_fully(read_offset_cursor, _buffer.data(), read_size));
+            int64_t cost = 0;
+            RETURN_IF_ERROR(_sb_stream->read_at_fully_with_cost(read_offset_cursor, _buffer.data(), read_size, &cost));
             char* src = _buffer.data();
 
-            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, nullptr));
+            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, nullptr, cost));
             read_offset_cursor += read_size;
         }
         return Status::OK();

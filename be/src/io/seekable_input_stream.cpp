@@ -30,6 +30,11 @@ Status SeekableInputStream::read_at_fully(int64_t offset, void* data, int64_t co
     return read_fully(data, count);
 }
 
+Status SeekableInputStream::read_at_fully_with_cost(int64_t offset, void* data, int64_t count, int64_t* cost) {
+    *cost = 0;
+    return read_at_fully(offset, data, count);
+}
+
 Status SeekableInputStream::skip(int64_t count) {
     ASSIGN_OR_RETURN(auto pos, position());
     return seek(pos + count);
