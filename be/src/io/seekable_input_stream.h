@@ -55,7 +55,8 @@ public:
     //    RETURN_IF_ERROR(seek(offset));
     //    return read_fully(out, count);
     // ```
-    virtual Status read_at_fully(int64_t offset, void* out, int64_t count);
+    virtual Status read_at_fully(int64_t offset, void* data, int64_t count);
+    virtual Status read_at_fully_with_cost(int64_t offset, void* data, int64_t count, int64_t* cost);
 
     // Return the total file size in bytes, or error.
     virtual StatusOr<int64_t> get_size() = 0;

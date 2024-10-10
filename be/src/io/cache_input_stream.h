@@ -94,10 +94,12 @@ protected:
     using SharedBufferPtr = SharedBufferedInputStream::SharedBufferPtr;
 
     // Read block from local, if not found, will return Status::NotFound();
-    virtual Status _read_block_from_local(const int64_t offset, const int64_t size, char* out);
+    virtual Status _read_block_from_local(const int64_t offset, const int64_t size, char* out, bool* extent);
     // Read multiple blocks from remote
-    virtual Status _read_blocks_from_remote(const int64_t offset, const int64_t size, char* out);
-    Status _populate_to_cache(const int64_t offset, const int64_t size, char* src, const SharedBufferPtr& sb);
+    virtual Status _read_blocks_from_remote(const int64_t offset, const int64_t size, char* out,
+                                            const std::vector<bool>& extent);
+    Status _populate_to_cache(const int64_t offset, const int64_t size, char* src, const SharedBufferPtr& sb,
+                              int64_t cost, const std::vector<bool>& extents);
     void _populate_cache_from_zero_copy_buffer(const char* p, int64_t offset, int64_t count, const SharedBufferPtr& sb);
     void _deduplicate_shared_buffer(const SharedBufferPtr& sb);
     bool _can_ignore_populate_error(const Status& status) const;

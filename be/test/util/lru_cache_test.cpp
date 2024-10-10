@@ -245,31 +245,31 @@ TEST_F(CacheTest, Usage) {
 
     CacheKey key1("100");
     insert_LRUCache(cache, key1, 100, CachePriority::NORMAL);
-    ASSERT_EQ(100, cache.get_usage());
+    ASSERT_EQ(100, cache.get_base_usage());
 
     CacheKey key2("200");
     insert_LRUCache(cache, key2, 200, CachePriority::DURABLE);
-    ASSERT_EQ(300, cache.get_usage());
+    ASSERT_EQ(300, cache.get_base_usage());
 
     CacheKey key3("300");
     insert_LRUCache(cache, key3, 300, CachePriority::NORMAL);
-    ASSERT_EQ(600, cache.get_usage());
+    ASSERT_EQ(600, cache.get_base_usage());
 
     CacheKey key4("400");
     insert_LRUCache(cache, key4, 400, CachePriority::NORMAL);
-    ASSERT_EQ(1000, cache.get_usage());
+    ASSERT_EQ(1000, cache.get_base_usage());
 
     CacheKey key5("500");
     insert_LRUCache(cache, key5, 500, CachePriority::NORMAL);
-    ASSERT_EQ(700, cache.get_usage());
+    ASSERT_EQ(700, cache.get_base_usage());
 
     CacheKey key6("600");
     insert_LRUCache(cache, key6, 600, CachePriority::NORMAL);
-    ASSERT_EQ(800, cache.get_usage());
+    ASSERT_EQ(800, cache.get_base_usage());
 
     CacheKey key7("950");
     insert_LRUCache(cache, key7, 950, CachePriority::DURABLE);
-    ASSERT_EQ(950, cache.get_usage());
+    ASSERT_EQ(950, cache.get_base_usage());
 }
 
 TEST_F(CacheTest, HeavyEntries) {

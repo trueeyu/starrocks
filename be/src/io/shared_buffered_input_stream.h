@@ -61,7 +61,8 @@ public:
     }
     StatusOr<int64_t> position() override { return _offset; }
     StatusOr<int64_t> read(void* data, int64_t count) override;
-    Status read_at_fully(int64_t offset, void* out, int64_t count) override;
+    Status read_at_fully(int64_t offset, void* data, int64_t count) override;
+    Status read_at_fully_with_cost(int64_t offset, void* data, int64_t count, int64_t* cost) override;
     StatusOr<int64_t> get_size() override;
     Status skip(int64_t count) override {
         _offset += count;
@@ -72,6 +73,8 @@ public:
     // Get bytes from shared buffer or remote storage, when the shared_buffer is not NULL, the function
     // will use it directely instead of finding it repeatedly.
     Status get_bytes(const uint8_t** buffer, size_t offset, size_t count, SharedBufferPtr shared_buffer);
+    Status get_bytes_with_cost(const uint8_t** buffer, size_t offset, size_t count, SharedBufferPtr shared_buffer,
+                               int64_t* cost);
 
     StatusOr<std::unique_ptr<NumericStatistics>> get_numeric_statistics() override {
         return _stream->get_numeric_statistics();

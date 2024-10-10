@@ -87,7 +87,7 @@ CacheInputStream::~CacheInputStream() {
     }
 }
 
-Status CacheInputStream::_read_block_from_local(const int64_t offset, const int64_t size, char* out) {
+Status CacheInputStream::_read_block_from_local(const int64_t offset, const int64_t size, char* out, bool* extent) {
     if (UNLIKELY(size == 0)) {
         return Status::OK();
     }
@@ -101,6 +101,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
         block.buffer.copy_to(out, size, offset - block.offset);
         _stats.read_block_buffer_bytes += size;
         _stats.read_block_buffer_count += 1;
+        *extent = false;
         return Status::OK();
     }
 
@@ -137,6 +138,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
         if (_enable_block_buffer) {
             res = _cache->read_buffer(_cache_key, block_offset, load_size, &block.buffer, &options);
             read_size = load_size;
+            *extent = options.extent;
         } else {
             StatusOr<size_t> r = _cache->read_buffer(_cache_key, offset, size, out, &options);
             res = r.status();
@@ -172,7 +174,8 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
     return Status::NotFound("Not Found");
 }
 
-Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const int64_t size, char* out) {
+Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const int64_t size, char* out,
+                                                  const std::vector<bool>& extents) {
     const int64_t start_block_id = offset / _block_size;
     const int64_t end_block_id = (offset + size - 1) / _block_size;
 
@@ -188,6 +191,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
         // Everytime read at most one buffer size
         const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
+        int64_t cost = 0;
         char* src = nullptr;
 
         // check [read_offset_cursor, read_size) is already in SharedBuffer
@@ -197,10 +201,10 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
         if (ret.ok()) {
             sb = ret.value();
             const uint8_t* buffer = nullptr;
-            RETURN_IF_ERROR(_sb_stream->get_bytes(&buffer, read_offset_cursor, read_size, sb));
+            RETURN_IF_ERROR(_sb_stream->get_bytes_with_cost(&buffer, read_offset_cursor, read_size, sb, &cost));
             src = (char*)buffer;
         } else {
-            RETURN_IF_ERROR(_sb_stream->read_at_fully(read_offset_cursor, _buffer.data(), read_size));
+            RETURN_IF_ERROR(_sb_stream->read_at_fully_with_cost(read_offset_cursor, _buffer.data(), read_size, &cost));
             src = _buffer.data();
         }
 
@@ -217,7 +221,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
         }
 
         if (_enable_populate_cache) {
-            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, sb));
+            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, sb, cost, extents));
         }
 
         read_offset_cursor += read_size;
@@ -230,7 +234,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
 }
 
 Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t size, char* src,
-                                            const SharedBufferPtr& sb) {
+                                            const SharedBufferPtr& sb, int64_t cost, const std::vector<bool>& extents) {
     SCOPED_RAW_TIMER(&_stats.write_cache_ns);
     const int64_t write_end_offset = offset + size;
     char* src_cursor = src;
@@ -242,6 +246,8 @@ Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t 
         options.evict_probability = _datacache_evict_probability;
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
+        options.cost = cost;
+        options.extent = extents[write_offset_cursor];
         const int64_t write_size = std::min(_block_size, write_end_offset - write_offset_cursor);
 
         if (options.async && sb) {
@@ -302,11 +308,20 @@ void CacheInputStream::_deduplicate_shared_buffer(const SharedBufferPtr& sb) {
 }
 
 struct ReadFromRemoteIORange {
-    ReadFromRemoteIORange(const int64_t offset, char* write_pointer, const int64_t size)
-            : offset(offset), write_pointer(write_pointer), size(size) {}
+    ReadFromRemoteIORange(const int64_t offset, char* write_pointer, const int64_t size, bool extent)
+            : offset(offset), write_pointer(write_pointer), size(size) {
+        extents.emplace_back(extent);
+    }
+
+    ReadFromRemoteIORange(const int64_t offset, char* write_pointer, const int64_t size, std::vector<bool> extents)
+            : offset(offset), write_pointer(write_pointer), size(size) {
+        extents = std::move(extents);
+    }
+
     const int64_t offset;
     char* write_pointer;
     const int64_t size;
+    std::vector<bool> extents;
 };
 
 Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
@@ -329,10 +344,11 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
         size_t off = std::max(offset, i * _block_size);
         size_t end = std::min((i + 1) * _block_size, end_offset);
         size_t size = end - off;
-        Status st = _read_block_from_local(off, size, p);
+        bool extent = false;
+        Status st = _read_block_from_local(off, size, p, &extent);
         if (st.is_not_found()) {
             // Not found block from local, we need to load it from remote
-            need_read_from_remote.emplace_back(off, p, size);
+            need_read_from_remote.emplace_back(off, p, size, extent);
         } else if (!st.ok()) {
             return st;
         }
@@ -353,9 +369,16 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
         ReadFromRemoteIORange& to_io_range = need_read_from_remote[to];
         int64_t start_offset = from_io_range.offset;
         int64_t merged_size = to_io_range.offset + to_io_range.size - from_io_range.offset;
+        std::vector<bool> extents;
+
+        for (size_t i = from; i < to; i++) {
+            extents.emplace_back(need_read_from_remote[i].extents.back());
+        }
+
         // check write pointer is continous
         DCHECK(from_io_range.write_pointer + merged_size == to_io_range.write_pointer + to_io_range.size);
-        merged_need_read_from_remote.emplace_back(start_offset, from_io_range.write_pointer, merged_size);
+        merged_need_read_from_remote.emplace_back(start_offset, from_io_range.write_pointer, merged_size,
+                                                  from_io_range.extents);
     };
 
     size_t unmerge = 0;
@@ -378,7 +401,8 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
     for (const auto& io_range : merged_need_read_from_remote) {
         DCHECK(io_range.offset >= origin_offset);
         DCHECK(io_range.offset + io_range.size <= origin_offset + count);
-        RETURN_IF_ERROR(_read_blocks_from_remote(io_range.offset, io_range.size, io_range.write_pointer));
+        RETURN_IF_ERROR(
+                _read_blocks_from_remote(io_range.offset, io_range.size, io_range.write_pointer, io_range.extents));
     }
 
     return Status::OK();
@@ -432,6 +456,8 @@ void CacheInputStream::_populate_cache_from_zero_copy_buffer(const char* p, int6
         options.evict_probability = _datacache_evict_probability;
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
+        options.cost = 0;
+        options.extent = false;
         if (options.async && sb) {
             auto cb = [sb](int code, const std::string& msg) {
                 // We only need to keep the shared buffer pointer
