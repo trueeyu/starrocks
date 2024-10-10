@@ -174,7 +174,8 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
     return Status::NotFound("Not Found");
 }
 
-Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const int64_t size, char* out, bool extent) {
+Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const int64_t size, char* out,
+                                                  const std::vector<bool>& extents) {
     const int64_t start_block_id = offset / _block_size;
     const int64_t end_block_id = (offset + size - 1) / _block_size;
 
@@ -220,7 +221,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
         }
 
         if (_enable_populate_cache) {
-            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, sb, cost, extent));
+            RETURN_IF_ERROR(_populate_to_cache(read_offset_cursor, read_size, src, sb, cost, extents));
         }
 
         read_offset_cursor += read_size;
@@ -233,7 +234,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
 }
 
 Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t size, char* src,
-                                            const SharedBufferPtr& sb, int64_t cost, bool extent) {
+                                            const SharedBufferPtr& sb, int64_t cost, const std::vector<bool>& extents) {
     SCOPED_RAW_TIMER(&_stats.write_cache_ns);
     const int64_t write_end_offset = offset + size;
     char* src_cursor = src;
@@ -246,7 +247,7 @@ Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t 
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
         options.cost = cost;
-        options.extent = extent;
+        options.extent = extents[write_offset_cursor];
         const int64_t write_size = std::min(_block_size, write_end_offset - write_offset_cursor);
 
         if (options.async && sb) {
@@ -308,11 +309,19 @@ void CacheInputStream::_deduplicate_shared_buffer(const SharedBufferPtr& sb) {
 
 struct ReadFromRemoteIORange {
     ReadFromRemoteIORange(const int64_t offset, char* write_pointer, const int64_t size, bool extent)
-            : offset(offset), write_pointer(write_pointer), size(size), extent(extent) {}
+            : offset(offset), write_pointer(write_pointer), size(size) {
+        extents.emplace_back(extent);
+    }
+
+    ReadFromRemoteIORange(const int64_t offset, char* write_pointer, const int64_t size, std::vector<bool> extents)
+            : offset(offset), write_pointer(write_pointer), size(size) {
+        extents = std::move(extents);
+    }
+
     const int64_t offset;
     char* write_pointer;
     const int64_t size;
-    bool extent = false;
+    std::vector<bool> extents;
 };
 
 Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
@@ -360,10 +369,16 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
         ReadFromRemoteIORange& to_io_range = need_read_from_remote[to];
         int64_t start_offset = from_io_range.offset;
         int64_t merged_size = to_io_range.offset + to_io_range.size - from_io_range.offset;
+        std::vector<bool> extents;
+
+        for (size_t i = from; i < to; i++) {
+            extents.emplace_back(need_read_from_remote[i].extents.back());
+        }
+
         // check write pointer is continous
         DCHECK(from_io_range.write_pointer + merged_size == to_io_range.write_pointer + to_io_range.size);
         merged_need_read_from_remote.emplace_back(start_offset, from_io_range.write_pointer, merged_size,
-                                                  from_io_range.extent);
+                                                  from_io_range.extents);
     };
 
     size_t unmerge = 0;
@@ -387,7 +402,7 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
         DCHECK(io_range.offset >= origin_offset);
         DCHECK(io_range.offset + io_range.size <= origin_offset + count);
         RETURN_IF_ERROR(
-                _read_blocks_from_remote(io_range.offset, io_range.size, io_range.write_pointer, io_range.extent));
+                _read_blocks_from_remote(io_range.offset, io_range.size, io_range.write_pointer, io_range.extents));
     }
 
     return Status::OK();
