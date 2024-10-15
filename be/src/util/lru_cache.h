@@ -296,16 +296,20 @@ private:
     void _evict_one_entry(LRUHandle* e);
 
     // Initialized before use.
-    size_t _capacity{0};
+    size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
+
     size_t _base_usage = 0;
+    size_t _extent_usage = 0;
 
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
     // Entries have refs==1 and in_cache==true.
-    LRUHandle _lru;
+    LRUHandle _extent_lru;
+    LRUHandle _extent_lru;
 
     HandleTable _table;
 
