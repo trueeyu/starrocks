@@ -38,8 +38,11 @@ BlockCache::~BlockCache() {
     (void)shutdown();
 }
 
-METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_data_quota, MetricUnit::BYTES);
-METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_data, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_base_quota, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_base_usage, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_extent_quota, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_extent_usage, MetricUnit::BYTES);
+
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
 
 Status BlockCache::init(const CacheOptions& options) {
@@ -61,23 +64,34 @@ Status BlockCache::init(const CacheOptions& options) {
     if (_disk_space_monitor) {
         _disk_space_monitor->start();
     }
-    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_data_quota",
-                                                             &lxh_datacache_mem_data_quota);
-    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_data", &lxh_datacache_mem_data);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_base_quota",
+                                                             &lxh_datacache_mem_base_quota);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_base_usage",
+                                                             &lxh_datacache_mem_base_usage);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_extent_quota",
+                                                             &lxh_datacache_mem_extent_quota);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_extent_usage",
+                                                             &lxh_datacache_mem_extent_usage);
+
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_meta", &lxh_datacache_mem_meta);
 
-    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_data_quota", [this]() {
-      DataCacheMetrics datacache_metrics = cache_metrics(0);
-      lxh_datacache_mem_data_quota.set_value(datacache_metrics.mem_quota_bytes);
-    });
-    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_data", [this]() {
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_base_quota", [this]() {
         DataCacheMetrics datacache_metrics = cache_metrics(0);
-        lxh_datacache_mem_data.set_value(datacache_metrics.mem_used_bytes);
+        lxh_datacache_mem_base_quota.set_value(datacache_metrics.mem_quota_bytes);
+        lxh_datacache_mem_base_usage.set_value(datacache_metrics.mem_used_bytes);
+        lxh_datacache_mem_extent_quota.set_value(datacache_metrics.mem_extent_quota_bytes);
+        lxh_datacache_mem_extent_usage.set_value(datacache_metrics.mem_extent_used_bytes);
+    });
+    /*
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_base_usage", [this]() {
+        DataCacheMetrics datacache_metrics = cache_metrics(0);
+        lxh_datacache_mem_base_usage.set_value(datacache_metrics.mem_used_bytes);
     });
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_data", [this]() {
         auto datacache_metrics = cache_metrics(0);
         lxh_datacache_mem_meta.set_value(datacache_metrics.meta_used_bytes);
     });
+    */
     return Status::OK();
 }
 
