@@ -16,11 +16,10 @@
 
 #include <fmt/format.h>
 
-#ifdef WITH_STARCACHE
 #include "block_cache/starcache_wrapper.h"
-#endif
 #include "common/statusor.h"
 #include "gutil/strings/substitute.h"
+#include "util/starrocks_metrics.h"
 
 namespace starrocks {
 
@@ -39,17 +38,18 @@ BlockCache::~BlockCache() {
     (void)shutdown();
 }
 
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_data, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
+
 Status BlockCache::init(const CacheOptions& options) {
     _block_size = std::min(options.block_size, MAX_BLOCK_SIZE);
     auto cache_options = options;
-#ifdef WITH_STARCACHE
     if (cache_options.engine == "starcache") {
         _kv_cache = std::make_unique<StarCacheWrapper>();
         _disk_space_monitor = std::make_unique<DiskSpaceMonitor>(this);
         _disk_space_monitor->adjust_spaces(&cache_options.disk_spaces);
         LOG(INFO) << "init starcache engine, block_size: " << _block_size;
     }
-#endif
     if (!_kv_cache) {
         LOG(ERROR) << "unsupported block cache engine: " << cache_options.engine;
         return Status::NotSupported("unsupported block cache engine");
@@ -60,6 +60,16 @@ Status BlockCache::init(const CacheOptions& options) {
     if (_disk_space_monitor) {
         _disk_space_monitor->start();
     }
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_data", &lxh_datacache_mem_data);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_meta", &lxh_datacache_mem_meta);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_data", [this]() {
+        auto datacache_metrics = cache_metrics(0);
+        lxh_datacache_mem_data.set_value(datacache_metrics.mem_used_bytes);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_data", [this]() {
+        auto datacache_metrics = cache_metrics(0);
+        lxh_datacache_mem_meta.set_value(datacache_metrics.meta_used_bytes);
+    });
     return Status::OK();
 }
 
