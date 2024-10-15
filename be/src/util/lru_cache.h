@@ -273,6 +273,7 @@ class LRUCache {
 public:
     // done
     LRUCache();
+    // done
     ~LRUCache() noexcept;
 
     // Separate from constructor so caller can easily make an array of LRUCache
@@ -285,6 +286,7 @@ public:
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
     void release(Cache::Handle* handle);
     void erase(const CacheKey& key, uint32_t hash);
+    // done
     int prune();
 
     uint64_t get_lookup_count() const;
@@ -293,8 +295,11 @@ public:
     size_t get_capacity() const;
 
 private:
+    // done
     void _lru_remove(LRUHandle* e);
+    // done
     void _lru_append(LRUHandle* list, LRUHandle* e);
+    // done
     bool _unref(LRUHandle* e);
     void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
     void _evict_one_entry(LRUHandle* e);

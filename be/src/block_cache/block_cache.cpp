@@ -197,7 +197,9 @@ DataCacheEngineType BlockCache::engine_type() {
 }
 
 void BlockCache::_refresh_quota() {
-    auto metrics = _kv_cache->cache_metrics(0);
+    DataCacheMetrics metrics = _kv_cache->cache_metrics(0);
+    LOG(ERROR) << "Metrics_1: " << metrics.mem_quota_bytes;
+    LOG(ERROR) << "Metrics_2: " << metrics.disk_quota_bytes;
     _mem_quota.store(metrics.mem_quota_bytes, std::memory_order_relaxed);
     _disk_quota.store(metrics.disk_quota_bytes, std::memory_order_relaxed);
 }

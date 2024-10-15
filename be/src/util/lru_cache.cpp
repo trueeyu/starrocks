@@ -294,7 +294,11 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
     _table.remove(e->key(), e->hash);
     e->in_cache = false;
     _unref(e);
-    _base_usage -= e->charge;
+    if (e->extent) {
+        _extent_usage -= e->charge;
+    } else {
+        _base_usage -= e->charge;
+    }
 }
 
 Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
