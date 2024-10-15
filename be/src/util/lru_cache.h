@@ -209,7 +209,10 @@ typedef struct LRUHandle {
     LRUHandle* prev;
     size_t charge;
     size_t key_length;
+
     bool in_cache; // Whether entry is in the cache.
+    bool extent = false;
+
     uint32_t refs;
     uint32_t hash; // Hash of key(); used for fast sharding and comparisons
     CachePriority priority = CachePriority::NORMAL;
@@ -268,6 +271,7 @@ private:
 // A single shard of sharded cache.
 class LRUCache {
 public:
+    // done
     LRUCache();
     ~LRUCache() noexcept;
 
@@ -308,7 +312,7 @@ private:
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
     // Entries have refs==1 and in_cache==true.
-    LRUHandle _extent_lru;
+    LRUHandle _base_lru;
     LRUHandle _extent_lru;
 
     HandleTable _table;

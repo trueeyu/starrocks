@@ -152,6 +152,9 @@ bool HandleTable::_resize() {
 
 LRUCache::LRUCache() {
     // Make empty circular linked list
+    _base_lru.next = &_base_lru;
+    _base_lru.prev = &_base_lru;
+
     _extent_lru.next = &_extent_lru;
     _extent_lru.prev = &_extent_lru;
 }
@@ -252,7 +255,7 @@ void LRUCache::release(Cache::Handle* handle) {
                 last_ref = true;
             } else {
                 // put it to LRU free list
-                _lru_append(&_extent_lru, e);
+                _lru_append(&_base_lru, e);
             }
         }
     }
@@ -264,9 +267,9 @@ void LRUCache::release(Cache::Handle* handle) {
 }
 
 void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
-    LRUHandle* cur = &_extent_lru;
+    LRUHandle* cur = &_base_lru;
     // 1. evict normal cache entries
-    while (_base_usage + charge > _base_capacity && cur->next != &_extent_lru) {
+    while (_base_usage + charge > _base_capacity && cur->next != &_base_lru) {
         LRUHandle* old = cur->next;
         if (old->priority == CachePriority::DURABLE) {
             cur = cur->next;
@@ -276,8 +279,8 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
         deleted->push_back(old);
     }
     // 2. evict durable cache entries if need
-    while (_base_usage + charge > _base_capacity && _extent_lru.next != &_extent_lru) {
-        LRUHandle* old = _extent_lru.next;
+    while (_base_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
+        LRUHandle* old = _base_lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
         _evict_one_entry(old);
         deleted->push_back(old);
@@ -371,6 +374,18 @@ int LRUCache::prune() {
     std::vector<LRUHandle*> last_ref_list;
     {
         std::lock_guard l(_mutex);
+        while (_base_lru.next != &_base_lru) {
+            LRUHandle* old = _base_lru.next;
+            DCHECK(old->in_cache);
+            DCHECK(old->refs == 1); // LRU list contains elements which may be evicted
+            _lru_remove(old);
+            _table.remove(old->key(), old->hash);
+            old->in_cache = false;
+            _unref(old);
+            _base_usage -= old->charge;
+            last_ref_list.push_back(old);
+        }
+
         while (_extent_lru.next != &_extent_lru) {
             LRUHandle* old = _extent_lru.next;
             DCHECK(old->in_cache);
@@ -379,7 +394,7 @@ int LRUCache::prune() {
             _table.remove(old->key(), old->hash);
             old->in_cache = false;
             _unref(old);
-            _base_usage -= old->charge;
+            _extent_usage -= old->charge;
             last_ref_list.push_back(old);
         }
     }
