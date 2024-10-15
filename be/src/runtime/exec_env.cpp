@@ -543,6 +543,7 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     RETURN_IF_ERROR(_small_file_mgr->init());
 
     RETURN_IF_ERROR(_load_channel_mgr->init(GlobalEnv::GetInstance()->load_mem_tracker()));
+    LOG(ERROR) << "LOAD_CHANNEL_MGR_START";
 
     _heartbeat_flags = new HeartbeatFlags();
     auto capacity = std::max<size_t>(config::query_cache_capacity, 4L * 1024 * 1024);
