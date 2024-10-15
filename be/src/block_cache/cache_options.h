@@ -75,6 +75,7 @@ struct WriteCacheOptions {
     // and improve cache hit rate sometimes.
     // It is expressed as a percentage. If evict_probability is 10, it means the probability to evict other data is 10%.
     int32_t evict_probability = 100;
+    size_t cost = 0;
 
     struct Stats {
         int64_t write_mem_bytes = 0;
