@@ -285,7 +285,7 @@ public:
 
     uint64_t get_lookup_count() const;
     uint64_t get_hit_count() const;
-    size_t get_usage() const;
+    size_t get_base_usage() const;
     size_t get_capacity() const;
 
 private:
@@ -300,7 +300,7 @@ private:
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
-    size_t _usage{0};
+    size_t _base_usage = 0;
 
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
