@@ -234,6 +234,10 @@ typedef struct LRUHandle {
         ::free(this);
     }
 
+    void free_value() {
+        ::free(this);
+    }
+
 } LRUHandle;
 
 // We provide our own simple hash tablet since it removes a whole bunch
@@ -284,15 +288,21 @@ public:
                           void (*deleter)(const CacheKey& key, void* value),
                           CachePriority priority = CachePriority::NORMAL, size_t value_size = 0);
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
+    // done
     void release(Cache::Handle* handle);
+    // done
     void erase(const CacheKey& key, uint32_t hash);
     // done
     int prune();
 
     uint64_t get_lookup_count() const;
     uint64_t get_hit_count() const;
+
     size_t get_base_usage() const;
-    size_t get_capacity() const;
+    size_t get_extent_usage() const;
+
+    size_t get_base_capacity() const;
+    size_t get_extent_capacity() const;
 
 private:
     // done
@@ -302,7 +312,10 @@ private:
     // done
     bool _unref(LRUHandle* e);
     void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
+
+    // done (base or extent)
     void _evict_one_entry(LRUHandle* e);
+    void _evict_one_entry_from_base_to_extent(LRUHandle* e);
 
     // Initialized before use.
     size_t _base_capacity = 0;

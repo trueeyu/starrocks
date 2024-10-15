@@ -211,9 +211,19 @@ size_t LRUCache::get_base_usage() const {
     return _base_usage;
 }
 
-size_t LRUCache::get_capacity() const {
+size_t LRUCache::get_extent_usage() const {
+    std::lock_guard l(_mutex);
+    return _extent_usage;
+}
+
+size_t LRUCache::get_base_capacity() const {
     std::lock_guard l(_mutex);
     return _base_capacity;
+}
+
+size_t LRUCache::get_extent_capacity() const {
+    std::lock_guard l(_mutex);
+    return _extent_capacity;
 }
 
 Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
@@ -238,31 +248,18 @@ void LRUCache::release(Cache::Handle* handle) {
         return;
     }
     auto* e = reinterpret_cast<LRUHandle*>(handle);
+    CHECK(e->extent == false);
     bool last_ref = false;
     {
         std::lock_guard l(_mutex);
         last_ref = _unref(e);
         if (last_ref) {
             _base_usage -= e->charge;
+            e->free();
         } else if (e->in_cache && e->refs == 1) {
-            // only exists in cache
-            if (_base_usage > _base_capacity) {
-                // take this opportunity and remove the item
-                _table.remove(e->key(), e->hash);
-                e->in_cache = false;
-                _unref(e);
-                _base_usage -= e->charge;
-                last_ref = true;
-            } else {
-                // put it to LRU free list
-                _lru_append(&_base_lru, e);
-            }
+            // put it to LRU free list
+            _lru_append(&_base_lru, e);
         }
-    }
-
-    // free handle out of mutex
-    if (last_ref) {
-        e->free();
     }
 }
 
@@ -288,17 +285,31 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
 }
 
 void LRUCache::_evict_one_entry(LRUHandle* e) {
-    DCHECK(e->in_cache);
-    DCHECK(e->refs == 1); // LRU list contains elements which may be evicted
+    CHECK(e->in_cache);
+    CHECK(e->refs == 1); // LRU list contains elements which may be evicted
+
     _lru_remove(e);
     _table.remove(e->key(), e->hash);
     e->in_cache = false;
     _unref(e);
+
     if (e->extent) {
         _extent_usage -= e->charge;
     } else {
         _base_usage -= e->charge;
     }
+}
+
+void LRUCache::_evict_one_entry_from_base_to_extent(LRUHandle* e) {
+    CHECK(e->extent);
+
+    _lru_remove(e);
+    _lru_append(&_extent_lru, e);
+    e->free_value();
+    e->extent = true;
+
+    _base_usage -= e->charge;
+    _extent_usage += e->charge;
 }
 
 Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
@@ -313,6 +324,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
     e->refs = 2; // one for the returned handle, one for LRUCache.
     e->next = e->prev = nullptr;
     e->in_cache = true;
+    e->extent = false;
     e->priority = priority;
     e->value_size = value_size;
     memcpy(e->key_data, key.data(), key.size());
@@ -359,7 +371,11 @@ void LRUCache::erase(const CacheKey& key, uint32_t hash) {
         if (e != nullptr) {
             last_ref = _unref(e);
             if (last_ref) {
-                _base_usage -= e->charge;
+                if (e->extent) {
+                    _extent_usage -= e->charge;
+                } else {
+                    _base_usage -= e->charge;
+                }
                 if (e->in_cache) {
                     // locate in free list
                     _lru_remove(e);
@@ -493,7 +509,7 @@ size_t ShardedLRUCache::_get_stat(size_t (LRUCache::*mem_fun)() const) const {
     return n;
 }
 size_t ShardedLRUCache::get_capacity() const {
-    return _get_stat(&LRUCache::get_capacity);
+    return _get_stat(&LRUCache::get_base_capacity);
 }
 
 void ShardedLRUCache::prune() {
@@ -520,7 +536,7 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
     size_t shard_count = sizeof(_shards) / sizeof(LRUCache);
 
     for (uint32_t i = 0; i < shard_count; ++i) {
-        size_t capacity = _shards[i].get_capacity();
+        size_t capacity = _shards[i].get_base_capacity();
         size_t usage = _shards[i].get_base_usage();
         rapidjson::Value shard_info(rapidjson::kObjectType);
         shard_info.AddMember("capacity", static_cast<double>(capacity), document->GetAllocator());
