@@ -40,7 +40,7 @@ StatusOr<CacheValue> CacheManager::probe(const std::string& key) {
 }
 
 size_t CacheManager::memory_usage() {
-    return _cache.get_memory_usage();
+    return _cache.get_base_memory_usage();
 }
 
 size_t CacheManager::capacity() {
