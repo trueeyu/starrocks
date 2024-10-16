@@ -260,11 +260,11 @@ void Metacache::erase(std::string_view key) {
 }
 
 void Metacache::update_capacity(size_t new_capacity) {
-    size_t old_capacity = _cache->get_capacity();
+    size_t old_capacity = _cache->get_base_capacity();
     int64_t delta = (int64_t)new_capacity - (int64_t)old_capacity;
     if (delta != 0) {
         (void)_cache->adjust_capacity(delta);
-        VLOG(5) << "Changed metadache capacity from " << old_capacity << " to " << _cache->get_capacity();
+        VLOG(5) << "Changed metadache capacity from " << old_capacity << " to " << _cache->get_base_capacity();
     }
 }
 
@@ -277,7 +277,7 @@ size_t Metacache::memory_usage() const {
 }
 
 size_t Metacache::capacity() const {
-    return _cache->get_capacity();
+    return _cache->get_base_capacity();
 }
 
 } // namespace starrocks::lake
