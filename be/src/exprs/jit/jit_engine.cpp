@@ -103,7 +103,7 @@ Status JitObjectCache::register_func(JITScalarFunction func) {
         // maybe release earlier as the std::shared_ptr<llvm::MemoryBuffer> is hold by caller
         GlobalEnv::GetInstance()->jit_cache_mem_tracker()->release(entry->obj_buff->getBufferSize());
         delete entry;
-    });
+    }, CachePriority::NORMAL, 0, 0);
     if (handle == nullptr) {
         delete cache;
         LOG(WARNING) << "JIT register func failed, func = " << _cache_key << ", ir size = " << cache_func_size;
