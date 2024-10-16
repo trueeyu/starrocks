@@ -169,6 +169,7 @@ bool StoragePageCache::adjust_capacity(int64_t delta) {
 }
 
 bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
+    VLOG(3) << "LXH: lookup key: " << key.fname << ":" << key.offset;
     auto* lru_handle = _cache->lookup(key.encode());
     if (lru_handle == nullptr) {
         return false;
@@ -179,6 +180,8 @@ bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
 
 void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory,
                               size_t cost) {
+    VLOG(3) << "LXH: insert key: " << key.fname << ":" << key.offset << ":size(" << data.size
+            << "):cost(" << cost << ")";
     // mem size should equals to data size when running UT
     int64_t mem_size = data.size;
 #ifndef BE_TEST
