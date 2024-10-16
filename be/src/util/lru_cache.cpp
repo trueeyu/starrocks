@@ -188,7 +188,7 @@ void LRUCache::set_capacity(size_t capacity) {
     {
         std::lock_guard l(_mutex);
         _base_capacity = capacity;
-        _evict_from_lru(0, &last_ref_list);
+        _evict_from_base_lru(0, &last_ref_list);
     }
 
     for (auto entry : last_ref_list) {
@@ -263,8 +263,9 @@ void LRUCache::release(Cache::Handle* handle) {
     }
 }
 
-void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
+void LRUCache::_evict_from_base_lru(size_t charge, std::vector<LRUHandle*>* deleted) {
     LRUHandle* cur = &_base_lru;
+
     // 1. evict normal cache entries
     while (_base_usage + charge > _base_capacity && cur->next != &_base_lru) {
         LRUHandle* old = cur->next;
@@ -275,12 +276,57 @@ void LRUCache::_evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted) 
         _evict_one_entry(old);
         deleted->push_back(old);
     }
+
     // 2. evict durable cache entries if need
     while (_base_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
         LRUHandle* old = _base_lru.next;
         DCHECK(old->priority == CachePriority::DURABLE);
         _evict_one_entry(old);
         deleted->push_back(old);
+    }
+}
+
+void LRUCache::_evict_from_extent_lru(std::vector<LRUHandle*>* deleted) {
+    LRUHandle* cur = &_extent_lru;
+
+    // 1. evict normal cache entries
+    while (_extent_usage > _extent_capacity && cur->next != &_extent_lru) {
+        LRUHandle* old = cur->next;
+        if (old->priority == CachePriority::DURABLE) {
+            cur = cur->next;
+            continue;
+        }
+        _evict_one_entry(old);
+        deleted->push_back(old);
+    }
+
+    // 2. evict durable cache entries if need
+    while (_extent_usage > _extent_capacity && _extent_lru.next != &_extent_lru) {
+        LRUHandle* old = _extent_lru.next;
+        DCHECK(old->priority == CachePriority::DURABLE);
+        _evict_one_entry(old);
+        deleted->push_back(old);
+    }
+}
+
+void LRUCache::_evict_from_base_to_extent_lru(size_t charge) {
+    LRUHandle* cur = &_base_lru;
+
+    // 1. evict normal cache entries
+    while (_base_usage + charge > _base_capacity && cur->next != &_base_lru) {
+        LRUHandle* old = cur->next;
+        if (old->priority == CachePriority::DURABLE) {
+            cur = cur->next;
+            continue;
+        }
+        _evict_one_entry_from_base_to_extent(old);
+    }
+
+    // 2. evict durable cache entries if need
+    while (_base_usage + charge > _base_capacity && _base_lru.next != &_base_lru) {
+        LRUHandle* old = _base_lru.next;
+        DCHECK(old->priority == CachePriority::DURABLE);
+        _evict_one_entry_from_base_to_extent(old);
     }
 }
 
@@ -334,7 +380,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
 
         // Free the space following strict LRU policy until enough space
         // is freed or the lru list is empty
-        _evict_from_lru(charge, &last_ref_list);
+        _evict_from_base_lru(charge, &last_ref_list);
 
         // insert into the cache
         // note that the cache might get larger than its capacity if not enough

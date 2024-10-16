@@ -311,7 +311,11 @@ private:
     void _lru_append(LRUHandle* list, LRUHandle* e);
     // done
     bool _unref(LRUHandle* e);
-    void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
+
+    // done
+    void _evict_from_base_lru(size_t charge, std::vector<LRUHandle*>* deleted);
+    void _evict_from_extent_lru(std::vector<LRUHandle*>* deleted);
+    void _evict_from_base_to_extent_lru(size_t charge);
 
     // done (base or extent)
     void _evict_one_entry(LRUHandle* e);
