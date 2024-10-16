@@ -332,7 +332,7 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
 }
 
 void LRUCache::_evict_one_entry_from_base_to_extent(LRUHandle* e) {
-    CHECK(e->extent);
+    CHECK(!e->extent);
 
     _lru_remove(e);
     _lru_append(&_extent_lru, e);
