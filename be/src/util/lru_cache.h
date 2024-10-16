@@ -243,7 +243,7 @@ typedef struct LRUHandle {
     }
 
     void free_value() {
-        ::free(this);
+        (*deleter)(key(), value);
     }
 
 } LRUHandle;
@@ -338,12 +338,12 @@ private:
     void _evict_one_entry(LRUHandle* e);
     void _evict_one_entry_from_base_to_extent(LRUHandle* e);
 
+    // _mutex protects the following state.
+    mutable std::mutex _mutex;
+
     // Initialized before use.
     size_t _base_capacity = 0;
     size_t _extent_capacity = 0;
-
-    // _mutex protects the following state.
-    mutable std::mutex _mutex;
 
     size_t _base_usage = 0;
     size_t _extent_usage = 0;
