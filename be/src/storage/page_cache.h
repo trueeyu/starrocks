@@ -104,17 +104,23 @@ public:
     // The in_memory page will have higher priority.
     void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory, size_t cost);
 
-    size_t memory_usage() const { return _cache->get_base_memory_usage(); }
+    size_t base_memory_usage() const { return _cache->get_base_memory_usage(); }
+    size_t extent_memory_usage() const { return _cache->get_extent_memory_usage(); }
 
     void set_capacity(size_t capacity);
 
-    size_t get_capacity();
+    size_t get_base_capacity();
+    size_t get_extent_capacity();
+
+    size_t get_base_usage() { return _cache->get_base_memory_usage(); }
+    size_t get_extent_usage() { return _cache->get_extent_memory_usage(); }
 
     uint64_t get_lookup_count();
-
     uint64_t get_hit_count();
+    uint64_t get_extent_write_count();
+    uint64_t get_extent_cost();
 
-    bool adjust_capacity(int64_t delta, size_t min_capacity = 0);
+    bool adjust_capacity(int64_t delta);
 
     void prune();
 

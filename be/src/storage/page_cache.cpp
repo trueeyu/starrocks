@@ -45,9 +45,14 @@
 
 namespace starrocks {
 
-METRIC_DEFINE_UINT_GAUGE(page_cache_lookup_count, MetricUnit::OPERATIONS);
-METRIC_DEFINE_UINT_GAUGE(page_cache_hit_count, MetricUnit::OPERATIONS);
-METRIC_DEFINE_UINT_GAUGE(page_cache_capacity, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_lookup_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_write_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_cost, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_capacity, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_capacity, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_usage, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_usage, MetricUnit::BYTES);
 
 StoragePageCache* StoragePageCache::_s_instance = nullptr;
 
@@ -69,19 +74,52 @@ void StoragePageCache::prune() {
 }
 
 static void init_metrics() {
-    StarRocksMetrics::instance()->metrics()->register_metric("page_cache_lookup_count", &page_cache_lookup_count);
-    StarRocksMetrics::instance()->metrics()->register_hook("page_cache_lookup_count", []() {
-        page_cache_lookup_count.set_value(StoragePageCache::instance()->get_lookup_count());
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_lookup_count",
+                                                             &lxh_page_cache_lookup_count);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_lookup_count", []() {
+        lxh_page_cache_lookup_count.set_value(StoragePageCache::instance()->get_lookup_count());
     });
 
-    StarRocksMetrics::instance()->metrics()->register_metric("page_cache_hit_count", &page_cache_hit_count);
-    StarRocksMetrics::instance()->metrics()->register_hook("page_cache_hit_count", []() {
-        page_cache_hit_count.set_value(StoragePageCache::instance()->get_hit_count());
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_hit_count",
+                                                             &lxh_page_cache_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_hit_count", []() {
+        lxh_page_cache_hit_count.set_value(StoragePageCache::instance()->get_hit_count());
     });
 
-    StarRocksMetrics::instance()->metrics()->register_metric("page_cache_capacity", &page_cache_capacity);
-    StarRocksMetrics::instance()->metrics()->register_hook("page_cache_capacity", []() {
-        page_cache_capacity.set_value(StoragePageCache::instance()->get_capacity());
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_write_count",
+                                                             &lxh_page_cache_extent_write_count);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_write_count", []() {
+        lxh_page_cache_extent_write_count.set_value(StoragePageCache::instance()->get_extent_write_count());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_cost",
+                                                             &lxh_page_cache_extent_cost);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_cost", []() {
+        lxh_page_cache_extent_cost.set_value(StoragePageCache::instance()->get_extent_cost());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_base_capacity",
+                                                             &lxh_page_cache_base_capacity);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_base_capacity", []() {
+        lxh_page_cache_base_capacity.set_value(StoragePageCache::instance()->get_base_capacity());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_capacity",
+                                                             &lxh_page_cache_extent_capacity);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_capacity", []() {
+        lxh_page_cache_extent_capacity.set_value(StoragePageCache::instance()->get_extent_capacity());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_base_usage",
+                                                             &lxh_page_cache_base_usage);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_base_usage", []() {
+        lxh_page_cache_base_usage.set_value(StoragePageCache::instance()->get_base_usage());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_usage",
+                                                             &lxh_page_cache_extent_usage);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_usage", []() {
+        lxh_page_cache_extent_usage.set_value(StoragePageCache::instance()->get_extent_usage());
     });
 }
 
@@ -99,8 +137,12 @@ void StoragePageCache::set_capacity(size_t capacity) {
     _cache->set_capacity(capacity);
 }
 
-size_t StoragePageCache::get_capacity() {
+size_t StoragePageCache::get_base_capacity() {
     return _cache->get_base_capacity();
+}
+
+size_t StoragePageCache::get_extent_capacity() {
+    return _cache->get_extent_capacity();
 }
 
 uint64_t StoragePageCache::get_lookup_count() {
@@ -111,7 +153,15 @@ uint64_t StoragePageCache::get_hit_count() {
     return _cache->get_hit_count();
 }
 
-bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
+uint64_t StoragePageCache::get_extent_write_count() {
+    return _cache->get_extent_write_count();
+}
+
+uint64_t StoragePageCache::get_extent_cost() {
+    return _cache->get_extent_cost();
+}
+
+bool StoragePageCache::adjust_capacity(int64_t delta) {
 #ifndef BE_TEST
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
 #endif

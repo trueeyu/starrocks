@@ -277,7 +277,7 @@ void evict_pagecache(StoragePageCache* cache, int64_t bytes_to_dec, std::atomic<
             bytes -= GCBYTES_ONE_STEP;
         }
         if (bytes > 0) {
-            cache->adjust_capacity(-bytes, kcacheMinSize);
+            cache->adjust_capacity(-bytes);
         }
     }
 }
@@ -340,7 +340,7 @@ void* StorageEngine::_adjust_pagecache_callback(void* arg_this) {
             evict_pagecache(cache, static_cast<int64_t>(bytes_to_dec), _bg_worker_stopped);
         } else {
             int64_t max_cache_size = std::max(GlobalEnv::GetInstance()->get_storage_page_cache_size(), kcacheMinSize);
-            int64_t cur_cache_size = cache->get_capacity();
+            int64_t cur_cache_size = cache->get_base_capacity();
             if (cur_cache_size >= max_cache_size) {
                 continue;
             }

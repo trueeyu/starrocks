@@ -129,14 +129,14 @@ TEST_F(StoragePageCacheTest, normal) {
         cache.set_capacity(ori);
 
         int64_t delta = ori;
-        ASSERT_FALSE(cache.adjust_capacity(-delta / 2, ori));
+        ASSERT_FALSE(cache.adjust_capacity(-delta / 2));
         ASSERT_EQ(cache.get_capacity(), ori);
-        ASSERT_TRUE(cache.adjust_capacity(-delta / 2, ori / 4));
+        ASSERT_TRUE(cache.adjust_capacity(-delta / 2));
         cache.set_capacity(ori);
 
         // overflow
         cache.set_capacity(kNumShards);
-        ASSERT_FALSE(cache.adjust_capacity(-2 * kNumShards, 0));
+        ASSERT_FALSE(cache.adjust_capacity(-2 * kNumShards));
     }
 
     // set capactity = 0
