@@ -116,7 +116,9 @@ public:
     size_t get_extent_usage() { return _cache->get_extent_memory_usage(); }
 
     uint64_t get_lookup_count();
-    uint64_t get_hit_count();
+    uint64_t get_base_hit_count();
+    uint64_t get_extent_hit_count();
+
     uint64_t get_extent_write_count();
     uint64_t get_extent_cost();
 

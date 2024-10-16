@@ -46,7 +46,8 @@
 namespace starrocks {
 
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_lookup_count, MetricUnit::OPERATIONS);
-METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_hit_count, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_write_count, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_cost, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_capacity, MetricUnit::BYTES);
@@ -80,10 +81,16 @@ static void init_metrics() {
         lxh_page_cache_lookup_count.set_value(StoragePageCache::instance()->get_lookup_count());
     });
 
-    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_hit_count",
-                                                             &lxh_page_cache_hit_count);
-    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_hit_count", []() {
-        lxh_page_cache_hit_count.set_value(StoragePageCache::instance()->get_hit_count());
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_base_hit_count",
+                                                             &lxh_page_cache_base_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_base_hit_count", []() {
+        lxh_page_cache_base_hit_count.set_value(StoragePageCache::instance()->get_base_hit_count());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_hit_count",
+                                                             &lxh_page_cache_extent_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_hit_count", []() {
+        lxh_page_cache_extent_hit_count.set_value(StoragePageCache::instance()->get_extent_hit_count());
     });
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_extent_write_count",
@@ -149,8 +156,12 @@ uint64_t StoragePageCache::get_lookup_count() {
     return _cache->get_lookup_count();
 }
 
-uint64_t StoragePageCache::get_hit_count() {
-    return _cache->get_hit_count();
+uint64_t StoragePageCache::get_base_hit_count() {
+    return _cache->get_base_hit_count();
+}
+
+uint64_t StoragePageCache::get_extent_hit_count() {
+    return _cache->get_extent_hit_count();
 }
 
 uint64_t StoragePageCache::get_extent_write_count() {

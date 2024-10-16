@@ -194,9 +194,11 @@ public:
     virtual size_t get_extent_memory_usage() const = 0;
 
     virtual size_t get_lookup_count() const = 0;
-    virtual size_t get_hit_count() const = 0;
 
+    virtual size_t get_base_hit_count() const = 0;
+    virtual uint64_t get_extent_hit_count() const = 0;
     virtual size_t get_extent_write_count() const = 0;
+
     virtual size_t get_extent_cost() const = 0;
 
     //  Decrease or increase cache capacity.
@@ -309,7 +311,8 @@ public:
 
     // done
     uint64_t get_lookup_count() const;
-    uint64_t get_hit_count() const;
+    uint64_t get_base_hit_count() const;
+    uint64_t get_extent_hit_count() const;
     uint64_t get_extent_write_count() const;
     uint64_t get_extent_cost() const;
 
@@ -357,7 +360,9 @@ private:
     HandleTable _table;
 
     uint64_t _lookup_count = 0;
-    uint64_t _hit_count = 0;
+    uint64_t _base_hit_count = 0;
+    uint64_t _extent_hit_count = 0;
+
     uint64_t _extent_write_count = 0;
     uint64_t _extent_cost = 0;
 };
@@ -396,7 +401,9 @@ public:
     size_t get_extent_capacity() const override;
 
     uint64_t get_lookup_count() const override;
-    uint64_t get_hit_count() const override;
+    uint64_t get_base_hit_count() const override;
+    uint64_t get_extent_hit_count() const override;
+
     uint64_t get_extent_write_count() const override;
     uint64_t get_extent_cost() const override;
 

@@ -12,7 +12,6 @@
 #include <string>
 
 #include "common/config.h"
-#include "storage/olap_common.h"
 
 using std::string;
 using std::stringstream;
@@ -211,9 +210,14 @@ uint64_t LRUCache::get_lookup_count() const {
     return _lookup_count;
 }
 
-uint64_t LRUCache::get_hit_count() const {
+uint64_t LRUCache::get_base_hit_count() const {
     std::lock_guard l(_mutex);
-    return _hit_count;
+    return _base_hit_count;
+}
+
+uint64_t LRUCache::get_extent_hit_count() const {
+    std::lock_guard l(_mutex);
+    return _extent_hit_count;
 }
 
 uint64_t LRUCache::get_extent_write_count() const {
@@ -252,6 +256,7 @@ Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
     LRUHandle* e = _table.lookup(key, hash);
     if (e != nullptr) {
         if (e->extent) {
+            ++_extent_hit_count;
             return reinterpret_cast<Cache::Handle*>((LRUHandle*)(nullptr));
         } else {
             // we get it from _table, so in_cache must be true
@@ -261,7 +266,7 @@ Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
                 _lru_remove(e);
             }
             e->refs++;
-            ++_hit_count;
+            ++_base_hit_count;
         }
     }
     return reinterpret_cast<Cache::Handle*>(e);
@@ -596,8 +601,12 @@ uint64_t ShardedLRUCache::get_extent_cost() const {
     return _get_stat(&LRUCache::get_extent_cost);
 }
 
-size_t ShardedLRUCache::get_hit_count() const {
-    return _get_stat(&LRUCache::get_hit_count);
+size_t ShardedLRUCache::get_base_hit_count() const {
+    return _get_stat(&LRUCache::get_base_hit_count);
+}
+
+uint64_t ShardedLRUCache::get_extent_hit_count() const {
+    return _get_stat(&LRUCache::get_extent_hit_count);
 }
 
 void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
@@ -619,7 +628,7 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
         shard_info.AddMember("usage_ratio", usage_ratio, document->GetAllocator());
 
         size_t lookup_count = _shards[i].get_lookup_count();
-        size_t hit_count = _shards[i].get_hit_count();
+        size_t hit_count = _shards[i].get_base_hit_count();
         shard_info.AddMember("lookup_count", static_cast<double>(lookup_count), document->GetAllocator());
         shard_info.AddMember("hit_count", static_cast<double>(hit_count), document->GetAllocator());
 

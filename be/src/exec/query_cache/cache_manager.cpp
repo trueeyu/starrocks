@@ -53,7 +53,7 @@ size_t CacheManager::lookup_count() {
 }
 
 size_t CacheManager::hit_count() {
-    return _cache.get_hit_count();
+    return _cache.get_base_hit_count();
 }
 
 void CacheManager::invalidate_all() {
