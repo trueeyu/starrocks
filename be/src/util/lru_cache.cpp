@@ -594,8 +594,13 @@ size_t ShardedLRUCache::_get_stat(size_t (LRUCache::*mem_fun)() const) const {
     }
     return n;
 }
-size_t ShardedLRUCache::get_capacity() const {
-    return _get_stat(&LRUCache::get_base_capacity);
+
+size_t ShardedLRUCache::get_base_capacity() const {
+    return _base_capacity;
+}
+
+size_t ShardedLRUCache::get_extent_capacity() const {
+    return _extent_capacity;
 }
 
 void ShardedLRUCache::prune() {
@@ -616,6 +621,14 @@ size_t ShardedLRUCache::get_extent_memory_usage() const {
 
 size_t ShardedLRUCache::get_lookup_count() const {
     return _get_stat(&LRUCache::get_lookup_count);
+}
+
+uint64_t ShardedLRUCache::get_extent_write_count() const {
+    return _get_stat(&LRUCache::get_extent_write_count);
+}
+
+uint64_t ShardedLRUCache::get_extent_cost() const {
+    return _get_stat(&LRUCache::get_extent_cost);
 }
 
 size_t ShardedLRUCache::get_hit_count() const {

@@ -100,7 +100,7 @@ void StoragePageCache::set_capacity(size_t capacity) {
 }
 
 size_t StoragePageCache::get_capacity() {
-    return _cache->get_capacity();
+    return _cache->get_base_capacity();
 }
 
 uint64_t StoragePageCache::get_lookup_count() {

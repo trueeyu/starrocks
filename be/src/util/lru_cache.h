@@ -186,13 +186,18 @@ public:
     virtual void get_cache_status(rapidjson::Document* document) = 0;
 
     virtual void set_capacity(size_t base_capacity) = 0;
-    virtual size_t get_capacity() const = 0;
+
+    virtual size_t get_base_capacity() const = 0;
+    virtual size_t get_extent_capacity() const = 0;
 
     virtual size_t get_base_memory_usage() const = 0;
     virtual size_t get_extent_memory_usage() const = 0;
 
     virtual size_t get_lookup_count() const = 0;
     virtual size_t get_hit_count() const = 0;
+
+    virtual size_t get_extent_write_count() const = 0;
+    virtual size_t get_extent_cost() const = 0;
 
     //  Decrease or increase cache capacity.
     virtual bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) = 0;
@@ -387,9 +392,14 @@ public:
     size_t get_base_memory_usage() const override;
     size_t get_extent_memory_usage() const override;
 
-    size_t get_capacity() const override;
+    size_t get_base_capacity() const override;
+    size_t get_extent_capacity() const override;
+
     uint64_t get_lookup_count() const override;
     uint64_t get_hit_count() const override;
+    uint64_t get_extent_write_count() const override;
+    uint64_t get_extent_cost() const override;
+
     bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) override;
 
 private:
