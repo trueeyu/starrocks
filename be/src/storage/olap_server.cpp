@@ -273,7 +273,7 @@ void evict_pagecache(StoragePageCache* cache, int64_t bytes_to_dec, std::atomic<
             if (UNLIKELY(stoped)) {
                 return;
             }
-            cache->adjust_capacity(-GCBYTES_ONE_STEP, kcacheMinSize);
+            cache->adjust_capacity(-GCBYTES_ONE_STEP);
             bytes -= GCBYTES_ONE_STEP;
         }
         if (bytes > 0) {

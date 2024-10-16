@@ -168,80 +168,84 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
     // hold compressed page at first, reset to decompressed page later
     // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
     std::unique_ptr<char[]> page(new char[page_size + Column::APPEND_OVERFLOW_MAX_SIZE]);
-    size_t io_ns;
     Slice page_slice(page.get(), page_size);
+    int64_t cost = 0;
     {
-        size_t start = opts.stats->io_ns;
-        SCOPED_RAW_TIMER(&opts.stats->io_ns);
-        // todo override is_cache_hit
-        if (opts.read_file->is_cache_hit()) {
-            RETURN_IF_ERROR(opts.read_file->read_at_fully(opts.page_pointer.offset, page_slice.data, page_slice.size));
-            ++opts.stats->pages_from_local_disk;
-        } else {
-            RETURN_IF_ERROR(opts.read_file->read_at_fully(opts.page_pointer.offset, page_slice.data, page_slice.size));
+        SCOPED_RAW_TIMER(&cost);
+        {
+            SCOPED_RAW_TIMER(&opts.stats->io_ns);
+            // todo override is_cache_hit
+            if (opts.read_file->is_cache_hit()) {
+                RETURN_IF_ERROR(
+                        opts.read_file->read_at_fully(opts.page_pointer.offset, page_slice.data, page_slice.size));
+                ++opts.stats->pages_from_local_disk;
+            } else {
+                RETURN_IF_ERROR(
+                        opts.read_file->read_at_fully(opts.page_pointer.offset, page_slice.data, page_slice.size));
+            }
+            opts.stats->compressed_bytes_read_request += page_size;
+            ++opts.stats->io_count_request;
         }
-        size_t end = opts.stats->io_ns;
-        io_ns = end - start;
-        opts.stats->compressed_bytes_read_request += page_size;
-        ++opts.stats->io_count_request;
-    }
 
-    if (opts.verify_checksum) {
-        uint32_t expect = decode_fixed32_le((uint8_t*)page_slice.data + page_slice.size - 4);
-        uint32_t actual = crc32c::Value(page_slice.data, page_slice.size - 4);
-        if (expect != actual) {
+        if (opts.verify_checksum) {
+            uint32_t expect = decode_fixed32_le((uint8_t*)page_slice.data + page_slice.size - 4);
+            uint32_t actual = crc32c::Value(page_slice.data, page_slice.size - 4);
+            if (expect != actual) {
+                return Status::Corruption(strings::Substitute(
+                        "Bad page: checksum mismatch (actual=$0 vs expect=$1), file=$2 encrypted=$3", actual, expect,
+                        opts.read_file->filename(), opts.read_file->is_encrypted()));
+            }
+        }
+
+        // remove checksum suffix
+        page_slice.size -= 4;
+        // parse and set footer
+        uint32_t footer_size = decode_fixed32_le((uint8_t*)page_slice.data + page_slice.size - 4);
+        if (!footer->ParseFromArray(page_slice.data + page_slice.size - 4 - footer_size, footer_size)) {
             return Status::Corruption(
-                    strings::Substitute("Bad page: checksum mismatch (actual=$0 vs expect=$1), file=$2 encrypted=$3",
-                                        actual, expect, opts.read_file->filename(), opts.read_file->is_encrypted()));
+                    strings::Substitute("Bad page: invalid footer, read from disk, file=$0, footer_size=$1",
+                                        opts.read_file->filename(), footer_size));
         }
-    }
 
-    // remove checksum suffix
-    page_slice.size -= 4;
-    // parse and set footer
-    uint32_t footer_size = decode_fixed32_le((uint8_t*)page_slice.data + page_slice.size - 4);
-    if (!footer->ParseFromArray(page_slice.data + page_slice.size - 4 - footer_size, footer_size)) {
-        return Status::Corruption(
-                strings::Substitute("Bad page: invalid footer, read from disk, file=$0, footer_size=$1",
-                                    opts.read_file->filename(), footer_size));
-    }
+        uint32_t body_size = page_slice.size - 4 - footer_size;
+        if (body_size != footer->uncompressed_size()) { // need decompress body
+            if (opts.codec == nullptr) {
+                return Status::Corruption(
+                        strings::Substitute("Bad page: page is compressed but codec is NO_COMPRESSION, file=$0",
+                                            opts.read_file->filename()));
+            }
+            SCOPED_RAW_TIMER(&opts.stats->decompress_ns);
+            // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
+            std::unique_ptr<char[]> decompressed_page(
+                    new char[footer->uncompressed_size() + footer_size + 4 + Column::APPEND_OVERFLOW_MAX_SIZE]);
 
-    uint32_t body_size = page_slice.size - 4 - footer_size;
-    if (body_size != footer->uncompressed_size()) { // need decompress body
-        if (opts.codec == nullptr) {
-            return Status::Corruption(strings::Substitute(
-                    "Bad page: page is compressed but codec is NO_COMPRESSION, file=$0", opts.read_file->filename()));
+            // decompress page body
+            Slice compressed_body(page_slice.data, body_size);
+            Slice decompressed_body(decompressed_page.get(), footer->uncompressed_size());
+            RETURN_IF_ERROR(opts.codec->decompress(compressed_body, &decompressed_body));
+            if (decompressed_body.size != footer->uncompressed_size()) {
+                return Status::Corruption(strings::Substitute(
+                        "Bad page: record uncompressed size=$0 vs real decompressed size=$1, file=$2",
+                        footer->uncompressed_size(), decompressed_body.size, opts.read_file->filename()));
+            }
+            // append footer and footer size
+            memcpy(decompressed_body.data + decompressed_body.size, page_slice.data + body_size, footer_size + 4);
+            // free memory of compressed page
+            page = std::move(decompressed_page);
+            page_slice = Slice(page.get(), footer->uncompressed_size() + footer_size + 4);
+            opts.stats->uncompressed_bytes_read += page_slice.size;
+        } else {
+            opts.stats->uncompressed_bytes_read += body_size;
         }
-        SCOPED_RAW_TIMER(&opts.stats->decompress_ns);
-        // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
-        std::unique_ptr<char[]> decompressed_page(
-                new char[footer->uncompressed_size() + footer_size + 4 + Column::APPEND_OVERFLOW_MAX_SIZE]);
 
-        // decompress page body
-        Slice compressed_body(page_slice.data, body_size);
-        Slice decompressed_body(decompressed_page.get(), footer->uncompressed_size());
-        RETURN_IF_ERROR(opts.codec->decompress(compressed_body, &decompressed_body));
-        if (decompressed_body.size != footer->uncompressed_size()) {
-            return Status::Corruption(strings::Substitute(
-                    "Bad page: record uncompressed size=$0 vs real decompressed size=$1, file=$2",
-                    footer->uncompressed_size(), decompressed_body.size, opts.read_file->filename()));
-        }
-        // append footer and footer size
-        memcpy(decompressed_body.data + decompressed_body.size, page_slice.data + body_size, footer_size + 4);
-        // free memory of compressed page
-        page = std::move(decompressed_page);
-        page_slice = Slice(page.get(), footer->uncompressed_size() + footer_size + 4);
-        opts.stats->uncompressed_bytes_read += page_slice.size;
-    } else {
-        opts.stats->uncompressed_bytes_read += body_size;
+        RETURN_IF_ERROR(
+                StoragePageDecoder::decode_page(footer, footer_size + 4, opts.encoding_type, &page, &page_slice));
+
+        *body = Slice(page_slice.data, page_slice.size - 4 - footer_size);
     }
-
-    RETURN_IF_ERROR(StoragePageDecoder::decode_page(footer, footer_size + 4, opts.encoding_type, &page, &page_slice));
-
-    *body = Slice(page_slice.data, page_slice.size - 4 - footer_size);
     if (opts.use_page_cache) {
         // insert this page into cache and return the cache handle
-        cache->insert(cache_key, page_slice, &cache_handle, opts.kept_in_memory, io_ns);
+        cache->insert(cache_key, page_slice, &cache_handle, opts.kept_in_memory, cost);
         *handle = PageHandle(std::move(cache_handle));
     } else {
         *handle = PageHandle(page_slice);
