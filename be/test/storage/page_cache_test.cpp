@@ -61,7 +61,7 @@ TEST_F(StoragePageCacheTest, normal) {
         char* buf = new char[1024];
         PageCacheHandle handle;
         Slice data(buf, 1024);
-        cache.insert(key, data, &handle, false);
+        cache.insert(key, data, &handle, false, 0);
 
         ASSERT_EQ(handle.data().data, buf);
 
@@ -75,7 +75,7 @@ TEST_F(StoragePageCacheTest, normal) {
         char* buf = new char[1024];
         PageCacheHandle handle;
         Slice data(buf, 1024);
-        cache.insert(memory_key, data, &handle, true);
+        cache.insert(memory_key, data, &handle, true, 0);
 
         ASSERT_EQ(handle.data().data, buf);
 
@@ -88,7 +88,7 @@ TEST_F(StoragePageCacheTest, normal) {
         StoragePageCache::CacheKey key("bcd", i);
         PageCacheHandle handle;
         Slice data(new char[1024], 1024);
-        cache.insert(key, data, &handle, false);
+        cache.insert(key, data, &handle, false, 0);
     }
 
     // cache miss
@@ -154,7 +154,7 @@ TEST_F(StoragePageCacheTest, metrics) {
     char* buf = new char[1024];
     PageCacheHandle handle;
     Slice data(buf, 1024);
-    cache.insert(key1, data, &handle, false);
+    cache.insert(key1, data, &handle, false, 0);
 
     StoragePageCache::CacheKey key2("def", 0);
     {
@@ -162,7 +162,7 @@ TEST_F(StoragePageCacheTest, metrics) {
         char* buf = new char[1024];
         PageCacheHandle handle;
         Slice data(buf, 1024);
-        cache.insert(key2, data, &handle, false);
+        cache.insert(key2, data, &handle, false, 0);
     }
 
     // At this point the cache should have two entries, one for user owner and one for cache Owenr.

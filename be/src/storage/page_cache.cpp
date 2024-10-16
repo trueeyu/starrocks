@@ -127,7 +127,8 @@ bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
     return true;
 }
 
-void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory) {
+void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory,
+                              size_t cost) {
     // mem size should equals to data size when running UT
     int64_t mem_size = data.size;
 #ifndef BE_TEST
@@ -149,7 +150,7 @@ void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheH
     }
     // Use mem size managed by memory allocator as this record charge size. At the same time, we should record this record size
     // for data fetching when lookup.
-    auto* lru_handle = _cache->insert(key.encode(), data.data, mem_size, deleter, priority, data.size, 0);
+    auto* lru_handle = _cache->insert(key.encode(), data.data, mem_size, deleter, priority, data.size, cost);
     *handle = PageCacheHandle(_cache.get(), lru_handle);
 }
 

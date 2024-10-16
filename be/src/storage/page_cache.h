@@ -98,11 +98,11 @@ public:
     bool lookup(const CacheKey& key, PageCacheHandle* handle);
 
     // Insert a page with key into this cache.
-    // Given hanlde will be set to valid reference.
+    // Given handle will be set to valid reference.
     // This function is thread-safe, and when two clients insert two same key
     // concurrently, this function can assure that only one page is cached.
     // The in_memory page will have higher priority.
-    void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory = false);
+    void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory, size_t cost);
 
     size_t memory_usage() const { return _cache->get_base_memory_usage(); }
 

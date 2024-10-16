@@ -168,8 +168,10 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
     // hold compressed page at first, reset to decompressed page later
     // Allocate APPEND_OVERFLOW_MAX_SIZE more bytes to make append_strings_overflow work
     std::unique_ptr<char[]> page(new char[page_size + Column::APPEND_OVERFLOW_MAX_SIZE]);
+    size_t io_ns;
     Slice page_slice(page.get(), page_size);
     {
+        size_t start = opts.stats->io_ns;
         SCOPED_RAW_TIMER(&opts.stats->io_ns);
         // todo override is_cache_hit
         if (opts.read_file->is_cache_hit()) {
@@ -178,6 +180,8 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
         } else {
             RETURN_IF_ERROR(opts.read_file->read_at_fully(opts.page_pointer.offset, page_slice.data, page_slice.size));
         }
+        size_t end = opts.stats->io_ns;
+        io_ns = end - start;
         opts.stats->compressed_bytes_read_request += page_size;
         ++opts.stats->io_count_request;
     }
@@ -237,7 +241,7 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
     *body = Slice(page_slice.data, page_slice.size - 4 - footer_size);
     if (opts.use_page_cache) {
         // insert this page into cache and return the cache handle
-        cache->insert(cache_key, page_slice, &cache_handle, opts.kept_in_memory);
+        cache->insert(cache_key, page_slice, &cache_handle, opts.kept_in_memory, io_ns);
         *handle = PageHandle(std::move(cache_handle));
     } else {
         *handle = PageHandle(page_slice);
