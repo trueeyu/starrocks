@@ -188,7 +188,7 @@ void LRUCache::set_capacity(size_t capacity) {
     {
         std::lock_guard l(_mutex);
         _base_capacity = capacity;
-        _evict_from_base_lru(0, &last_ref_list);
+        _evict_from_base_to_extent_lru(0);
     }
 
     for (auto entry : last_ref_list) {
@@ -204,6 +204,16 @@ uint64_t LRUCache::get_lookup_count() const {
 uint64_t LRUCache::get_hit_count() const {
     std::lock_guard l(_mutex);
     return _hit_count;
+}
+
+uint64_t LRUCache::get_extent_write_count() const {
+    std::lock_guard l(_mutex);
+    return _extent_write_count;
+}
+
+uint64_t LRUCache::get_extent_cost() const {
+    std::lock_guard l(_mutex);
+    return _extent_cost;
 }
 
 size_t LRUCache::get_base_usage() const {
@@ -231,14 +241,18 @@ Cache::Handle* LRUCache::lookup(const CacheKey& key, uint32_t hash) {
     ++_lookup_count;
     LRUHandle* e = _table.lookup(key, hash);
     if (e != nullptr) {
-        // we get it from _table, so in_cache must be true
-        DCHECK(e->in_cache);
-        if (e->refs == 1) {
-            // only in LRU free list, remove it from list
-            _lru_remove(e);
+        if (e->extent) {
+            return reinterpret_cast<Cache::Handle*>((LRUHandle*)(nullptr));
+        } else {
+            // we get it from _table, so in_cache must be true
+            DCHECK(e->in_cache);
+            if (e->refs == 1) {
+                // only in LRU free list, remove it from list
+                _lru_remove(e);
+            }
+            e->refs++;
+            ++_hit_count;
         }
-        e->refs++;
-        ++_hit_count;
     }
     return reinterpret_cast<Cache::Handle*>(e);
 }
@@ -380,7 +394,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
 
         // Free the space following strict LRU policy until enough space
         // is freed or the lru list is empty
-        _evict_from_base_lru(charge, &last_ref_list);
+        _evict_from_base_to_extent_lru(charge);
 
         // insert into the cache
         // note that the cache might get larger than its capacity if not enough
@@ -390,13 +404,21 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
         if (old != nullptr) {
             old->in_cache = false;
             if (_unref(old)) {
-                _base_usage -= old->charge;
+                if (old->extent) {
+                    _extent_usage -= old->charge;
+                    _extent_write_count += 1;
+                    _extent_cost += 10;
+                } else {
+                    _base_usage -= old->charge;
+                }
                 // old is on LRU because it's in cache and its reference count
                 // was just 1 (Unref returned 0)
                 _lru_remove(old);
                 last_ref_list.push_back(old);
             }
         }
+
+        _evict_from_extent_lru(&last_ref_list);
     }
 
     // we free the entries here outside of mutex for

@@ -283,10 +283,12 @@ public:
     // Separate from constructor so caller can easily make an array of LRUCache
     void set_capacity(size_t capacity);
 
+    // done
     // Like Cache methods, but with an extra "hash" parameter.
     Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
                           void (*deleter)(const CacheKey& key, void* value),
                           CachePriority priority = CachePriority::NORMAL, size_t value_size = 0);
+    // done
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
     // done
     void release(Cache::Handle* handle);
@@ -295,12 +297,17 @@ public:
     // done
     int prune();
 
+    // done
     uint64_t get_lookup_count() const;
     uint64_t get_hit_count() const;
+    uint64_t get_extent_write_count() const;
+    uint64_t get_extent_cost() const;
 
+    // done
     size_t get_base_usage() const;
     size_t get_extent_usage() const;
 
+    // done
     size_t get_base_capacity() const;
     size_t get_extent_capacity() const;
 
@@ -339,8 +346,10 @@ private:
 
     HandleTable _table;
 
-    uint64_t _lookup_count{0};
-    uint64_t _hit_count{0};
+    uint64_t _lookup_count = 0;
+    uint64_t _hit_count = 0;
+    uint64_t _extent_write_count = 0;
+    uint64_t _extent_cost = 0;
 };
 
 static const int kNumShardBits = 5;
