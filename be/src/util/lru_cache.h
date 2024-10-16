@@ -280,8 +280,10 @@ public:
     // done
     ~LRUCache() noexcept;
 
+    // done
     // Separate from constructor so caller can easily make an array of LRUCache
     void set_base_capacity(size_t capacity);
+    void set_extent_capacity(size_t capacity);
 
     // done
     // Like Cache methods, but with an extra "hash" parameter.
@@ -385,7 +387,9 @@ private:
     LRUCache _shards[kNumShards];
     std::mutex _mutex;
     uint64_t _last_id;
-    size_t _capacity;
+
+    size_t _base_capacity = 0;
+
     ChargeMode _charge_mode;
 };
 

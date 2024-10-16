@@ -185,8 +185,24 @@ void LRUCache::_lru_append(LRUHandle* list, LRUHandle* e) {
 
 void LRUCache::set_base_capacity(size_t capacity) {
     std::lock_guard l(_mutex);
+
     _base_capacity = capacity;
     _evict_from_base_to_extent_lru(0);
+}
+
+void LRUCache::set_extent_capacity(size_t capacity) {
+    std::vector<LRUHandle*> last_ref_list;
+
+    {
+        std::lock_guard l(_mutex);
+
+        _extent_capacity = capacity;
+        _evict_from_extent_lru(&last_ref_list);
+    }
+
+    for (auto& item : last_ref_list) {
+        item->free();
+    }
 }
 
 uint64_t LRUCache::get_lookup_count() const {
@@ -494,8 +510,8 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
 }
 
 ShardedLRUCache::ShardedLRUCache(size_t capacity, ChargeMode charge_mode)
-        : _last_id(0), _capacity(capacity), _charge_mode(charge_mode) {
-    const size_t per_shard = (_capacity + (kNumShards - 1)) / kNumShards;
+        : _last_id(0), _base_capacity(capacity), _charge_mode(charge_mode) {
+    const size_t per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(per_shard);
     }
@@ -506,7 +522,7 @@ void ShardedLRUCache::_set_capacity(size_t capacity) {
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(per_shard);
     }
-    _capacity = capacity;
+    _base_capacity = capacity;
 }
 
 void ShardedLRUCache::set_capacity(size_t capacity) {
@@ -517,7 +533,7 @@ void ShardedLRUCache::set_capacity(size_t capacity) {
 
 bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_capacity) {
     std::lock_guard l(_mutex);
-    int64_t new_capacity = _capacity + delta;
+    int64_t new_capacity = _base_capacity + delta;
     if (new_capacity < static_cast<int64_t>(min_capacity)) {
         return false;
     }
