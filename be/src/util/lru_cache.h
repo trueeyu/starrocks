@@ -281,7 +281,7 @@ public:
     ~LRUCache() noexcept;
 
     // Separate from constructor so caller can easily make an array of LRUCache
-    void set_capacity(size_t capacity);
+    void set_base_capacity(size_t capacity);
 
     // done
     // Like Cache methods, but with an extra "hash" parameter.

@@ -241,7 +241,7 @@ static void insert_LRUCache(LRUCache& cache, const CacheKey& key, int value, Cac
 
 TEST_F(CacheTest, Usage) {
     LRUCache cache;
-    cache.set_capacity(1000);
+    cache.set_base_capacity(1000);
 
     CacheKey key1("100");
     insert_LRUCache(cache, key1, 100, CachePriority::NORMAL);
