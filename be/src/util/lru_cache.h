@@ -141,7 +141,7 @@ public:
     // value will be passed to "deleter".
     virtual Handle* insert(const CacheKey& key, void* value, size_t charge,
                            void (*deleter)(const CacheKey& key, void* value),
-                           CachePriority priority = CachePriority::NORMAL, size_t value_size) = 0;
+                           CachePriority priority, size_t value_size) = 0;
 
     // If the cache has no mapping for "key", returns NULL.
     //
