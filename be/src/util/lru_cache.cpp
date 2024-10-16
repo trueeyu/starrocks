@@ -375,11 +375,13 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
         _base_usage += charge;
         if (old != nullptr) {
             old->in_cache = false;
+            if (old->extent) {
+                _extent_write_count += 1;
+                _extent_cost += cost;
+            }
             if (_unref(old)) {
                 if (old->extent) {
                     _extent_usage -= old->charge;
-                    _extent_write_count += 1;
-                    _extent_cost += cost;
                 } else {
                     _base_usage -= old->charge;
                 }
