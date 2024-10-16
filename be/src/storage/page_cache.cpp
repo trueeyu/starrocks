@@ -115,7 +115,7 @@ bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
 #ifndef BE_TEST
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
 #endif
-    return _cache->adjust_capacity(delta, min_capacity);
+    return _cache->adjust_capacity(delta);
 }
 
 bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {

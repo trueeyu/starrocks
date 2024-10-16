@@ -200,7 +200,7 @@ public:
     virtual size_t get_extent_cost() const = 0;
 
     //  Decrease or increase cache capacity.
-    virtual bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) = 0;
+    virtual bool adjust_capacity(int64_t delta) = 0;
 
 private:
     Cache(const Cache&) = delete;
@@ -400,7 +400,7 @@ public:
     uint64_t get_extent_write_count() const override;
     uint64_t get_extent_cost() const override;
 
-    bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) override;
+    bool adjust_capacity(int64_t delta) override;
 
 private:
     static uint32_t _hash_slice(const CacheKey& s);

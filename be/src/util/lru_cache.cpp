@@ -505,12 +505,9 @@ void ShardedLRUCache::set_capacity(size_t base_capacity) {
     _set_capacity(base_capacity);
 }
 
-bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_base_capacity) {
+bool ShardedLRUCache::adjust_capacity(int64_t delta) {
     std::lock_guard l(_mutex);
     int64_t new_base_capacity = _base_capacity + delta;
-    if (new_base_capacity < static_cast<int64_t>(min_base_capacity)) {
-        return false;
-    }
     _set_capacity(new_base_capacity);
     return true;
 }

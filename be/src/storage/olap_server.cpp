@@ -328,7 +328,7 @@ void* StorageEngine::_adjust_pagecache_callback(void* arg_this) {
         int64_t memory_high = memtracker->limit() * memory_high_level / 100;
         if (delta_urgent > 0) {
             // Memory usage exceeds memory_urgent_level, reduce size immediately.
-            cache->adjust_capacity(-delta_urgent, kcacheMinSize);
+            cache->adjust_capacity(-delta_urgent);
             size_t bytes_to_dec = dec_advisor->bytes_should_gc(MonoTime::Now(), memory_urgent - memory_high);
             evict_pagecache(cache, static_cast<int64_t>(bytes_to_dec), _bg_worker_stopped);
             continue;
