@@ -320,10 +320,10 @@ TEST_F(CacheTest, SetCapacity) {
         handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
     }
     ASSERT_EQ(kCacheSize, _cache->get_capacity());
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
     _cache->set_capacity(kCacheSize * 2);
     ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
 
     // Test2: decrease capacity
     // insert more elements to cache, then release 32,
@@ -334,18 +334,18 @@ TEST_F(CacheTest, SetCapacity) {
         handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
     }
     ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(64, _cache->get_memory_usage());
+    ASSERT_EQ(64, _cache->get_base_memory_usage());
     for (int i = 0; i < 32; i++) {
         _cache->release(handles[i]);
     }
     ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(64, _cache->get_memory_usage());
+    ASSERT_EQ(64, _cache->get_base_memory_usage());
     _cache->set_capacity(32);
     ASSERT_EQ(32, _cache->get_capacity());
     for (int i = 32; i < 64; i++) {
         _cache->release(handles[i]);
     }
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
 }
 
 } // namespace starrocks

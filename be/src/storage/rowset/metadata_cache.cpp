@@ -44,7 +44,7 @@ void MetadataCache::warmup_rowset(Rowset* ptr) {
 }
 
 size_t MetadataCache::get_memory_usage() const {
-    return _cache->get_memory_usage();
+    return _cache->get_base_memory_usage();
 }
 
 void MetadataCache::set_capacity(size_t capacity) {

@@ -80,7 +80,7 @@ PersistentIndexBlockCache::PersistentIndexBlockCache(MemTracker* mem_tracker, in
 
 void PersistentIndexBlockCache::update_memory_usage() {
     std::lock_guard<std::mutex> lg(_mutex);
-    size_t current_mem_usage = _cache->get_memory_usage();
+    size_t current_mem_usage = _cache->get_base_memory_usage();
     if (_memory_usage > current_mem_usage) {
         _mem_tracker->release(_memory_usage - current_mem_usage);
     } else {

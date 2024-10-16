@@ -273,7 +273,7 @@ void Metacache::prune() {
 }
 
 size_t Metacache::memory_usage() const {
-    return _cache->get_memory_usage();
+    return _cache->get_base_memory_usage();
 }
 
 size_t Metacache::capacity() const {

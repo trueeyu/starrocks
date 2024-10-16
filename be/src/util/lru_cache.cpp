@@ -511,6 +511,9 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
 
 ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
         : _last_id(0), _base_capacity(base_capacity), _charge_mode(charge_mode) {
+    _base_capacity = base_capacity;
+    _extent_capacity = _base_capacity / 10;
+
     const size_t base_per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
     const size_t extent_per_shard = base_per_shard / 10;
     for (auto& _shard : _shards) {
@@ -519,27 +522,31 @@ ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
     }
 }
 
-void ShardedLRUCache::_set_capacity(size_t capacity) {
-    const size_t per_shard = (capacity + (kNumShards - 1)) / kNumShards;
+void ShardedLRUCache::_set_capacity(size_t base_capacity) {
+    _base_capacity = base_capacity;
+    _extent_capacity = base_capacity / 10;
+
+    const size_t base_per_shard = (base_capacity + (kNumShards - 1)) / kNumShards;
+    const size_t extent_per_shard = base_per_shard / 10;
     for (auto& _shard : _shards) {
-        _shard.set_base_capacity(per_shard);
+        _shard.set_base_capacity(base_per_shard);
+        _shard.set_extent_capacity(extent_per_shard);
     }
-    _base_capacity = capacity;
 }
 
-void ShardedLRUCache::set_capacity(size_t capacity) {
-    // Maybe multi client try to set capactity, we protect it using mutex.
+void ShardedLRUCache::set_capacity(size_t base_capacity) {
+    // Maybe multi client try to set capacity, we protect it using mutex.
     std::lock_guard l(_mutex);
-    _set_capacity(capacity);
+    _set_capacity(base_capacity);
 }
 
-bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_capacity) {
+bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_base_capacity) {
     std::lock_guard l(_mutex);
-    int64_t new_capacity = _base_capacity + delta;
-    if (new_capacity < static_cast<int64_t>(min_capacity)) {
+    int64_t new_base_capacity = _base_capacity + delta;
+    if (new_base_capacity < static_cast<int64_t>(min_base_capacity)) {
         return false;
     }
-    _set_capacity(new_capacity);
+    _set_capacity(new_base_capacity);
     return true;
 }
 
@@ -599,8 +606,12 @@ void ShardedLRUCache::prune() {
     VLOG(7) << "Successfully prune cache, clean " << num_prune << " entries.";
 }
 
-size_t ShardedLRUCache::get_memory_usage() const {
+size_t ShardedLRUCache::get_base_memory_usage() const {
     return _get_stat(&LRUCache::get_base_usage);
+}
+
+size_t ShardedLRUCache::get_extent_memory_usage() const {
+    return _get_stat(&LRUCache::get_extent_usage);
 }
 
 size_t ShardedLRUCache::get_lookup_count() const {

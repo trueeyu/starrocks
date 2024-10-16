@@ -185,14 +185,17 @@ public:
 
     virtual void get_cache_status(rapidjson::Document* document) = 0;
 
-    virtual void set_capacity(size_t capacity) = 0;
+    virtual void set_capacity(size_t base_capacity) = 0;
     virtual size_t get_capacity() const = 0;
-    virtual size_t get_memory_usage() const = 0;
+
+    virtual size_t get_base_memory_usage() const = 0;
+    virtual size_t get_extent_memory_usage() const = 0;
+
     virtual size_t get_lookup_count() const = 0;
     virtual size_t get_hit_count() const = 0;
 
     //  Decrease or increase cache capacity.
-    virtual bool adjust_capacity(int64_t delta, size_t min_capacity = 0) = 0;
+    virtual bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) = 0;
 
 private:
     Cache(const Cache&) = delete;
@@ -359,29 +362,40 @@ static const int kNumShards = 1 << kNumShardBits;
 
 class ShardedLRUCache : public Cache {
 public:
+    // done
     explicit ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
     ~ShardedLRUCache() override = default;
+
     Handle* insert(const CacheKey& key, void* value, size_t charge, void (*deleter)(const CacheKey& key, void* value),
                    CachePriority priority = CachePriority::NORMAL, size_t value_size = 0) override;
+    // done
     Handle* lookup(const CacheKey& key) override;
+
+    // done
     void release(Handle* handle) override;
+    // done
     void erase(const CacheKey& key) override;
+    // done
     void* value(Handle* handle) override;
+    // done
     Slice value_slice(Handle* handle) override;
     uint64_t new_id() override;
     void prune() override;
     void get_cache_status(rapidjson::Document* document) override;
-    void set_capacity(size_t capacity) override;
-    size_t get_memory_usage() const override;
+    void set_capacity(size_t base_capacity) override;
+
+    size_t get_base_memory_usage() const override;
+    size_t get_extent_memory_usage() const override;
+
     size_t get_capacity() const override;
     uint64_t get_lookup_count() const override;
     uint64_t get_hit_count() const override;
-    bool adjust_capacity(int64_t delta, size_t min_capacity = 0) override;
+    bool adjust_capacity(int64_t delta, size_t min_base_capacity = 0) override;
 
 private:
     static uint32_t _hash_slice(const CacheKey& s);
     static uint32_t _shard(uint32_t hash);
-    void _set_capacity(size_t capacity);
+    void _set_capacity(size_t base_capacity);
     size_t _get_stat(size_t (LRUCache::*mem_fun)() const) const;
 
     LRUCache _shards[kNumShards];
