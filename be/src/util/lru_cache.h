@@ -141,7 +141,7 @@ public:
     // value will be passed to "deleter".
     virtual Handle* insert(const CacheKey& key, void* value, size_t charge,
                            void (*deleter)(const CacheKey& key, void* value),
-                           CachePriority priority, size_t value_size) = 0;
+                           CachePriority priority, size_t value_size, size_t cost) = 0;
 
     // If the cache has no mapping for "key", returns NULL.
     //
@@ -297,7 +297,7 @@ public:
     // Like Cache methods, but with an extra "hash" parameter.
     Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
                           void (*deleter)(const CacheKey& key, void* value),
-                          CachePriority priority, size_t value_size);
+                          CachePriority priority, size_t value_size, size_t cost);
     // done
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
     // done
@@ -372,7 +372,7 @@ public:
     ~ShardedLRUCache() override = default;
 
     Handle* insert(const CacheKey& key, void* value, size_t charge, void (*deleter)(const CacheKey& key, void* value),
-                   CachePriority priority, size_t value_size) override;
+                   CachePriority priority, size_t value_size, size_t cost) override;
     // done
     Handle* lookup(const CacheKey& key) override;
 

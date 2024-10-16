@@ -383,7 +383,7 @@ void LRUCache::_evict_one_entry_from_base_to_extent(LRUHandle* e) {
 
 Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
                                 void (*deleter)(const CacheKey& key, void* value), CachePriority priority,
-                                size_t value_size) {
+                                size_t value_size, size_t cost) {
     auto* e = reinterpret_cast<LRUHandle*>(malloc(sizeof(LRUHandle) - 1 + key.size()));
     e->value = value;
     e->deleter = deleter;
@@ -552,9 +552,9 @@ bool ShardedLRUCache::adjust_capacity(int64_t delta, size_t min_base_capacity) {
 
 Cache::Handle* ShardedLRUCache::insert(const CacheKey& key, void* value, size_t charge,
                                        void (*deleter)(const CacheKey& key, void* value), CachePriority priority,
-                                       size_t value_size) {
+                                       size_t value_size, size_t cost) {
     const uint32_t hash = _hash_slice(key);
-    return _shards[_shard(hash)].insert(key, hash, value, charge, deleter, priority, value_size);
+    return _shards[_shard(hash)].insert(key, hash, value, charge, deleter, priority, value_size, cost);
 }
 
 Cache::Handle* ShardedLRUCache::lookup(const CacheKey& key) {
