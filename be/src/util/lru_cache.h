@@ -359,7 +359,7 @@ static const int kNumShards = 1 << kNumShardBits;
 
 class ShardedLRUCache : public Cache {
 public:
-    explicit ShardedLRUCache(size_t capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
+    explicit ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
     ~ShardedLRUCache() override = default;
     Handle* insert(const CacheKey& key, void* value, size_t charge, void (*deleter)(const CacheKey& key, void* value),
                    CachePriority priority = CachePriority::NORMAL, size_t value_size = 0) override;
@@ -389,6 +389,7 @@ private:
     uint64_t _last_id;
 
     size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
 
     ChargeMode _charge_mode;
 };

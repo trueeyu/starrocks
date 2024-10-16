@@ -509,11 +509,13 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
     return hash >> (32 - kNumShardBits);
 }
 
-ShardedLRUCache::ShardedLRUCache(size_t capacity, ChargeMode charge_mode)
-        : _last_id(0), _base_capacity(capacity), _charge_mode(charge_mode) {
-    const size_t per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
+ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
+        : _last_id(0), _base_capacity(base_capacity), _charge_mode(charge_mode) {
+    const size_t base_per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
+    const size_t extent_per_shard = base_per_shard / 10;
     for (auto& _shard : _shards) {
-        _shard.set_base_capacity(per_shard);
+        _shard.set_base_capacity(base_per_shard);
+        _shard.set_extent_capacity(extent_per_shard);
     }
 }
 
