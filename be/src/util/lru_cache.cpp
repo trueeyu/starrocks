@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 
+#include "common/config.h"
 #include "storage/olap_common.h"
 
 using std::string;
@@ -479,10 +480,10 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
 ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
         : _last_id(0), _base_capacity(base_capacity), _charge_mode(charge_mode) {
     _base_capacity = base_capacity;
-    _extent_capacity = _base_capacity / 10;
+    _extent_capacity = _base_capacity * config::extent_percent / 100;
 
     const size_t base_per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
-    const size_t extent_per_shard = base_per_shard / 10;
+    const size_t extent_per_shard = base_per_shard / config::extent_percent;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(base_per_shard);
         _shard.set_extent_capacity(extent_per_shard);
@@ -491,10 +492,10 @@ ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
 
 void ShardedLRUCache::_set_capacity(size_t base_capacity) {
     _base_capacity = base_capacity;
-    _extent_capacity = base_capacity / 10;
+    _extent_capacity = base_capacity * config::extent_percent / 100;
 
     const size_t base_per_shard = (base_capacity + (kNumShards - 1)) / kNumShards;
-    const size_t extent_per_shard = base_per_shard / 10;
+    const size_t extent_per_shard = base_per_shard * config::extent_percent / 100;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(base_per_shard);
         _shard.set_extent_capacity(extent_per_shard);
