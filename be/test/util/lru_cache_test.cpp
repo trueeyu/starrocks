@@ -105,13 +105,14 @@ public:
 
     void Insert(int key, int value, int charge) {
         std::string result;
-        _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter));
+        _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter,
+                                       CachePriority::NORMAL, 0));
     }
 
     void InsertDurable(int key, int value, int charge) {
         std::string result;
         _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter,
-                                       CachePriority::DURABLE));
+                                       CachePriority::DURABLE, 0));
     }
 
     void Erase(int key) {
@@ -317,7 +318,8 @@ TEST_F(CacheTest, SetCapacity) {
     // Insert kCacheSize entries, but not releasing.
     for (int i = 0; i < 32; i++) {
         std::string result;
-        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
+        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter,
+                                    CachePriority::NORMAL, 0);
     }
     ASSERT_EQ(kCacheSize, _cache->get_base_capacity());
     ASSERT_EQ(32, _cache->get_base_memory_usage());
@@ -331,7 +333,8 @@ TEST_F(CacheTest, SetCapacity) {
     // then release 32, usage should be 32.
     for (int i = 32; i < 64; i++) {
         std::string result;
-        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
+        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter,
+                                    CachePriority::NORMAL, 0);
     }
     ASSERT_EQ(kCacheSize * 2, _cache->get_base_capacity());
     ASSERT_EQ(64, _cache->get_base_memory_usage());
