@@ -53,6 +53,7 @@ METRIC_DEFINE_UINT_GAUGE(lxh_datacache_extent_cost, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_miss_time, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_io_time, MetricUnit::OPERATIONS);
 
 Status BlockCache::init(const CacheOptions& options) {
     _block_size = std::min(options.block_size, MAX_BLOCK_SIZE);
@@ -128,6 +129,9 @@ Status BlockCache::init(const CacheOptions& options) {
     });
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_miss_time", [this]() {
         lxh_datacache_miss_time.set_value(GlobalEnv::GetInstance()->_total_block_cache_miss_time);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_io_time", [this]() {
+        lxh_datacache_io_time.set_value(GlobalEnv::GetInstance()->_total_data_cache_io_time);
     });
 
     return Status::OK();

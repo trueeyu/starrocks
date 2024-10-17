@@ -58,6 +58,7 @@ OlapChunkSource::OlapChunkSource(ScanOperator* op, RuntimeProfile* runtime_profi
 OlapChunkSource::~OlapChunkSource() {
     _reader.reset();
     _predicate_free_pool.clear();
+    GlobalEnv::GetInstance()->_total_page_cache_io_time += _io_timer->value();
 }
 
 void OlapChunkSource::close(RuntimeState* state) {
