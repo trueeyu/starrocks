@@ -77,6 +77,23 @@ const static std::string HEADER_JSON = "application/json";
 
 std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 
+Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
+    if (name == "inc_page_cache_size") {
+        int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
+        StoragePageCache::instance()->set_capacity(size + std::stol(value));
+    } else if (name == "dec_page_cache_size") {
+        int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
+        StoragePageCache::instance()->set_capacity(size - std::stol(value));
+    } else if (name == "inc_block_cache_size") {
+        int64_t size = BlockCache::instance()->mem_quota();
+        auto st = BlockCache::instance()->update_mem_quota(size + std::stol(value), false);
+    } else if (name == "dec_block_cache_size") {
+        int64_t size = BlockCache::instance()->mem_quota();
+        BlockCache::instance()->update_mem_quota(size - std::stol(value), false);
+    }
+    return Status::OK();
+}
+
 Status UpdateConfigAction::update_config(const std::string& name, const std::string& value) {
     std::call_once(_once_flag, [&]() {
         _config_callback.emplace("scanner_thread_pool_thread_num", [&]() {
