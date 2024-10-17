@@ -27,6 +27,7 @@ namespace starrocks {
 Status StarCacheWrapper::init(const CacheOptions& options) {
     starcache::CacheOptions opt;
     opt.mem_quota_bytes = options.mem_space_size;
+    opt.mem_extent_quota_bytes = options.extent_mem_space_size;
     for (auto& dir : options.disk_spaces) {
         opt.disk_dir_spaces.push_back({.path = dir.path, .quota_bytes = dir.size});
     }

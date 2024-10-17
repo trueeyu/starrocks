@@ -87,6 +87,7 @@ Status init_datacache(GlobalEnv* global_env, const std::vector<StorePath>& stora
         }
         RETURN_IF_ERROR(DataCacheUtils::parse_conf_datacache_mem_size(config::datacache_mem_size, mem_limit,
                                                                       &cache_options.mem_space_size));
+        cache_options.extent_mem_space_size = cache_options.mem_space_size * config::block_cache_extent_percent / 100;
         LOG(ERROR) << "data cache size: " << cache_options.mem_space_size;
         if (config::datacache_disk_path.value().empty()) {
             // If the disk cache does not be configured for datacache, set default path according storage path.
