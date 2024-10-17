@@ -1483,5 +1483,6 @@ CONF_mBool(enable_bit_unpack_simd, "true");
 
 CONF_mInt32(max_committed_without_schema_rowset, "1000");
 CONF_mInt32(extent_percent, "10");
+CONF_mInt32(block_cache_extent_percent, "10");
 
 } // namespace starrocks::config

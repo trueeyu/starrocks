@@ -46,14 +46,16 @@
 namespace starrocks {
 
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_lookup_count, MetricUnit::OPERATIONS);
+
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_capacity, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_usage, MetricUnit::BYTES);
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_usage, MetricUnit::BYTES);
+
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_hit_count, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_write_count, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_cost, MetricUnit::OPERATIONS);
-METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_capacity, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_capacity, MetricUnit::BYTES);
-METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_base_usage, MetricUnit::BYTES);
-METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_usage, MetricUnit::BYTES);
 
 StoragePageCache* StoragePageCache::_s_instance = nullptr;
 
