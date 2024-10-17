@@ -302,14 +302,19 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
 #endif // USE_STAROS
     });
 
-    Status s = config::set_config(name, value);
-    if (s.ok()) {
-        LOG(INFO) << "set_config " << name << "=" << value << " success";
-        if (_config_callback.count(name)) {
-            _config_callback[name]();
+    if (config::config_exist(name)) {
+        update_cache(name, value);
+        return Status::OK();
+    } else {
+        Status s = config::set_config(name, value);
+        if (s.ok()) {
+            LOG(INFO) << "set_config " << name << "=" << value << " success";
+            if (_config_callback.count(name)) {
+                _config_callback[name]();
+            }
         }
+        return s;
     }
-    return s;
 }
 
 void UpdateConfigAction::handle(HttpRequest* req) {
