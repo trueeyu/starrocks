@@ -488,7 +488,7 @@ ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
     _extent_capacity = _base_capacity * config::extent_percent / 100;
 
     const size_t base_per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
-    const size_t extent_per_shard = base_per_shard / config::extent_percent;
+    const size_t extent_per_shard = base_per_shard * config::extent_percent / 100;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(base_per_shard);
         _shard.set_extent_capacity(extent_per_shard);
