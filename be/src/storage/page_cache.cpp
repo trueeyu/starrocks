@@ -57,6 +57,8 @@ METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_write_count, MetricUnit::OPERATIO
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_cost, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_extent_capacity, MetricUnit::BYTES);
 
+METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_miss_cost, MetricUnit::OPERATIONS);
+
 StoragePageCache* StoragePageCache::_s_instance = nullptr;
 
 void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t capacity) {
@@ -129,6 +131,12 @@ static void init_metrics() {
                                                              &lxh_page_cache_extent_usage);
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_extent_usage", []() {
         lxh_page_cache_extent_usage.set_value(StoragePageCache::instance()->get_extent_usage());
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_page_cache_miss_cost",
+                                                             &lxh_page_cache_miss_cost);
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_page_cache_miss_cost", []() {
+        lxh_page_cache_miss_cost.set_value(GlobalEnv::GetInstance()->_total_page_cache_miss_time);
     });
 }
 

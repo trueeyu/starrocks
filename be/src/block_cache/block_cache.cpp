@@ -20,6 +20,7 @@
 #include "common/statusor.h"
 #include "gutil/strings/substitute.h"
 #include "util/starrocks_metrics.h"
+#include "runtime/exec_env.h"
 
 namespace starrocks {
 
@@ -50,6 +51,8 @@ METRIC_DEFINE_UINT_GAUGE(lxh_datacache_extent_write_count, MetricUnit::OPERATION
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_extent_cost, MetricUnit::OPERATIONS);
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
+
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_miss_time, MetricUnit::OPERATIONS);
 
 Status BlockCache::init(const CacheOptions& options) {
     _block_size = std::min(options.block_size, MAX_BLOCK_SIZE);
@@ -122,6 +125,9 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_mem_meta", [this]() {
       DataCacheMetrics datacache_metrics = cache_metrics(0);
       lxh_datacache_mem_meta.set_value(datacache_metrics.meta_used_bytes);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_miss_time", [this]() {
+        lxh_datacache_miss_time.set_value(GlobalEnv::GetInstance()->_total_block_cache_miss_time);
     });
 
     return Status::OK();

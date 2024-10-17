@@ -156,6 +156,10 @@ public:
     static int64_t calc_max_query_memory(int64_t process_mem_limit, int64_t percent);
     int64_t cache_size() const { return _cache_size; }
 
+public:
+    std::atomic<uint64_t> _total_page_cache_miss_time = 0;
+    std::atomic<uint64_t> _total_block_cache_miss_time = 0;
+
 private:
     static bool _is_init;
 

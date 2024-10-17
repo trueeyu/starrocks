@@ -22,6 +22,7 @@
 #include "util/hash_util.hpp"
 #include "util/runtime_profile.h"
 #include "util/stack_util.h"
+#include "runtime/exec_env.h"
 
 namespace starrocks::io {
 
@@ -190,6 +191,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
                 src = _buffer.data();
             }
         }
+        GlobalEnv::GetInstance()->_total_block_cache_miss_time += read_remote_ns;
 
         if (_enable_cache_io_adaptor) {
             int64_t delta_remote_bytes =
