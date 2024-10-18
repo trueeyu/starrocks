@@ -227,7 +227,9 @@ struct ConnectorScanOperatorAdaptiveProcessor {
 
 ConnectorScanOperator::ConnectorScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_sequence, int32_t dop,
                                              ScanNode* scan_node)
-        : ScanOperator(factory, id, driver_sequence, dop, scan_node) {}
+        : ScanOperator(factory, id, driver_sequence, dop, scan_node) {
+    VLOG(3) << "LXH: construct connector scan operator";
+}
 
 int64_t ConnectorScanOperator::_adjust_scan_mem_limit(int64_t old_value, int64_t new_value) {
     auto* factory = down_cast<ConnectorScanOperatorFactory*>(_factory);
@@ -251,6 +253,18 @@ int64_t ConnectorScanOperator::_adjust_scan_mem_limit(int64_t old_value, int64_t
     VLOG_OPERATOR << build_debug_string();
 
     return new_scan_mem_limit;
+}
+
+ConnectorScanOperator::~ConnectorScanOperator() {
+    for (auto& p : _chunk_source_profiles) {
+        VLOG(3) << "LXH: destruct connector scan operator";
+        auto* scan_timer = p->get_counter("ScanTime");
+        if (scan_timer != nullptr) {
+            VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
+            GlobalEnv::GetInstance()->_total_data_cache_io_time.fetch_add(scan_timer->value(),
+                                                                          std::memory_order_relaxed);
+        }
+    }
 }
 
 Status ConnectorScanOperator::do_prepare(RuntimeState* state) {

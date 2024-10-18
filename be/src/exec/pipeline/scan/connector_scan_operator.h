@@ -86,14 +86,7 @@ public:
     ConnectorScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_sequence, int32_t dop,
                           ScanNode* scan_node);
 
-    ~ConnectorScanOperator() override {
-        VLOG(3) << "LXH: destruct connector scan operator";
-        auto* scan_timer = _unique_metrics->get_counter("ScanTime");
-        if (scan_timer != nullptr) {
-            VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
-            GlobalEnv::GetInstance()->_total_data_cache_io_time.fetch_add(scan_timer->value(), std::memory_order_relaxed);
-        }
-    }
+    ~ConnectorScanOperator() override;
 
     Status do_prepare(RuntimeState* state) override;
     void do_close(RuntimeState* state) override;

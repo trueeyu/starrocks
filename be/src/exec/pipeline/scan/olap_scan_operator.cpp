@@ -63,10 +63,13 @@ OlapScanOperator::OlapScanOperator(OperatorFactory* factory, int32_t id, int32_t
 
 OlapScanOperator::~OlapScanOperator() {
     VLOG(3) << "LXH: destruct olap scan operator";
-    auto* scan_timer = _unique_metrics->get_counter("ScanTime");
-    if (scan_timer != nullptr) {
-        VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
-        GlobalEnv::GetInstance()->_total_page_cache_io_time.fetch_add(scan_timer->value(), std::memory_order_relaxed);
+    for (auto& p : _chunk_source_profiles) {
+        auto* scan_timer = p->get_counter("ScanTime");
+        if (scan_timer != nullptr) {
+            VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
+            GlobalEnv::GetInstance()->_total_page_cache_io_time.fetch_add(scan_timer->value(),
+                                                                          std::memory_order_relaxed);
+        }
     }
 
     auto* state = runtime_state();
