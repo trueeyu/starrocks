@@ -140,9 +140,9 @@ static void init_metrics() {
         lxh_page_cache_miss_cost.set_value(GlobalEnv::GetInstance()->_total_page_cache_miss_time);
     });
 
-    StarRocksMetrics::instance()->metrics()->register_metric("lxh_total_page_io_time",
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_total_page_cache_io_time",
                                                              &lxh_total_page_cache_io_time);
-    StarRocksMetrics::instance()->metrics()->register_hook("lxh_total_page_io_time", []() {
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_total_page_cache_io_time", []() {
         lxh_total_page_cache_io_time.set_value(GlobalEnv::GetInstance()->_total_page_cache_io_time);
     });
 }

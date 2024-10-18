@@ -87,6 +87,8 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_extent_cost", &lxh_datacache_extent_cost);
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_meta", &lxh_datacache_mem_meta);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_miss_time", &lxh_datacache_miss_time);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_io_time", &lxh_datacache_io_time);
 
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_lookup_count", [this]() {
       DataCacheMetrics datacache_metrics = cache_metrics(1);
