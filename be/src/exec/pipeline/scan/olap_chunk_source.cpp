@@ -58,6 +58,7 @@ OlapChunkSource::OlapChunkSource(ScanOperator* op, RuntimeProfile* runtime_profi
 OlapChunkSource::~OlapChunkSource() {
     _reader.reset();
     _predicate_free_pool.clear();
+    VLOG(3) << "LXH: chunk_source active time: " << _scan_timer->value();
     GlobalEnv::GetInstance()->_total_page_cache_io_time += _scan_timer->value();
 }
 
