@@ -152,19 +152,6 @@ static int64_t calc_max_consistency_memory(int64_t process_mem_limit) {
     return std::min<int64_t>(limit, process_mem_limit * percent / 100);
 }
 
-class SetMemTrackerForColumnPool {
-public:
-    SetMemTrackerForColumnPool(std::shared_ptr<MemTracker> mem_tracker) : _mem_tracker(std::move(mem_tracker)) {}
-
-    template <typename Pool>
-    void operator()() {
-        Pool::singleton()->set_mem_tracker(_mem_tracker);
-    }
-
-private:
-    std::shared_ptr<MemTracker> _mem_tracker = nullptr;
-};
-
 bool GlobalEnv::_is_init = false;
 
 bool GlobalEnv::is_init() {
@@ -251,6 +238,7 @@ Status GlobalEnv::_init_mem_tracker() {
     MemChunkAllocator::init_instance(_chunk_allocator_mem_tracker.get(), config::chunk_reserved_bytes_limit);
 
     _init_storage_page_cache(); // TODO: move to StorageEngine
+    _cache_size = config::cache_size;
     return Status::OK();
 }
 
@@ -543,6 +531,7 @@ Status ExecEnv::init(const std::vector<StorePath>& store_paths, bool as_cn) {
     RETURN_IF_ERROR(_small_file_mgr->init());
 
     RETURN_IF_ERROR(_load_channel_mgr->init(GlobalEnv::GetInstance()->load_mem_tracker()));
+    LOG(ERROR) << "LOAD_CHANNEL_MGR_START";
 
     _heartbeat_flags = new HeartbeatFlags();
     auto capacity = std::max<size_t>(config::query_cache_capacity, 4L * 1024 * 1024);

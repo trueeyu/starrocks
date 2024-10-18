@@ -88,6 +88,8 @@ public:
 
     bool has_mem_cache() const { return _mem_quota.load(std::memory_order_relaxed) > 0; }
 
+    int64_t mem_quota() const { return _mem_quota.load(); }
+
     bool has_disk_cache() const { return _disk_quota.load(std::memory_order_relaxed) > 0; }
 
     bool available() const { return is_initialized() && (has_mem_cache() || has_disk_cache()); }

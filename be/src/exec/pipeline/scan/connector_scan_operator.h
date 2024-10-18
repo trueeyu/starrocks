@@ -86,7 +86,7 @@ public:
     ConnectorScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_sequence, int32_t dop,
                           ScanNode* scan_node);
 
-    ~ConnectorScanOperator() override = default;
+    ~ConnectorScanOperator() override;
 
     Status do_prepare(RuntimeState* state) override;
     void do_close(RuntimeState* state) override;

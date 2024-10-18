@@ -19,9 +19,7 @@
 #include "block_cache/io_buffer.h"
 #include "common/status.h"
 
-#ifdef WITH_STARCACHE
 #include "starcache/star_cache.h"
-#endif
 
 namespace starrocks {
 
@@ -29,15 +27,9 @@ namespace starrocks {
 // Importing the starcache headers here is not graceful, but the `cachelib` doesn't support
 // object cache and we'll deprecate it for some performance reasons. Now there is no need to
 // pay too much attention to the compatibility and upper-level abstraction of the cachelib interface.
-#ifdef WITH_STARCACHE
 using DataCacheHandle = starcache::ObjectHandle;
 using DataCacheMetrics = starcache::CacheMetrics;
 using DataCacheStatus = starcache::CacheStatus;
-#else
-using DataCacheHandle = DummyCacheHandle;
-using DataCacheMetrics = DummyCacheMetrics;
-using DataCacheStatus = DummyCacheStatus;
-#endif
 
 enum class DataCacheEngineType { STARCACHE };
 

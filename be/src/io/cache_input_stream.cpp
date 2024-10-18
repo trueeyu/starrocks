@@ -22,6 +22,7 @@
 #include "util/hash_util.hpp"
 #include "util/runtime_profile.h"
 #include "util/stack_util.h"
+#include "runtime/exec_env.h"
 
 namespace starrocks::io {
 
@@ -96,7 +97,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
                 strings::memcpy_inlined(out, sb->buffer.data() + offset - sb->offset, size);
                 if (_enable_populate_cache) {
                     _populate_to_cache((const char*)sb->buffer.data() + block_offset - sb->offset, block_offset,
-                                       load_size, sb);
+                                       load_size, sb, 0);
                 }
                 return Status::OK();
             }
@@ -190,6 +191,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
                 src = _buffer.data();
             }
         }
+        GlobalEnv::GetInstance()->_total_block_cache_miss_time += read_remote_ns;
 
         if (_enable_cache_io_adaptor) {
             int64_t delta_remote_bytes =
@@ -213,7 +215,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
         }
 
         if (_enable_populate_cache) {
-            _populate_to_cache(src, read_offset_cursor, read_size, sb);
+            _populate_to_cache(src, read_offset_cursor, read_size, sb, read_remote_ns);
         }
 
         read_offset_cursor += read_size;
@@ -372,16 +374,18 @@ StatusOr<std::string_view> CacheInputStream::peek(int64_t count) {
     SharedBufferPtr sb;
     ASSIGN_OR_RETURN(auto s, _sb_stream->peek_shared_buffer(count, &sb));
     if (_enable_populate_cache) {
-        _populate_to_cache(s.data(), _offset, count, sb);
+        _populate_to_cache(s.data(), _offset, count, sb, 0);
     }
     return s;
 }
 
-void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t count, const SharedBufferPtr& sb) {
+void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t count, const SharedBufferPtr& sb,
+                                          size_t cost) {
     int64_t begin = offset / _block_size * _block_size;
     int64_t end = std::min((offset + count + _block_size - 1) / _block_size * _block_size, _size);
     p -= (offset - begin);
-    auto f = [sb, this](const char* buf, size_t off, size_t size) {
+    size_t block_count = (end - begin) / _block_size + ((end - begin) % _block_size != 0);
+    auto f = [sb, this, cost, block_count](const char* buf, size_t off, size_t size) {
         DCHECK(off % _block_size == 0);
         if (_already_populated_blocks.contains(off / _block_size)) {
             // Already populate in CacheInputStream's lifecycle, ignore this time
@@ -394,6 +398,7 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
         options.evict_probability = _datacache_evict_probability;
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
+        options.cost = cost / block_count;
         if (options.async && sb) {
             auto cb = [sb](int code, const std::string& msg) {
                 // We only need to keep the shared buffer pointer
