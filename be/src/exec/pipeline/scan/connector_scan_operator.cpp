@@ -649,8 +649,6 @@ ConnectorChunkSource::ConnectorChunkSource(ScanOperator* op, RuntimeProfile* run
 }
 
 ConnectorChunkSource::~ConnectorChunkSource() {
-    GlobalEnv::GetInstance()->_total_data_cache_io_time += _io_task_wait_timer->value();
-    GlobalEnv::GetInstance()->_total_data_cache_io_time += _io_task_exec_timer->value();
 
     if (_runtime_state != nullptr) {
         close(_runtime_state);
