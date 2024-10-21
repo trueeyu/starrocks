@@ -140,6 +140,7 @@ Status StarCacheWrapper::remove(const std::string& key) {
 Status StarCacheWrapper::update_mem_quota(size_t quota_bytes, bool flush_to_disk) {
     _cache->update_mem_quota(quota_bytes, flush_to_disk);
     _cache->update_extent_mem_quota(quota_bytes * config::block_cache_extent_percent / 100);
+    return Status::OK();
 }
 
 Status StarCacheWrapper::update_disk_spaces(const std::vector<DirSpace>& spaces) {
