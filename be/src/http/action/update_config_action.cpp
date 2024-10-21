@@ -80,16 +80,24 @@ std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
     if (name == "inc_page_cache_size") {
         int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
-        StoragePageCache::instance()->set_capacity(size + std::stol(value));
+        size_t capacity = size + std::stol(value);
+        LOG(ERROR) << "inc page cache capacity: " << capacity;
+        StoragePageCache::instance()->set_capacity(capacity);
     } else if (name == "dec_page_cache_size") {
         int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
-        StoragePageCache::instance()->set_capacity(size - std::stol(value));
+        size_t capacity = size - std::stol(value);
+        LOG(ERROR) << "dec page cache capacity: " << capacity;
+        StoragePageCache::instance()->set_capacity(capacity);
     } else if (name == "inc_block_cache_size") {
         int64_t size = BlockCache::instance()->mem_quota();
-        auto st = BlockCache::instance()->update_mem_quota(size + std::stol(value), false);
+        size_t capacity = size + std::stol(value);
+        LOG(ERROR) << "inc block cache capacity: " << capacity;
+        auto st = BlockCache::instance()->update_mem_quota(capacity, false);
     } else if (name == "dec_block_cache_size") {
         int64_t size = BlockCache::instance()->mem_quota();
-        BlockCache::instance()->update_mem_quota(size - std::stol(value), false);
+        size_t capacity = size - std::stol(value);
+        LOG(ERROR) << "desc block cache capacity: " << capacity;
+        BlockCache::instance()->update_mem_quota(capacity, false);
     }
     return Status::OK();
 }
