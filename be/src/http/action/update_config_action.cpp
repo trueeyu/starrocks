@@ -79,12 +79,12 @@ std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 
 Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
     if (name == "inc_page_cache_size") {
-        int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
+        int64_t size = StoragePageCache::instance()->get_base_capacity();
         size_t capacity = size + std::stol(value);
         LOG(ERROR) << "inc page cache capacity: " << capacity;
         StoragePageCache::instance()->set_capacity(capacity);
     } else if (name == "dec_page_cache_size") {
-        int64_t size = GlobalEnv::GetInstance()->get_storage_page_cache_size();
+        int64_t size = StoragePageCache::instance()->get_base_capacity();
         size_t capacity = size - std::stol(value);
         LOG(ERROR) << "dec page cache capacity: " << capacity;
         StoragePageCache::instance()->set_capacity(capacity);
