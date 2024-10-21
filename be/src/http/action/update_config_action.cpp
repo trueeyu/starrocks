@@ -302,7 +302,7 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
 #endif // USE_STAROS
     });
 
-    if (config::config_exist(name)) {
+    if (!config::config_exist(name)) {
         update_cache(name, value);
         return Status::OK();
     } else {
