@@ -99,7 +99,7 @@ Status BlockCache::init(const CacheOptions& options) {
     });
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_write_success_count", [this]() {
       DataCacheMetrics datacache_metrics = cache_metrics(2);
-      lxh_datacache_lookup_count.set_value(datacache_metrics.detail_l2->write_success_count);
+      lxh_datacache_write_success_count.set_value(datacache_metrics.detail_l2->write_success_count);
     });
 
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_quota", [this]() {
