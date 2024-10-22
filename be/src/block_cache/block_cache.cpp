@@ -150,15 +150,23 @@ Status BlockCache::init(const CacheOptions& options) {
         lxh_datacache_io_time.set_value(GlobalEnv::GetInstance()->_total_data_cache_io_time);
     });
 
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_interface_writer_buffer_count",
+                                                             &lxh_interface_write_buffer_count);
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_write_buffer_count", [this]() {
         lxh_interface_write_buffer_count.set_value(_lxh_interface_write_buffer_count);
     });
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_interface_read_buffer_count",
+                                                             &lxh_interface_read_buffer_count);
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_read_buffer_count", [this]() {
         lxh_interface_read_buffer_count.set_value(_lxh_interface_read_buffer_count);
     });
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_interface_write_object_count",
+                                                             &lxh_interface_write_object_count);
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_write_object_count", [this]() {
         lxh_interface_write_object_count.set_value(_lxh_interface_write_object_count);
     });
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_interface_read_object_count",
+                                                             &lxh_interface_read_object_count);
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_read_object_count", [this]() {
         lxh_interface_read_object_count.set_value(_lxh_interface_read_object_count);
     });
