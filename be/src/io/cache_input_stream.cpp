@@ -114,6 +114,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
         options.use_adaptor = _enable_cache_io_adaptor;
         SCOPED_RAW_TIMER(&read_cache_ns);
         if (_enable_block_buffer) {
+            VLOG(3) << "cache read buffer: " << _cache_key << ":" << block_offset << ":" << load_size;
             res = _cache->read_buffer(_cache_key, block_offset, load_size, &block.buffer, &options);
             read_size = load_size;
         } else {
@@ -377,7 +378,7 @@ StatusOr<std::string_view> CacheInputStream::peek(int64_t count) {
     // if app level uses zero copy read, it does bypass the cache layer.
     // so here we have to fill cache manually.
     SharedBufferPtr sb;
-    VLOG(3) << "peed: " << count;
+    VLOG(3) << "peek: " << count;
     ASSIGN_OR_RETURN(auto s, _sb_stream->peek_shared_buffer(count, &sb));
     if (_enable_populate_cache) {
         _populate_to_cache(s.data(), _offset, count, sb, 0);
