@@ -173,6 +173,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
         // Everytime read at most one buffer size
         const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
+        VLOG(3) << "READ_SIZE: " << block_end_offset - read_offset_cursor << ":" << read_size;
         char* src = nullptr;
 
         // check [read_offset_cursor, read_size) is already in SharedBuffer
