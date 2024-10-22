@@ -40,6 +40,7 @@ BlockCache::~BlockCache() {
 }
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_lookup_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_write_success_count, MetricUnit::OPERATIONS);
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_quota, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_usage, MetricUnit::BYTES);
@@ -76,6 +77,8 @@ Status BlockCache::init(const CacheOptions& options) {
     }
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_lookup_count", &lxh_datacache_lookup_count);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_write_success_count",
+                                                             &lxh_datacache_write_success_count);
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_quota", &lxh_datacache_base_quota);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_usage", &lxh_datacache_base_usage);
@@ -93,6 +96,10 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_lookup_count", [this]() {
       DataCacheMetrics datacache_metrics = cache_metrics(1);
       lxh_datacache_lookup_count.set_value(datacache_metrics.detail_l1->hit_count + datacache_metrics.detail_l1->miss_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_write_success_count", [this]() {
+      DataCacheMetrics datacache_metrics = cache_metrics(2);
+      lxh_datacache_lookup_count.set_value(datacache_metrics.detail_l2->write_success_count);
     });
 
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_quota", [this]() {
