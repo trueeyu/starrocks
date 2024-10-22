@@ -56,6 +56,13 @@ METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_miss_time, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_io_time, MetricUnit::OPERATIONS);
 
+
+METRIC_DEFINE_UINT_GAUGE(lxh_interface_write_buffer_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_interface_write_object_count, MetricUnit::OPERATIONS);
+
+METRIC_DEFINE_UINT_GAUGE(lxh_interface_read_buffer_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_interface_read_object_count, MetricUnit::OPERATIONS);
+
 Status BlockCache::init(const CacheOptions& options) {
     _block_size = std::min(options.block_size, MAX_BLOCK_SIZE);
     auto cache_options = options;
@@ -143,6 +150,19 @@ Status BlockCache::init(const CacheOptions& options) {
         lxh_datacache_io_time.set_value(GlobalEnv::GetInstance()->_total_data_cache_io_time);
     });
 
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_write_buffer_count", [this]() {
+        lxh_interface_write_buffer_count.set_value(_lxh_interface_write_buffer_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_read_buffer_count", [this]() {
+        lxh_interface_read_buffer_count.set_value(_lxh_interface_read_buffer_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_write_object_count", [this]() {
+        lxh_interface_write_object_count.set_value(_lxh_interface_write_object_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_interface_read_object_count", [this]() {
+        lxh_interface_read_object_count.set_value(_lxh_interface_read_object_count);
+    });
+
     return Status::OK();
 }
 
@@ -158,6 +178,7 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, const I
 
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
+    _lxh_interface_write_buffer_count++;
     return _kv_cache->write_buffer(block_key, buffer, options);
 }
 
@@ -171,6 +192,7 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, size_t 
 
     IOBuffer buffer;
     buffer.append_user_data((void*)data, size, empty_deleter);
+    _lxh_interface_write_buffer_count++;
     return write_buffer(cache_key, offset, buffer, options);
 }
 
@@ -179,6 +201,7 @@ Status BlockCache::write_object(const CacheKey& cache_key, const void* ptr, size
     if (!ptr) {
         return Status::InvalidArgument("invalid object pointer");
     }
+    _lxh_interface_write_object_count++;
     return _kv_cache->write_object(cache_key, ptr, size, std::move(deleter), handle, options);
 }
 
@@ -190,18 +213,21 @@ Status BlockCache::read_buffer(const CacheKey& cache_key, off_t offset, size_t s
 
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
+    _lxh_interface_read_buffer_count++;
     return _kv_cache->read_buffer(block_key, offset - index * _block_size, size, buffer, options);
 }
 
 StatusOr<size_t> BlockCache::read_buffer(const CacheKey& cache_key, off_t offset, size_t size, char* data,
                                          ReadCacheOptions* options) {
     IOBuffer buffer;
+    _lxh_interface_read_buffer_count++;
     RETURN_IF_ERROR(read_buffer(cache_key, offset, size, &buffer, options));
     buffer.copy_to(data);
     return buffer.size();
 }
 
 Status BlockCache::read_object(const CacheKey& cache_key, DataCacheHandle* handle, ReadCacheOptions* options) {
+    _lxh_interface_read_object_count++;
     return _kv_cache->read_object(cache_key, handle, options);
 }
 

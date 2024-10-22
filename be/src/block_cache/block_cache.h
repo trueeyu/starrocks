@@ -110,6 +110,12 @@ private:
     std::atomic<bool> _initialized = false;
     std::atomic<size_t> _mem_quota = 0;
     std::atomic<size_t> _disk_quota = 0;
+
+    std::atomic<size_t> _lxh_interface_write_buffer_count = 0;
+    std::atomic<size_t> _lxh_interface_write_object_count = 0;
+
+    std::atomic<size_t> _lxh_interface_read_buffer_count = 0;
+    std::atomic<size_t> _lxh_interface_read_object_count = 0;
 };
 
 } // namespace starrocks
