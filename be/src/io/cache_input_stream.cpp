@@ -412,6 +412,7 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
             options.callback = cb;
             options.allow_zero_copy = true;
         }
+        VLOG(3) << "WRITE_BUFFER: " << _cache_key << ":" << off << ":" << size;
         Status r = _cache->write_buffer(_cache_key, off, size, buf, &options);
         if (r.ok() || r.is_already_exist()) {
             _already_populated_blocks.emplace(off / _block_size);
