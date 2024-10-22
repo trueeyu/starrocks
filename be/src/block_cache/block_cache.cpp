@@ -187,8 +187,8 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, const I
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
     _lxh_interface_write_buffer_count++;
-    VLOG(3) << "WRITE_BUFFER_SIZE: " << crc_hash_64(cache_key.data(), cache_key.size(), CRC_HASH_SEED1)
-            << ":" << buffer.size() << ":" << cache_key;
+    VLOG(3) << "WRITE_BUFFER_SIZE: " << crc_hash_64(block_key.data(), block_key.size(), CRC_HASH_SEED1)
+            << ":" << buffer.size() << ":" << block_key;
     return _kv_cache->write_buffer(block_key, buffer, options);
 }
 
