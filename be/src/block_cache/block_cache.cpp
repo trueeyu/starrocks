@@ -187,6 +187,7 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, const I
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
     _lxh_interface_write_buffer_count++;
+    VLOG(3) << "WRITE_BUFFER_SIZE: " << buffer.size();
     return _kv_cache->write_buffer(block_key, buffer, options);
 }
 
@@ -200,7 +201,6 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, size_t 
 
     IOBuffer buffer;
     buffer.append_user_data((void*)data, size, empty_deleter);
-    _lxh_interface_write_buffer_count++;
     return write_buffer(cache_key, offset, buffer, options);
 }
 
@@ -222,6 +222,7 @@ Status BlockCache::read_buffer(const CacheKey& cache_key, off_t offset, size_t s
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
     _lxh_interface_read_buffer_count++;
+    VLOG(3) << "READ_BUFFER_SIZE: " << size;
     return _kv_cache->read_buffer(block_key, offset - index * _block_size, size, buffer, options);
 }
 
