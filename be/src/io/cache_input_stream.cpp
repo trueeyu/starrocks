@@ -284,6 +284,8 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
 
     std::vector<ReadFromRemoteIORange> need_read_from_remote{};
 
+    VLOG(3) << "READ_AT_FULLY: " << _block_size << ":" << start_block_id << ":" << end_block_id;
+
     for (int64_t i = start_block_id; i <= end_block_id; i++) {
         size_t off = std::max(offset, i * _block_size);
         size_t end = std::min((i + 1) * _block_size, end_offset);
