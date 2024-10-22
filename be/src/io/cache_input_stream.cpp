@@ -377,6 +377,7 @@ StatusOr<std::string_view> CacheInputStream::peek(int64_t count) {
     // if app level uses zero copy read, it does bypass the cache layer.
     // so here we have to fill cache manually.
     SharedBufferPtr sb;
+    VLOG(3) << "peed: " << count;
     ASSIGN_OR_RETURN(auto s, _sb_stream->peek_shared_buffer(count, &sb));
     if (_enable_populate_cache) {
         _populate_to_cache(s.data(), _offset, count, sb, 0);
