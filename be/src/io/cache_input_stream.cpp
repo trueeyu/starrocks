@@ -388,6 +388,9 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
                                           size_t cost) {
     int64_t begin = offset / _block_size * _block_size;
     int64_t end = std::min((offset + count + _block_size - 1) / _block_size * _block_size, _size);
+
+    VLOG(3) << "populate: " << offset << ":" << count << ":" << begin << ":" << end;
+
     p -= (offset - begin);
     size_t block_count = (end - begin) / _block_size + ((end - begin) % _block_size != 0);
     auto f = [sb, this, cost, block_count](const char* buf, size_t off, size_t size) {
