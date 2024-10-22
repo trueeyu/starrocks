@@ -223,7 +223,8 @@ Status BlockCache::read_buffer(const CacheKey& cache_key, off_t offset, size_t s
     size_t index = offset / _block_size;
     std::string block_key = fmt::format("{}/{}", cache_key, index);
     _lxh_interface_read_buffer_count++;
-    VLOG(3) << "READ_BUFFER_SIZE: " << size;
+    VLOG(3) << "READ_BUFFER_SIZE: " << crc_hash_64(block_key.data(), block_key.size(), CRC_HASH_SEED1)
+        << ":" << size << ":" << block_key;
     return _kv_cache->read_buffer(block_key, offset - index * _block_size, size, buffer, options);
 }
 
