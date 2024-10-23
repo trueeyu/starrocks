@@ -45,6 +45,10 @@ METRIC_DEFINE_UINT_GAUGE(lxh_datacache_write_success_count, MetricUnit::OPERATIO
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_quota, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_usage, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_buffer_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_buffer_miss_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_object_hit_count, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_base_object_miss_count, MetricUnit::OPERATIONS);
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_extent_quota, MetricUnit::BYTES);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_extent_usage, MetricUnit::BYTES);
@@ -90,6 +94,10 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_quota", &lxh_datacache_base_quota);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_usage", &lxh_datacache_base_usage);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_hit_count", &lxh_datacache_base_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_buffer_hit_count", &lxh_datacache_base_buffer_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_buffer_miss_count", &lxh_datacache_base_buffer_miss_count);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_object_hit_count", &lxh_datacache_base_object_hit_count);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_base_object_miss_count", &lxh_datacache_base_object_miss_count);
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_extent_quota", &lxh_datacache_extent_quota);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_extent_usage", &lxh_datacache_extent_usage);
@@ -120,6 +128,23 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_hit_count", [this]() {
         DataCacheMetrics datacache_metrics = cache_metrics(1);
         lxh_datacache_base_hit_count.set_value(datacache_metrics.detail_l1->hit_count);
+    });
+
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_buffer_hit_count", [this]() {
+      DataCacheMetrics datacache_metrics = cache_metrics(1);
+      lxh_datacache_base_buffer_hit_count.set_value(datacache_metrics.detail_l1->buffer_hit_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_buffer_miss_count", [this]() {
+      DataCacheMetrics datacache_metrics = cache_metrics(1);
+      lxh_datacache_base_buffer_miss_count.set_value(datacache_metrics.detail_l1->buffer_miss_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_object_hit_count", [this]() {
+      DataCacheMetrics datacache_metrics = cache_metrics(1);
+      lxh_datacache_base_object_hit_count.set_value(datacache_metrics.detail_l1->object_hit_count);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_base_object_miss_count", [this]() {
+      DataCacheMetrics datacache_metrics = cache_metrics(1);
+      lxh_datacache_base_object_miss_count.set_value(datacache_metrics.detail_l1->object_miss_count);
     });
 
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_extent_quota", [this]() {
