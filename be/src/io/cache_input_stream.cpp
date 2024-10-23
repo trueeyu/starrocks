@@ -273,6 +273,7 @@ struct ReadFromRemoteIORange {
 };
 
 Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
+    VLOG(3) << "INPUT STREAM read 2";
     const int64_t origin_offset = offset;
     count = std::min(_size - offset, count);
     if (count < 0) {
@@ -350,6 +351,7 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
 }
 
 StatusOr<int64_t> CacheInputStream::read(void* data, int64_t count) {
+    VLOG(3) << "INPUT STREAM read 1";
     count = std::min(_size - _offset, count);
     RETURN_IF_ERROR(read_at_fully(_offset, data, count));
     _offset += count;
@@ -357,6 +359,7 @@ StatusOr<int64_t> CacheInputStream::read(void* data, int64_t count) {
 }
 
 Status CacheInputStream::seek(int64_t offset) {
+    VLOG(3) << "INPUT STREAM read 3";
     if (offset < 0 || offset >= _size) return Status::InvalidArgument(fmt::format("Invalid offset {}", offset));
     _offset = offset;
     return _sb_stream->seek(offset);
@@ -375,6 +378,7 @@ int64_t CacheInputStream::get_align_size() const {
 }
 
 StatusOr<std::string_view> CacheInputStream::peek(int64_t count) {
+    VLOG(3) << "INPUT STREAM read 4";
     // if app level uses zero copy read, it does bypass the cache layer.
     // so here we have to fill cache manually.
     SharedBufferPtr sb;
