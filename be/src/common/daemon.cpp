@@ -338,9 +338,10 @@ struct PageCacheStats {
     size_t extent_cost = 0;
 
     std::string to_string() {
-        return strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
-                "extent_usage{}, extent_hit_count{}, extent_cost{}", lookup_count, base_capacity, base_usage,
-                base_hit_count, extent_capacity, extent_usage, extent_hit_count, extent_cost);
+        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3}, "
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
+                extent_usage, extent_hit_count, extent_cost);
     }
 
     void fill(MetricRegistry* metric) {
@@ -370,9 +371,10 @@ struct BlockCacheStats {
     size_t extent_cost = 0;
 
     std::string to_string() {
-        return strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
-                "extent_usage{}, extent_hit_count{}, extent_cost{}", lookup_count, base_capacity, base_usage,
-                base_hit_count, extent_capacity, extent_usage, extent_hit_count, extent_cost);
+        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3},"
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
+                extent_usage, extent_hit_count, extent_cost);
     }
 };
 
