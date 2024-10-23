@@ -325,6 +325,57 @@ void init_minidump() {
 #endif
 }
 
+struct PageCacheStats {
+    size_t lookup_count = 0;
+
+    size_t base_capacity = 0;
+    size_t base_usage = 0;
+    size_t base_hit_count = 0;
+
+    size_t extent_capacity = 0;
+    size_t extent_usage = 0;
+    size_t extent_hit_count = 0;
+    size_t extent_cost = 0;
+
+    std::string to_string() {
+        strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
+                "extent_usage{}, extent_hit_count{}, extent_cost{}", lookup_count, base_capacity, base_usage,
+                base_hit_count, extent_capacity, extent_usage, extent_hit_count, extent_cost);
+    }
+
+    void fill(MetricRegistry* metric) {
+        lookup_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_lookup_count"))->value();
+
+        base_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_capacity"))->value();
+        base_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_usage"))->value();
+        base_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_hit_count"))->value();
+
+        extent_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_capacity"))->value();
+        extent_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_usage"))->value();
+        extent_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_hit_count"))->value();
+        extent_cost = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_cost"))->value();
+    }
+};
+
+struct BlockCacheStats {
+    size_t lookup_count = 0;
+
+    size_t base_capacity = 0;
+    size_t base_usage = 0;
+    size_t base_hit_count = 0;
+
+    size_t extent_capacity = 0;
+    size_t extent_usage = 0;
+    size_t extent_hit_count = 0;
+    size_t extent_cost = 0;
+
+    std::string to_string() {
+        strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
+                "extent_usage{}, extent_hit_count{}, extent_cost{}", lookup_count, base_capacity, base_usage,
+                base_hit_count, extent_capacity, extent_usage, extent_hit_count, extent_cost);
+    }
+};
+
 void cache_daemon(void* arg_this) {
     while(true) {
         sleep(config::cache_interval);
@@ -338,9 +389,14 @@ void cache_daemon(void* arg_this) {
             continue;
         }
         auto* metric = StarRocksMetrics::instance()->metrics();
+        if (metric == nullptr) {
+            continue;
+        }
 
-        LOG(ERROR) << "PAGE_CACHE: base_capacity: " << metric->get_metric("lxh_page_cache_base_capacity")->to_string();
-        LOG(ERROR) << "BLOCK_CACHE: base_capacitY: " << metric->get_metric("lxh_datacache_base_quota")->to_string();
+        PageCacheStats page_cache_stats;
+        page_cache_stats.fill(metric);
+
+        LOG(ERROR) << "PAGE_CACHE: " << page_cache_stats.to_string();
     }
 }
 
