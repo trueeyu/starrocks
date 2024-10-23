@@ -370,7 +370,7 @@ struct BlockCacheStats {
     size_t extent_cost = 0;
 
     std::string to_string() {
-        strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
+        return strings::Substitute("lookup_count{}, base_capacity{}, base_usaeg{}, base_hit_count{}, extent_capacity{}, "
                 "extent_usage{}, extent_hit_count{}, extent_cost{}", lookup_count, base_capacity, base_usage,
                 base_hit_count, extent_capacity, extent_usage, extent_hit_count, extent_cost);
     }
