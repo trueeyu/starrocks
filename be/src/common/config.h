@@ -1487,5 +1487,6 @@ CONF_mInt32(block_cache_extent_percent, "10");
 CONF_mInt64(cache_size, "4294967296");
 CONF_mInt64(block_cache_start_percent, "50");
 CONF_mInt64(page_cache_start_percent, "50");
+CONF_mInt32(cache_interval, "10");
 
 } // namespace starrocks::config

@@ -325,6 +325,25 @@ void init_minidump() {
 #endif
 }
 
+void cache_daemon(void* arg_this) {
+    while(true) {
+        sleep(config::cache_interval);
+
+        BlockCache* block_cache = BlockCache::instance();
+        if (block_cache == nullptr) {
+            continue;
+        }
+        StoragePageCache* page_cache = StoragePageCache::instance();
+        if (page_cache == nullptr) {
+            continue;
+        }
+        auto* metric = StarRocksMetrics::instance()->metrics();
+
+        LOG(ERROR) << "PAGE_CACHE: base_capacity: " << metric->get_metric("lxh_page_cache_base_capacity")->to_string();
+        LOG(ERROR) << "BLOCK_CACHE: base_capacitY: " << metric->get_metric("lxh_datacache_base_quota")->to_string();
+    }
+}
+
 void Daemon::init(bool as_cn, const std::vector<StorePath>& paths) {
     if (as_cn) {
         init_glog("cn", true);
@@ -363,6 +382,10 @@ void Daemon::init(bool as_cn, const std::vector<StorePath>& paths) {
         Thread::set_thread_name(jemalloc_tracker_thread, "jemalloc_tracker_daemon");
         _daemon_threads.emplace_back(std::move(jemalloc_tracker_thread));
     }
+
+    std::thread cache_tmp_thread(cache_daemon, this);
+    Thread::set_thread_name(cache_tmp_thread, "cache tmp thread");
+    _daemon_threads.emplace_back(std::move(cache_tmp_thread));
 
     init_signals();
     init_minidump();
