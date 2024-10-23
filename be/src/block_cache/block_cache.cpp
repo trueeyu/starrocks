@@ -176,6 +176,7 @@ Status BlockCache::init(const CacheOptions& options) {
 
 Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, const IOBuffer& buffer,
                                 WriteCacheOptions* options) {
+    VLOG(3) << "write buffer 1";
     if (offset % _block_size != 0) {
         LOG(WARNING) << "write block key: " << cache_key << " with invalid args, offset: " << offset;
         return Status::InvalidArgument(strings::Substitute("offset must be aligned by block size $0", _block_size));
@@ -197,6 +198,7 @@ static void empty_deleter(void*) {}
 
 Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, size_t size, const char* data,
                                 WriteCacheOptions* options) {
+    VLOG(3) << "write buffer 2";
     if (!data) {
         return Status::InvalidArgument("invalid data buffer");
     }
