@@ -174,7 +174,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
         // Everytime read at most one buffer size
         const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
-        VLOG(3) << "READ_SIZE: " << block_end_offset - read_offset_cursor << ":" << read_size;
+        VLOG(3) << "READ_SIZE_1: " << block_end_offset - read_offset_cursor << ":" << read_size;
         char* src = nullptr;
 
         // check [read_offset_cursor, read_size) is already in SharedBuffer
@@ -195,6 +195,7 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
                 src = _buffer.data();
             }
         }
+        VLOG(3) << "READ_SIZE_2";
         GlobalEnv::GetInstance()->_total_block_cache_miss_time += read_remote_ns;
 
         if (_enable_cache_io_adaptor) {
@@ -218,7 +219,9 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
             out_remain_size -= out_size;
         }
 
+        VLOG(3) << "READ_SIZE_3";
         if (_enable_populate_cache) {
+            VLOG(3) << "READ_SIZE_4";
             _populate_to_cache(src, read_offset_cursor, read_size, sb, read_remote_ns);
         }
 
