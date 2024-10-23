@@ -181,7 +181,7 @@ Status BlockCache::write_buffer(const CacheKey& cache_key, off_t offset, const I
         LOG(WARNING) << "write block key: " << cache_key << " with invalid args, offset: " << offset;
         return Status::InvalidArgument(strings::Substitute("offset must be aligned by block size $0", _block_size));
     }
-    VLOG(3) << "WRITE_BUFFER: buffer is empty: ", int(buffer.empty());
+    VLOG(3) << "WRITE_BUFFER: buffer is empty: " << int(buffer.empty());
     if (buffer.empty()) {
         return Status::OK();
     }
