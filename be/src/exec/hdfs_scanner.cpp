@@ -247,6 +247,7 @@ StatusOr<std::unique_ptr<RandomAccessFile>> HdfsScanner::create_random_access_fi
             cache_input_stream = std::make_shared<io::CacheSelectInputStream>(
                     shared_buffered_input_stream, filename, file_size, datacache_options.modification_time);
         } else {
+            LOG(ERROR) << "enable cache input stream";
             cache_input_stream = std::make_shared<io::CacheInputStream>(shared_buffered_input_stream, filename,
                                                                         file_size, datacache_options.modification_time);
             cache_input_stream->set_enable_populate_cache(datacache_options.enable_populate_datacache);
