@@ -1490,6 +1490,6 @@ CONF_mInt64(page_cache_start_percent, "50");
 CONF_mInt32(cache_interval, "10");
 CONF_mBool(enable_cache_transfer, "false");
 // us
-CONF_mInt32(random_io_time, 10000);
+CONF_mInt32(random_io_time, "10000");
 
 } // namespace starrocks::config
