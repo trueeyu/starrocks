@@ -325,6 +325,83 @@ void init_minidump() {
 #endif
 }
 
+struct PageCacheStats {
+    size_t lookup_count = 0;
+
+    size_t base_capacity = 0;
+    size_t base_usage = 0;
+    size_t base_hit_count = 0;
+
+    size_t extent_capacity = 0;
+    size_t extent_usage = 0;
+    size_t extent_hit_count = 0;
+    size_t extent_cost = 0;
+
+    std::string to_string() {
+        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3}, "
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
+                extent_usage, extent_hit_count, extent_cost);
+    }
+
+    void fill(MetricRegistry* metric) {
+        lookup_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_lookup_count"))->value();
+
+        base_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_capacity"))->value();
+        base_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_usage"))->value();
+        base_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_hit_count"))->value();
+
+        extent_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_capacity"))->value();
+        extent_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_usage"))->value();
+        extent_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_hit_count"))->value();
+        extent_cost = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_cost"))->value();
+    }
+};
+
+struct BlockCacheStats {
+    size_t lookup_count = 0;
+
+    size_t base_capacity = 0;
+    size_t base_usage = 0;
+    size_t base_hit_count = 0;
+
+    size_t extent_capacity = 0;
+    size_t extent_usage = 0;
+    size_t extent_hit_count = 0;
+    size_t extent_cost = 0;
+
+    std::string to_string() {
+        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3},"
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
+                extent_usage, extent_hit_count, extent_cost);
+    }
+};
+
+void cache_daemon(void* arg_this) {
+    while(true) {
+        sleep(config::cache_interval);
+
+        BlockCache* block_cache = BlockCache::instance();
+        if (block_cache == nullptr) {
+            continue;
+        }
+        StoragePageCache* page_cache = StoragePageCache::instance();
+        if (page_cache == nullptr) {
+            continue;
+        }
+        auto* metric = StarRocksMetrics::instance()->metrics();
+        if (metric == nullptr) {
+            continue;
+        }
+
+        PageCacheStats page_cache_stats;
+        page_cache_stats.fill(metric);
+
+        LOG(ERROR) << "PAGE_CACHE: " << page_cache_stats.to_string();
+    }
+}
+
 void Daemon::init(bool as_cn, const std::vector<StorePath>& paths) {
     if (as_cn) {
         init_glog("cn", true);
@@ -363,6 +440,10 @@ void Daemon::init(bool as_cn, const std::vector<StorePath>& paths) {
         Thread::set_thread_name(jemalloc_tracker_thread, "jemalloc_tracker_daemon");
         _daemon_threads.emplace_back(std::move(jemalloc_tracker_thread));
     }
+
+    std::thread cache_tmp_thread(cache_daemon, this);
+    Thread::set_thread_name(cache_tmp_thread, "cache tmp thread");
+    _daemon_threads.emplace_back(std::move(cache_tmp_thread));
 
     init_signals();
     init_minidump();

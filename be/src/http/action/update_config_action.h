@@ -52,6 +52,7 @@ public:
     void handle(HttpRequest* req) override;
 
     Status update_config(const std::string& name, const std::string& value);
+    Status update_cache(const std::string& name, const std::string& value);
 
     // hack to share update_config method with be_configs schema table sink
     static UpdateConfigAction* instance() { return _instance.load(); }

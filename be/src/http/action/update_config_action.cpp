@@ -77,7 +77,33 @@ const static std::string HEADER_JSON = "application/json";
 
 std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 
+Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
+    if (name == "inc_page_cache_size") {
+        int64_t size = StoragePageCache::instance()->get_base_capacity();
+        size_t capacity = size + std::stol(value);
+        LOG(ERROR) << "inc page cache capacity: " << capacity;
+        StoragePageCache::instance()->set_capacity(capacity);
+    } else if (name == "dec_page_cache_size") {
+        int64_t size = StoragePageCache::instance()->get_base_capacity();
+        size_t capacity = size - std::stol(value);
+        LOG(ERROR) << "dec page cache capacity: " << capacity;
+        StoragePageCache::instance()->set_capacity(capacity);
+    } else if (name == "inc_block_cache_size") {
+        int64_t size = BlockCache::instance()->mem_quota();
+        size_t capacity = size + std::stol(value);
+        LOG(ERROR) << "inc block cache capacity: " << capacity;
+        auto st = BlockCache::instance()->update_mem_quota(capacity, false);
+    } else if (name == "dec_block_cache_size") {
+        int64_t size = BlockCache::instance()->mem_quota();
+        size_t capacity = size - std::stol(value);
+        LOG(ERROR) << "desc block cache capacity: " << capacity;
+        BlockCache::instance()->update_mem_quota(capacity, false);
+    }
+    return Status::OK();
+}
+
 Status UpdateConfigAction::update_config(const std::string& name, const std::string& value) {
+    LOG(ERROR) << "update config: " << name << ":" << value;
     std::call_once(_once_flag, [&]() {
         _config_callback.emplace("scanner_thread_pool_thread_num", [&]() {
             LOG(INFO) << "set scanner_thread_pool_thread_num:" << config::scanner_thread_pool_thread_num;
@@ -285,14 +311,19 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
 #endif // USE_STAROS
     });
 
-    Status s = config::set_config(name, value);
-    if (s.ok()) {
-        LOG(INFO) << "set_config " << name << "=" << value << " success";
-        if (_config_callback.count(name)) {
-            _config_callback[name]();
+    if (!config::config_exist(name)) {
+        update_cache(name, value);
+        return Status::OK();
+    } else {
+        Status s = config::set_config(name, value);
+        if (s.ok()) {
+            LOG(INFO) << "set_config " << name << "=" << value << " success";
+            if (_config_callback.count(name)) {
+                _config_callback[name]();
+            }
         }
+        return s;
     }
-    return s;
 }
 
 void UpdateConfigAction::handle(HttpRequest* req) {

@@ -431,12 +431,15 @@ Status ScanOperator::_trigger_next_scan(RuntimeState* state, int chunk_source_in
             FAIL_POINT_SCOPE(mem_alloc_error);
 #endif
 
-            DeferOp timer_defer([chunk_source]() {
-                COUNTER_SET(chunk_source->scan_timer(),
-                            chunk_source->io_task_wait_timer()->value() + chunk_source->io_task_exec_timer()->value());
+            const auto io_task_exec_start_nano = MonotonicNanos();
+            DeferOp timer_defer([chunk_source, io_task_exec_start_nano]() {
+                COUNTER_UPDATE(chunk_source->io_task_exec_timer(), MonotonicNanos() - io_task_exec_start_nano);
+                COUNTER_UPDATE(chunk_source->scan_timer(), MonotonicNanos() - io_task_exec_start_nano);
             });
             COUNTER_UPDATE(chunk_source->io_task_wait_timer(), MonotonicNanos() - io_task_start_nano);
-            SCOPED_TIMER(chunk_source->io_task_exec_timer());
+            COUNTER_UPDATE(chunk_source->scan_timer(), MonotonicNanos() - io_task_start_nano);
+
+            //SCOPED_TIMER(chunk_source->io_task_exec_timer());
 
             int64_t prev_cpu_time = chunk_source->get_cpu_time_spent();
             int64_t prev_scan_rows = chunk_source->get_scan_rows();
@@ -591,9 +594,11 @@ void ScanOperator::_merge_chunk_source_profiles(RuntimeState* state) {
         query_ctx = state->exec_env()->query_context_mgr()->get(state->query_id());
         DCHECK(query_ctx != nullptr);
     }
+    /*
     if (!query_ctx->enable_profile()) {
         return;
     }
+    */
     std::vector<RuntimeProfile*> profiles(_chunk_source_profiles.size());
     for (auto i = 0; i < _chunk_source_profiles.size(); i++) {
         profiles[i] = _chunk_source_profiles[i].get();

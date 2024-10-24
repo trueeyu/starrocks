@@ -88,6 +88,8 @@ public:
 
     bool has_mem_cache() const { return _mem_quota.load(std::memory_order_relaxed) > 0; }
 
+    int64_t mem_quota() const { return _mem_quota.load(); }
+
     bool has_disk_cache() const { return _disk_quota.load(std::memory_order_relaxed) > 0; }
 
     bool available() const { return is_initialized() && (has_mem_cache() || has_disk_cache()); }
@@ -108,6 +110,12 @@ private:
     std::atomic<bool> _initialized = false;
     std::atomic<size_t> _mem_quota = 0;
     std::atomic<size_t> _disk_quota = 0;
+
+    std::atomic<size_t> _lxh_interface_write_buffer_count = 0;
+    std::atomic<size_t> _lxh_interface_write_object_count = 0;
+
+    std::atomic<size_t> _lxh_interface_read_buffer_count = 0;
+    std::atomic<size_t> _lxh_interface_read_object_count = 0;
 };
 
 } // namespace starrocks

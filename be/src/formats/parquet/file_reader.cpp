@@ -274,7 +274,11 @@ Status FileReader::_get_footer() {
     }
 
     int64_t file_metadata_size = 0;
-    RETURN_IF_ERROR(_parse_footer(&_file_metadata, &file_metadata_size));
+    int64_t read_time = 0;
+    {
+        SCOPED_RAW_TIMER(&read_time);
+        RETURN_IF_ERROR(_parse_footer(&_file_metadata, &file_metadata_size));
+    }
     if (file_metadata_size > 0) {
         // cache does not understand shared ptr at all.
         // so we have to new a object to hold this shared ptr.
@@ -292,6 +296,7 @@ Status FileReader::_get_footer() {
         auto deleter = [capture]() { delete capture; };
         WriteCacheOptions options;
         options.evict_probability = _datacache_options.datacache_evict_probability;
+        options.cost = read_time;
         st = cache->write_object(metacache_key, capture, file_metadata_size, deleter, &cache_handle, &options);
     } else {
         LOG(ERROR) << "Parsing unexpected parquet file metadata size";

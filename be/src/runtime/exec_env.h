@@ -154,6 +154,13 @@ public:
     int64_t get_storage_page_cache_size();
     int64_t check_storage_page_cache_size(int64_t storage_cache_limit);
     static int64_t calc_max_query_memory(int64_t process_mem_limit, int64_t percent);
+    int64_t cache_size() const { return _cache_size; }
+
+public:
+    std::atomic<uint64_t> _total_page_cache_miss_time = 0;
+    std::atomic<uint64_t> _total_block_cache_miss_time = 0;
+    std::atomic<uint64_t> _total_page_cache_io_time = 0;
+    std::atomic<uint64_t> _total_data_cache_io_time = 0;
 
 private:
     static bool _is_init;
@@ -225,6 +232,8 @@ private:
     std::shared_ptr<MemTracker> _datacache_mem_tracker;
 
     std::vector<std::shared_ptr<MemTracker>> _mem_trackers;
+
+    size_t _cache_size = 0;
 };
 
 // Execution environment for queries/plan fragments.
