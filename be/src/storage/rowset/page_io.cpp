@@ -174,6 +174,9 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
         SCOPED_RAW_TIMER(&cost);
         {
             SCOPED_RAW_TIMER(&opts.stats->io_ns);
+            if (config::random_io_time != 0) {
+                ::usleep(rand()%config::random_io_time);
+            }
             // todo override is_cache_hit
             if (opts.read_file->is_cache_hit()) {
                 RETURN_IF_ERROR(
