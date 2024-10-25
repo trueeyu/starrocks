@@ -309,6 +309,8 @@ Status ScanOperator::_try_to_trigger_next_scan(RuntimeState* state) {
     int to_sched[_io_tasks_per_scan_operator];
     int size = 0;
 
+    VLOG(3) << "trigger: " << _io_tasks_per_scan_operator;
+
     // right here, we want total running io tasks as `total_cnt`
     {
         bool skip[_io_tasks_per_scan_operator];
