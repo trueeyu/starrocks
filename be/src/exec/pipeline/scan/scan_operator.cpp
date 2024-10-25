@@ -270,6 +270,7 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
         auto [owner_id, is_eos] = _should_emit_eos(res);
         eval_runtime_bloom_filters(res.get());
         res->owner_info().set_owner_id(owner_id, is_eos);
+        VLOG(3) << "pull chunk: " << res->num_rows();
     }
 
     return res;
