@@ -565,6 +565,8 @@ void HiveDataSource::_init_rf_counters() {
 Status HiveDataSource::_init_scanner(RuntimeState* state) {
     SCOPED_TIMER(_profile.open_file_timer);
 
+    VLOG(3) << "_init_scanner: " << _scan_range.full_path << ":" << _scan_range.offset << ":" << _scan_range.length;
+
     const auto& scan_range = _scan_range;
     std::string native_file_path = scan_range.full_path;
     if (_hive_table != nullptr && _hive_table->has_partition() && !_hive_table->has_base_path()) {
