@@ -147,13 +147,12 @@ std::string FileReader::_build_metacache_key() {
 }
 
 Status FileReader::init(HdfsScannerContext* ctx) {
+    VLOG(3) << "file reader init: " << _file->filename();
     _scanner_ctx = ctx;
-#ifdef WITH_STARCACHE
     // Only support file metacache in starcache engine
     if (ctx->use_file_metacache && config::datacache_enable) {
         _cache = BlockCache::instance();
     }
-#endif
     RETURN_IF_ERROR(_get_footer());
 
     // set existed SlotDescriptor in this parquet file
