@@ -252,9 +252,10 @@ void GlobalEnv::_init_storage_page_cache() {
     if (process_mem_tracker()->has_limit()) {
         mem_limit = process_mem_tracker()->limit();
     }
-    int64_t cache_size = ParseUtil::parse_mem_spec(config::cache_size, mem_limit);
-    int64_t page_cache_base_size = cache_size * config::page_cache_init_percent / 100;
-    int64_t page_cache_extent_size = DataCacheUtils::calc_extent_size(cache_size, page_cache_base_size,
+    _cache_size = ParseUtil::parse_mem_spec(config::cache_size, mem_limit);
+
+    int64_t page_cache_base_size = _cache_size * config::page_cache_init_percent / 100;
+    int64_t page_cache_extent_size = DataCacheUtils::calc_extent_size(_cache_size, page_cache_base_size,
                                                                       config::page_cache_extent_percent,
                                                                       config::page_cache_extent_lower_percent,
                                                                       config::page_cache_extent_upper_percent);

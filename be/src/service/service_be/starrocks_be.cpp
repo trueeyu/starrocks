@@ -81,14 +81,10 @@ Status init_datacache(GlobalEnv* global_env, const std::vector<StorePath>& stora
         BlockCache* cache = BlockCache::instance();
 
         CacheOptions cache_options;
-        int64_t mem_limit = MemInfo::physical_mem();
-        if (global_env->process_mem_tracker()->has_limit()) {
-            mem_limit = global_env->process_mem_tracker()->limit();
-        }
-        int64_t cache_mem_limit = 0;
-        RETURN_IF_ERROR(DataCacheUtils::parse_conf_cache_mem_size(config::cache_size, mem_limit, &cache_mem_limit));
-        cache_options.mem_space_size = cache_mem_limit * config::block_cache_init_percent / 100;
-        cache_options.extent_mem_space_size = DataCacheUtils::calc_extent_size(cache_mem_limit,
+
+        int64_t cache_size = global_env->get_cache_size();
+        cache_options.mem_space_size = cache_size * config::block_cache_init_percent / 100;
+        cache_options.extent_mem_space_size = DataCacheUtils::calc_extent_size(cache_size,
                                                                                cache_options.mem_space_size,
                                                                                config::page_cache_extent_percent,
                                                                                config::page_cache_extent_lower_percent,

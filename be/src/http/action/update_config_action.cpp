@@ -71,6 +71,9 @@
 #include "service/staros_worker.h"
 #endif // USE_STAROS
 
+#include "block_cache/datacache_utils.h"
+#include "runtime/exec_env.h"
+
 namespace starrocks {
 
 const static std::string HEADER_JSON = "application/json";
@@ -78,21 +81,34 @@ const static std::string HEADER_JSON = "application/json";
 std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 
 Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
     if (name == "inc_page_cache_size") {
-        int64_t size = StoragePageCache::instance()->get_base_capacity();
-        size_t capacity = size + std::stol(value);
-        LOG(ERROR) << "inc page cache capacity: " << capacity;
-        StoragePageCache::instance()->set_capacity(capacity);
+        int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+        int64_t base_capacity = cur_base_capacity + std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::page_cache_extent_percent,
+                                                                   config::page_cache_extent_lower_percent,
+                                                                   config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "inc page cache capacity: " << base_capacity << "," << extent_capacity;
+        StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
     } else if (name == "dec_page_cache_size") {
-        int64_t size = StoragePageCache::instance()->get_base_capacity();
-        size_t capacity = size - std::stol(value);
-        LOG(ERROR) << "dec page cache capacity: " << capacity;
-        StoragePageCache::instance()->set_capacity(capacity);
+        int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+        int64_t base_capacity = cur_base_capacity - std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::page_cache_extent_percent,
+                                                                   config::page_cache_extent_lower_percent,
+                                                                   config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "dec page cache capacity: " << base_capacity << "," << extent_capacity;
+        StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
     } else if (name == "inc_block_cache_size") {
-        int64_t size = BlockCache::instance()->mem_quota();
-        size_t capacity = size + std::stol(value);
-        LOG(ERROR) << "inc block cache capacity: " << capacity;
-        auto st = BlockCache::instance()->update_mem_quota(capacity, false);
+        int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
+        int64_t base_capacity = cur_base_capacity + std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::page_cache_extent_percent,
+                                                                   config::page_cache_extent_lower_percent,
+                                                                   config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "inc block cache capacity: " << base_capacity << "," << extent_capacity;
+        auto st = BlockCache::instance()->update_mem_quota(base_capacity, false);
     } else if (name == "dec_block_cache_size") {
         int64_t size = BlockCache::instance()->mem_quota();
         size_t capacity = size - std::stol(value);
