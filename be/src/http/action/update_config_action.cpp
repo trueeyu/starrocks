@@ -112,15 +112,15 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
         _config_callback.emplace("storage_page_cache_limit", [&]() {
             int64_t cache_limit = GlobalEnv::GetInstance()->get_storage_page_cache_size();
             cache_limit = GlobalEnv::GetInstance()->check_storage_page_cache_size(cache_limit);
-            StoragePageCache::instance()->set_capacity(cache_limit);
+            StoragePageCache::instance()->set_capacity(cache_limit, 0);
         });
         _config_callback.emplace("disable_storage_page_cache", [&]() {
             if (config::disable_storage_page_cache) {
-                StoragePageCache::instance()->set_capacity(0);
+                StoragePageCache::instance()->set_capacity(0, 0);
             } else {
                 int64_t cache_limit = GlobalEnv::GetInstance()->get_storage_page_cache_size();
                 cache_limit = GlobalEnv::GetInstance()->check_storage_page_cache_size(cache_limit);
-                StoragePageCache::instance()->set_capacity(cache_limit);
+                StoragePageCache::instance()->set_capacity(cache_limit, 0);
             }
         });
         _config_callback.emplace("datacache_mem_size", [&]() {
