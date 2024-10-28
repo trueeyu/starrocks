@@ -78,7 +78,7 @@ public:
     };
 
     // Create global instance of this class
-    static void create_global_cache(MemTracker* mem_tracker, size_t capacity);
+    static void create_global_cache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity);
 
     static void release_global_cache();
 
@@ -86,7 +86,7 @@ public:
     // Client should call create_global_cache before.
     static StoragePageCache* instance() { return _s_instance; }
 
-    StoragePageCache(MemTracker* mem_tracker, size_t capacity);
+    StoragePageCache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity);
 
     // Lookup the given page in the cache.
     //
@@ -107,7 +107,7 @@ public:
     size_t base_memory_usage() const { return _cache->get_base_memory_usage(); }
     size_t extent_memory_usage() const { return _cache->get_extent_memory_usage(); }
 
-    void set_capacity(size_t capacity);
+    void set_capacity(size_t base_capacity, size_t extent_capacity);
 
     size_t get_base_capacity();
     size_t get_extent_capacity();

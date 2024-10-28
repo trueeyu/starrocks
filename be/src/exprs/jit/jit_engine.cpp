@@ -149,7 +149,7 @@ Status JITEngine::init() {
         }
     }
     LOG(INFO) << "JIT LRU cache size = " << jit_lru_cache_size;
-    _func_cache = new_lru_cache(jit_lru_cache_size);
+    _func_cache = new_lru_cache(jit_lru_cache_size, 0);
 #endif
     DCHECK(_func_cache != nullptr);
     llvm::InitializeNativeTarget();

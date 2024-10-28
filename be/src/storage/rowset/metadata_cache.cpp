@@ -28,7 +28,7 @@ void MetadataCache::create_cache(size_t capacity) {
 }
 
 MetadataCache::MetadataCache(size_t capacity) {
-    _cache.reset(new_lru_cache(capacity));
+    _cache.reset(new_lru_cache(capacity, 0));
 }
 
 void MetadataCache::cache_rowset(Rowset* ptr) {

@@ -1482,13 +1482,24 @@ CONF_mBool(skip_schema_in_rowset_meta, "true");
 CONF_mBool(enable_bit_unpack_simd, "true");
 
 CONF_mInt32(max_committed_without_schema_rowset, "1000");
-CONF_mInt32(extent_percent, "10");
-CONF_mInt32(block_cache_extent_percent, "10");
-CONF_mInt64(cache_size, "4294967296");
-CONF_mInt64(block_cache_start_percent, "50");
-CONF_mInt64(page_cache_start_percent, "50");
-CONF_mInt32(cache_interval, "10");
+
+CONF_mString(cache_size, "4294967296"); // total cache size
+
+CONF_mInt64(page_cache_init_percent, "50");
+CONF_mInt64(page_cache_extent_percent, "20");
+CONF_mInt64(page_cache_extent_lower_percent, "10");
+CONF_mInt64(page_cache_extent_upper_percent, "20");
+
+CONF_mInt64(block_cache_init_percent, "50");
+CONF_mInt64(block_cache_extent_percent, "20");
+CONF_mInt64(block_cache_extent_lower_percent, "10");
+CONF_mInt64(block_cache_extent_upper_percent, "20");
+
 CONF_mBool(enable_cache_transfer, "false");
+
+CONF_mInt64(cache_transfer_interval, "100");
+CONF_mInt64(cache_transfer_times, "10");
+
 // us
 CONF_mInt32(random_io_time, "10000");
 

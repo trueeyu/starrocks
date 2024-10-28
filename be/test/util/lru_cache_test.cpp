@@ -87,7 +87,7 @@ public:
     std::vector<int> _deleted_values;
     Cache* _cache;
 
-    CacheTest() : _cache(new_lru_cache(kCacheSize)) { _s_current = this; }
+    CacheTest() : _cache(new_lru_cache(kCacheSize, 0)) { _s_current = this; }
 
     ~CacheTest() override { delete _cache; }
 

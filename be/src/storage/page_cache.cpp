@@ -62,9 +62,9 @@ METRIC_DEFINE_UINT_GAUGE(lxh_page_cache_total_scan_time, MetricUnit::OPERATIONS)
 
 StoragePageCache* StoragePageCache::_s_instance = nullptr;
 
-void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t capacity) {
+void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity) {
     if (_s_instance == nullptr) {
-        _s_instance = new StoragePageCache(mem_tracker, capacity);
+        _s_instance = new StoragePageCache(mem_tracker, base_capacity, extent_capacity);
     }
 }
 
@@ -147,18 +147,18 @@ static void init_metrics() {
     });
 }
 
-StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity)
-        : _mem_tracker(mem_tracker), _cache(new_lru_cache(capacity, ChargeMode::MEMSIZE)) {
+StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity)
+        : _mem_tracker(mem_tracker), _cache(new_lru_cache(base_capacity, extent_capacity, ChargeMode::MEMSIZE)) {
     init_metrics();
 }
 
 StoragePageCache::~StoragePageCache() = default;
 
-void StoragePageCache::set_capacity(size_t capacity) {
+void StoragePageCache::set_capacity(size_t base_capacity, size_t extent_capacity) {
 #ifndef BE_TEST
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
 #endif
-    _cache->set_capacity(capacity);
+    _cache->set_capacity(base_capacity, extent_capacity);
 }
 
 size_t StoragePageCache::get_base_capacity() {

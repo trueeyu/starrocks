@@ -482,41 +482,38 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
     return hash >> (32 - kNumShardBits);
 }
 
-ShardedLRUCache::ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode)
-        : _last_id(0), _base_capacity(base_capacity), _charge_mode(charge_mode) {
-    _base_capacity = base_capacity;
-    _extent_capacity = _base_capacity * config::extent_percent / 100;
-
+ShardedLRUCache::ShardedLRUCache(size_t base_capacity, size_t extent_capacity, ChargeMode charge_mode)
+        : _last_id(0), _base_capacity(base_capacity), _extent_capacity(extent_capacity), _charge_mode(charge_mode) {
     const size_t base_per_shard = (_base_capacity + (kNumShards - 1)) / kNumShards;
-    const size_t extent_per_shard = base_per_shard * config::extent_percent / 100;
+    const size_t extent_per_shard = (_extent_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(base_per_shard);
         _shard.set_extent_capacity(extent_per_shard);
     }
 }
 
-void ShardedLRUCache::_set_capacity(size_t base_capacity) {
+void ShardedLRUCache::_set_capacity(size_t base_capacity, size_t extent_capacity) {
     _base_capacity = base_capacity;
-    _extent_capacity = base_capacity * config::extent_percent / 100;
+    _extent_capacity = extent_capacity;
 
     const size_t base_per_shard = (base_capacity + (kNumShards - 1)) / kNumShards;
-    const size_t extent_per_shard = base_per_shard * config::extent_percent / 100;
+    const size_t extent_per_shard = (extent_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
         _shard.set_base_capacity(base_per_shard);
         _shard.set_extent_capacity(extent_per_shard);
     }
 }
 
-void ShardedLRUCache::set_capacity(size_t base_capacity) {
+void ShardedLRUCache::set_capacity(size_t base_capacity, size_t extent_capacity) {
     // Maybe multi client try to set capacity, we protect it using mutex.
     std::lock_guard l(_mutex);
-    _set_capacity(base_capacity);
+    _set_capacity(base_capacity, extent_capacity);
 }
 
 bool ShardedLRUCache::adjust_capacity(int64_t delta) {
     std::lock_guard l(_mutex);
     int64_t new_base_capacity = _base_capacity + delta;
-    _set_capacity(new_base_capacity);
+    _set_capacity(new_base_capacity, 0);
     return true;
 }
 
@@ -643,8 +640,8 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
     }
 }
 
-Cache* new_lru_cache(size_t capacity, ChargeMode charge_mode) {
-    return new ShardedLRUCache(capacity, charge_mode);
+Cache* new_lru_cache(size_t base_capacity, size_t extent_capacity, ChargeMode charge_mode) {
+    return new ShardedLRUCache(base_capacity, extent_capacity, charge_mode);
 }
 
 } // namespace starrocks

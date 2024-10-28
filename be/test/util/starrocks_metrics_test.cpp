@@ -54,7 +54,7 @@ protected:
         static const int kNumShardBits = 5;
         static const int kNumShards = 1 << kNumShardBits;
         StoragePageCache::release_global_cache();
-        StoragePageCache::create_global_cache(_page_cache_mem_tracker.get(), kNumShards * 100000);
+        StoragePageCache::create_global_cache(_page_cache_mem_tracker.get(), kNumShards * 100000, 0);
     }
 
     void TearDown() override { StoragePageCache::instance()->prune(); }

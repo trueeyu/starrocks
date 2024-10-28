@@ -25,7 +25,7 @@ static void fd_deleter(const CacheKey& key, void* value) {
     ::close(fd);
 }
 
-FdCache::FdCache(size_t capacity) : _cache(new_lru_cache(capacity)) {}
+FdCache::FdCache(size_t capacity) : _cache(new_lru_cache(capacity, 0)) {}
 
 FdCache::~FdCache() {
     delete _cache;

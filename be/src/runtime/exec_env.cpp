@@ -249,9 +249,18 @@ void GlobalEnv::_reset_tracker() {
 }
 
 void GlobalEnv::_init_storage_page_cache() {
-    int64_t storage_cache_limit = get_storage_page_cache_size();
-    storage_cache_limit = check_storage_page_cache_size(storage_cache_limit);
-    StoragePageCache::create_global_cache(page_cache_mem_tracker(), storage_cache_limit);
+    int64_t mem_limit = MemInfo::physical_mem();
+    if (process_mem_tracker()->has_limit()) {
+        mem_limit = process_mem_tracker()->limit();
+    }
+    int64_t cache_size = ParseUtil::parse_mem_spec(config::cache_size, mem_limit);
+    int64_t page_cache_base_size = cache_size * config::page_cache_init_percent / 100;
+    int64_t page_cache_extent_size = DataCacheUtils::calc_extent_size(cache_size, page_cache_base_size,
+                                                                      config::page_cache_extent_percent,
+                                                                      config::page_cache_extent_lower_percent,
+                                                                      config::page_cache_extent_upper_percent);
+
+    StoragePageCache::create_global_cache(page_cache_mem_tracker(), page_cache_base_size, page_cache_extent_size);
 }
 
 int64_t GlobalEnv::get_storage_page_cache_size() {
@@ -811,7 +820,7 @@ void ExecEnv::try_release_resource_before_core_dump() {
     }
     auto* storage_page_cache = StoragePageCache::instance();
     if (storage_page_cache != nullptr && need_release("data_cache")) {
-        storage_page_cache->set_capacity(0);
+        storage_page_cache->set_capacity(0, 0);
         LOG(INFO) << "release storage page cache memory";
     }
     if (_block_cache != nullptr && _block_cache->available() && need_release("data_cache")) {

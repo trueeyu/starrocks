@@ -44,6 +44,37 @@ void DataCacheUtils::set_metrics_from_thrift(TDataCacheMetrics& t_metrics, const
     t_metrics.__set_mem_used_bytes(metrics.mem_used_bytes);
 }
 
+Status DataCacheUtils::parse_conf_cache_mem_size(const std::string& conf_mem_size_str, int64_t mem_limit,
+                                                 int64_t* mem_size) {
+    int64_t parsed_mem_size = ParseUtil::parse_mem_spec(conf_mem_size_str, mem_limit);
+    if (mem_limit > 0 && parsed_mem_size > mem_limit) {
+        LOG(WARNING) << "the configured cache memory size exceeds the limit, decreased it to the limit value."
+                     << "mem_size: " << parsed_mem_size << ", mem_limit: " << mem_limit;
+        parsed_mem_size = mem_limit;
+    }
+    if (parsed_mem_size < 0) {
+        LOG(ERROR) << "invalid mem size for cache: " << parsed_mem_size;
+        return Status::InvalidArgument("invalid mem size for ache");
+    }
+    *mem_size = parsed_mem_size;
+    return Status::OK();
+}
+
+int64_t DataCacheUtils::calc_extent_size(int64_t cache_size, int64_t base_size, int64_t extent_percent,
+                                         int64_t extent_lower_percent, int64_t extent_upper_percent) {
+    int64_t size = base_size * extent_percent / 100;
+    int64_t lower_size = cache_size * extent_lower_percent / 100;
+    int64_t upper_size = cache_size * extent_upper_percent / 100;
+
+    if (size <= lower_size) {
+        return lower_size;
+    }
+    if (size >= upper_size) {
+        return upper_size;
+    }
+    return size;
+}
+
 Status DataCacheUtils::parse_conf_datacache_mem_size(const std::string& conf_mem_size_str, int64_t mem_limit,
                                                      size_t* mem_size) {
     int64_t parsed_mem_size = ParseUtil::parse_mem_spec(conf_mem_size_str, mem_limit);

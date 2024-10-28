@@ -85,10 +85,15 @@ Status init_datacache(GlobalEnv* global_env, const std::vector<StorePath>& stora
         if (global_env->process_mem_tracker()->has_limit()) {
             mem_limit = global_env->process_mem_tracker()->limit();
         }
-        RETURN_IF_ERROR(DataCacheUtils::parse_conf_datacache_mem_size(config::datacache_mem_size, mem_limit,
-                                                                      &cache_options.mem_space_size));
-        cache_options.extent_mem_space_size = cache_options.mem_space_size * config::block_cache_extent_percent / 100;
-        LOG(ERROR) << "data cache size: " << cache_options.mem_space_size;
+        int64_t cache_mem_limit = 0;
+        RETURN_IF_ERROR(DataCacheUtils::parse_conf_cache_mem_size(config::cache_size, mem_limit, &cache_mem_limit));
+        cache_options.mem_space_size = cache_mem_limit * config::block_cache_init_percent / 100;
+        cache_options.extent_mem_space_size = DataCacheUtils::calc_extent_size(cache_mem_limit,
+                                                                               cache_options.mem_space_size,
+                                                                               config::page_cache_extent_percent,
+                                                                               config::page_cache_extent_lower_percent,
+                                                                               config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "data cache size: " << cache_options.mem_space_size << "," << cache_options.extent_mem_space_size;
         if (config::datacache_disk_path.value().empty()) {
             // If the disk cache does not be configured for datacache, set default path according storage path.
             std::vector<std::string> datacache_paths;

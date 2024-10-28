@@ -29,7 +29,8 @@ enum class ChargeMode {
 
 // Create a new cache with a fixed size capacity.  This implementation
 // of Cache uses a least-recently-used eviction policy.
-extern Cache* new_lru_cache(size_t capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
+extern Cache* new_lru_cache(size_t base_capacity, size_t extent_capacity,
+                            ChargeMode charge_mode = ChargeMode::VALUESIZE);
 
 class CacheKey {
 public:
@@ -185,7 +186,7 @@ public:
 
     virtual void get_cache_status(rapidjson::Document* document) = 0;
 
-    virtual void set_capacity(size_t base_capacity) = 0;
+    virtual void set_capacity(size_t base_capacity, size_t extent_capacity) = 0;
 
     virtual size_t get_base_capacity() const = 0;
     virtual size_t get_extent_capacity() const = 0;
@@ -373,7 +374,8 @@ static const int kNumShards = 1 << kNumShardBits;
 class ShardedLRUCache : public Cache {
 public:
     // done
-    explicit ShardedLRUCache(size_t base_capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
+    explicit ShardedLRUCache(size_t base_capacity, size_t extent_capacity,
+                             ChargeMode charge_mode = ChargeMode::VALUESIZE);
     ~ShardedLRUCache() override = default;
 
     Handle* insert(const CacheKey& key, void* value, size_t charge, void (*deleter)(const CacheKey& key, void* value),
@@ -392,7 +394,7 @@ public:
     uint64_t new_id() override;
     void prune() override;
     void get_cache_status(rapidjson::Document* document) override;
-    void set_capacity(size_t base_capacity) override;
+    void set_capacity(size_t base_capacity, size_t extent_capacity) override;
 
     size_t get_base_memory_usage() const override;
     size_t get_extent_memory_usage() const override;
@@ -412,7 +414,7 @@ public:
 private:
     static uint32_t _hash_slice(const CacheKey& s);
     static uint32_t _shard(uint32_t hash);
-    void _set_capacity(size_t base_capacity);
+    void _set_capacity(size_t base_capacity, size_t extent_capacity);
     size_t _get_stat(size_t (LRUCache::*mem_fun)() const) const;
 
     LRUCache _shards[kNumShards];
