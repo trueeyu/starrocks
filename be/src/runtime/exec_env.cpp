@@ -238,7 +238,6 @@ Status GlobalEnv::_init_mem_tracker() {
     MemChunkAllocator::init_instance(_chunk_allocator_mem_tracker.get(), config::chunk_reserved_bytes_limit);
 
     _init_storage_page_cache(); // TODO: move to StorageEngine
-    _cache_size = config::cache_size;
     return Status::OK();
 }
 
