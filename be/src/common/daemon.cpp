@@ -338,7 +338,7 @@ struct PageCacheStats {
     size_t extent_cost = 0;
 
     std::string to_string() {
-        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3}, "
+        return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usage{$2}, base_hit_count{$3}, "
                 "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
                 lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
                 extent_usage, extent_hit_count, extent_cost);
@@ -369,6 +369,19 @@ struct BlockCacheStats {
     size_t extent_usage = 0;
     size_t extent_hit_count = 0;
     size_t extent_cost = 0;
+
+    void fill(MetricRegistry* metric) {
+        lookup_count = ((UIntGauge*)metric->get_metric("lxh_datacache_lookup_count"))->value();
+        base_hit_count = ((UIntGauge*)metric->get_metric("lxh_datacache_base_hit_count"))->value();
+        extent_hit_count = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_write_count"))->value();
+
+        base_capacity = ((UIntGauge*)metric->get_metric("lxh_datacache_base_quota"))->value();
+        extent_capacity = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_quota"))->value();
+        base_usage = ((UIntGauge*)metric->get_metric("lxh_datacache_base_usage"))->value();
+        extent_usage = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_usage"))->value();
+
+        extent_cost = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_cost"))->value();
+    }
 
     std::string to_string() {
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3},"
@@ -402,7 +415,11 @@ void cache_daemon(void* arg_this) {
         PageCacheStats page_cache_stats;
         page_cache_stats.fill(metric);
 
-        LOG(ERROR) << "CACHE_METRICS: " << page_cache_stats.to_string();
+        BlockCacheStats block_cache_stats;
+        block_cache_stats.fill(metric);
+
+        LOG(ERROR) << "PAGE_CACHE_METRICS: " << page_cache_stats.to_string();
+        LOG(ERROR) << "BLOCK_CACHE_METRICS: " << block_cache_stats.to_string();
     }
 }
 
