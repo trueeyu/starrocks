@@ -465,6 +465,8 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
     int64_t page_cache_extent_cost = page_cache_end->extent_cost - page_cache_start->extent_cost;
     int64_t block_cache_extent_cost = block_cache_end->extent_cost - block_cache_start->extent_cost;
 
+    LOG(ERROR) << "CACHE_DAEMON: process all exceed: " << page_cache_extent_write_count << ", " << block_cache_extent_write_count;
+
     if (page_cache_extent_write_count <= 0 && block_cache_extent_write_count <= 0) {
         return 0;
     } else if (page_cache_extent_write_count <= 0) {
@@ -612,8 +614,9 @@ void cache_daemon(void* arg_this) {
             continue;
         } else if (page_cache_stat->extent_exceed() && block_cache_stat->extent_exceed()) {
             auto* start_page_cache_stat = &page_cache_stats[start_index];
-            auto* start_block_cache_stat = &block_cache_stats[start_index];
             auto* end_page_cache_stat = &page_cache_stats[end_index];
+
+            auto* start_block_cache_stat = &block_cache_stats[start_index];
             auto* end_block_cache_stat = &block_cache_stats[end_index];
             int64_t transfer_size = process_all_exceed(start_page_cache_stat, end_page_cache_stat,
                                                        start_block_cache_stat, end_block_cache_stat);
