@@ -586,21 +586,19 @@ void cache_daemon(void* arg_this) {
 
         auto* page_cache_stat = &page_cache_stats[cur_index];
         auto* block_cache_stat = &block_cache_stats[cur_index];
-        int64_t end_index = cur_index;
-        int64_t start_index = 0;
-        cur_index++;
-        if (cur_index >= transfer_times) {
+        int64_t end_index = 0;
+        int64_t start_index = cur_index;
+        if (cur_index + 1 >= transfer_times) {
             cur_index = 0;
-            start_index = 0;
         } else {
-            start_index = cur_index;
+            cur_index++;
         }
 
-        LOG(ERROR) << "CACHE_DAEMON: PAGE_CACHE_METRICS: " << start_index << "," << end_index << page_cache_stat->to_string();
-        LOG(ERROR) << "CACHE_DAEMON: BLOCK_CACHE_METRICS: " << start_index << "," << end_index << block_cache_stat->to_string();
+        LOG(ERROR) << "CACHE_DAEMON: PAGE_CACHE_METRICS: " << start_index << "," << end_index << "," << page_cache_stat->to_string();
+        LOG(ERROR) << "CACHE_DAEMON: BLOCK_CACHE_METRICS: " << start_index << "," << end_index << "," << block_cache_stat->to_string();
 
         if (total_count <= transfer_times) {
-            LOG(ERROR) << "CACHE_DAEMON: start times: " << total_count;
+            LOG(ERROR) << "CACHE_DAEMON: start times: " << total_count << ", " << transfer_times;
             continue;
         }
 
