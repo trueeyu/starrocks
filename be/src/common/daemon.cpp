@@ -606,13 +606,13 @@ void cache_daemon(void* arg_this) {
             LOG(ERROR) << "CACHE_DAEMON: all cache not exceed, continue";
             continue;
         } else if (page_cache_stat->extent_exceed() && block_cache_stat->extent_exceed()) {
-            LOG(ERROR) << "CACHE_DAEMON: all cache exceed";
             auto* start_page_cache_stat = &page_cache_stats[start_index];
             auto* start_block_cache_stat = &block_cache_stats[start_index];
             auto* end_page_cache_stat = &page_cache_stats[end_index];
             auto* end_block_cache_stat = &block_cache_stats[end_index];
             int64_t transfer_size = process_all_exceed(start_page_cache_stat, end_page_cache_stat,
                                                        start_block_cache_stat, end_block_cache_stat);
+            LOG(ERROR) << "CACHE_DAEMON: all cache exceed: " << transfer_size;
             if (transfer_size == 0) {
                 continue;
             } else if (transfer_size > 0) {
@@ -623,10 +623,10 @@ void cache_daemon(void* arg_this) {
                 inc_block_cache_size(-transfer_size);
             }
         } else if (page_cache_stat->extent_exceed()) {
-            LOG(ERROR) << "CACHE_DAEMON: page cache exceed";
             auto* start_page_cache_stat = &page_cache_stats[start_index];
             auto* end_page_cache_stat = &page_cache_stats[end_index];
             int64 transfer_size = process_page_cache_exceed(start_page_cache_stat, end_page_cache_stat);
+            LOG(ERROR) << "CACHE_DAEMON: page cache exceed: " << transfer_size;
             if (transfer_size == 0) {
                 continue;
             } else {
@@ -634,10 +634,10 @@ void cache_daemon(void* arg_this) {
                 dec_block_cache_size(transfer_size);
             }
         } else {
-            LOG(ERROR) << "CACHE_DAEMON: block cache exceed";
             auto* start_block_cache_stat = &block_cache_stats[start_index];
             auto* end_block_cache_stat = &block_cache_stats[end_index];
             int64 transfer_size = process_block_cache_exceed(start_block_cache_stat, end_block_cache_stat);
+            LOG(ERROR) << "CACHE_DAEMON: block cache exceed: " << transfer_size;
             if (transfer_size == 0) {
                 continue;
             } else {
