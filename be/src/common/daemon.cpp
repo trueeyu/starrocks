@@ -380,7 +380,7 @@ struct BlockCacheStats {
 
 void cache_daemon(void* arg_this) {
     while(true) {
-        sleep(config::cache_interval);
+        //sleep(config::cache_);
 
         BlockCache* block_cache = BlockCache::instance();
         if (block_cache == nullptr) {
@@ -441,9 +441,11 @@ void Daemon::init(bool as_cn, const std::vector<StorePath>& paths) {
         _daemon_threads.emplace_back(std::move(jemalloc_tracker_thread));
     }
 
-    std::thread cache_tmp_thread(cache_daemon, this);
-    Thread::set_thread_name(cache_tmp_thread, "cache tmp thread");
-    _daemon_threads.emplace_back(std::move(cache_tmp_thread));
+    if (config::enable_cache_transfer) {
+        std::thread cache_tmp_thread(cache_daemon, this);
+        Thread::set_thread_name(cache_tmp_thread, "cache tmp thread");
+        _daemon_threads.emplace_back(std::move(cache_tmp_thread));
+    }
 
     init_signals();
     init_minidump();

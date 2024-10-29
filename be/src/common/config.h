@@ -1499,6 +1499,7 @@ CONF_mBool(enable_cache_transfer, "false");
 
 CONF_mInt64(cache_transfer_interval, "100");
 CONF_mInt64(cache_transfer_times, "10");
+CONF_mBool(enable_cache_transfer, "false");
 
 // us
 CONF_mInt32(random_io_time, "10000");
