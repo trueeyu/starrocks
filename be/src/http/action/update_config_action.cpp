@@ -104,18 +104,18 @@ Status UpdateConfigAction::update_cache(const std::string& name, const std::stri
         int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
         int64_t base_capacity = cur_base_capacity + std::stol(value);
         int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
-                                                                   config::page_cache_extent_percent,
-                                                                   config::page_cache_extent_lower_percent,
-                                                                   config::page_cache_extent_upper_percent);
+                                                                   config::block_cache_extent_percent,
+                                                                   config::block_cache_extent_lower_percent,
+                                                                   config::block_cache_extent_upper_percent);
         LOG(ERROR) << "inc block cache capacity: " << base_capacity << "," << extent_capacity;
         auto st = BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
     } else if (name == "dec_block_cache_size") {
         int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
         size_t base_capacity = cur_base_capacity - std::stol(value);
         int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
-                                                                   config::page_cache_extent_percent,
-                                                                   config::page_cache_extent_lower_percent,
-                                                                   config::page_cache_extent_upper_percent);
+                                                                   config::block_cache_extent_percent,
+                                                                   config::block_cache_extent_lower_percent,
+                                                                   config::block_cache_extent_upper_percent);
         LOG(ERROR) << "desc block cache capacity: " << base_capacity << "," << extent_capacity;
         BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
     }
