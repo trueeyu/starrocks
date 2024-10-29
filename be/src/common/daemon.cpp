@@ -346,14 +346,14 @@ struct PageCacheStats {
 
     void fill(MetricRegistry* metric) {
         lookup_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_lookup_count"))->value();
+        base_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_hit_count"))->value();
+        extent_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_write_count"))->value();
 
         base_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_capacity"))->value();
-        base_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_usage"))->value();
-        base_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_hit_count"))->value();
-
         extent_capacity = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_capacity"))->value();
+        base_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_usage"))->value();
         extent_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_usage"))->value();
-        extent_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_hit_count"))->value();
+
         extent_cost = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_cost"))->value();
     }
 };
