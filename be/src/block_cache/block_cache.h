@@ -65,7 +65,7 @@ public:
     Status remove(const CacheKey& cache_key, off_t offset, size_t size);
 
     // Update the datacache memory quota.
-    Status update_mem_quota(size_t quota_bytes, bool flush_to_disk);
+    Status update_mem_quota(size_t base_quota_bytes, size_t extent_quota_bytes, bool flush_to_disk);
 
     // Update the datacache disk space infomation, such as disk quota or disk path.
     Status update_disk_spaces(const std::vector<DirSpace>& spaces);

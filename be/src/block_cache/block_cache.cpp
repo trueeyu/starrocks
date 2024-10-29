@@ -295,8 +295,8 @@ Status BlockCache::remove(const CacheKey& cache_key, off_t offset, size_t size) 
     return _kv_cache->remove(block_key);
 }
 
-Status BlockCache::update_mem_quota(size_t quota_bytes, bool flush_to_disk) {
-    Status st = _kv_cache->update_mem_quota(quota_bytes, flush_to_disk);
+Status BlockCache::update_mem_quota(size_t base_quota_bytes, size_t extent_quota_bytes, bool flush_to_disk) {
+    Status st = _kv_cache->update_mem_quota(base_quota_bytes, extent_quota_bytes, flush_to_disk);
     _refresh_quota();
     return st;
 }

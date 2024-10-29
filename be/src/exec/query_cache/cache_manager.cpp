@@ -17,7 +17,7 @@
 #include "util/defer_op.h"
 namespace starrocks::query_cache {
 
-CacheManager::CacheManager(size_t capacity) : _cache(capacity) {}
+CacheManager::CacheManager(size_t capacity) : _cache(capacity, 0) {}
 static void delete_cache_entry(const CacheKey& key, void* value) {
     auto* cache_value = (CacheValue*)value;
     delete cache_value;
