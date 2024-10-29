@@ -379,9 +379,13 @@ struct BlockCacheStats {
 };
 
 void cache_daemon(void* arg_this) {
-    while(true) {
-        //sleep(config::cache_);
+    int64_t interval = config::cache_transfer_interval;
+    int64_t one_time_interval = interval / config::cache_transfer_times;
+    //int64_t transfer_size = config::cache_transfer_size;
+    //int64_t transfer_extent_percent = config::cache_transfer_extent_percent;
 
+    while(true) {
+        sleep(one_time_interval);
         BlockCache* block_cache = BlockCache::instance();
         if (block_cache == nullptr) {
             continue;
@@ -398,7 +402,7 @@ void cache_daemon(void* arg_this) {
         PageCacheStats page_cache_stats;
         page_cache_stats.fill(metric);
 
-        LOG(ERROR) << "PAGE_CACHE: " << page_cache_stats.to_string();
+        LOG(ERROR) << "CACHE_METRICS: " << page_cache_stats.to_string();
     }
 }
 
