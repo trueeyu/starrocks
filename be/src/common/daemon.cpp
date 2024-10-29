@@ -352,6 +352,14 @@ struct PageCacheStats {
         }
     }
 
+    bool base_exceed() {
+        if (base_usage >= base_capacity * 0.9) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
     bool reach_min() {
         if (base_usage - config::cache_transfer_size <= config::cache_min_size) {
             return true;
@@ -420,6 +428,14 @@ struct BlockCacheStats {
 
     double extent_cache_opt() {
         return extent_cost * 0.1 / (extent_capacity / 1024 / 1024);
+    }
+
+    bool base_exceed() {
+        if (base_usage >= base_capacity * 0.85) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     bool extent_exceed() {
@@ -609,6 +625,10 @@ void cache_daemon(void* arg_this) {
 
         if (!page_cache_stat->extent_exceed() && !block_cache_stat->extent_exceed()) {
             LOG(ERROR) << "CACHE_DAEMON: all cache not exceed, continue";
+            continue;
+        }
+        else if (!page_cache_stat->base_exceed() || !page_cache_stat->base_exceed()) {
+            LOG(ERROR) << "CACHE_DAEMON: base cache not exceed, continue";
             continue;
         } else if (page_cache_stat->extent_exceed() && block_cache_stat->extent_exceed()) {
             auto* start_page_cache_stat = &page_cache_stats[start_index];
