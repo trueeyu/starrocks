@@ -460,12 +460,10 @@ int64_t process_block_cache_exceed(BlockCacheStats* block_cache_start, BlockCach
 int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* page_cache_end,
                            BlockCacheStats* block_cache_start, BlockCacheStats* block_cache_end) {
     int64_t page_cache_extent_write_count = page_cache_end->extent_hit_count - page_cache_start->extent_hit_count;
-    int64_t block_cache_extent_write_count = block_cache_end->extent_hit_count - block_cache_end->extent_hit_count;
+    int64_t block_cache_extent_write_count = block_cache_end->extent_hit_count - block_cache_start->extent_hit_count;
 
     int64_t page_cache_extent_cost = page_cache_end->extent_cost - page_cache_start->extent_cost;
     int64_t block_cache_extent_cost = block_cache_end->extent_cost - block_cache_start->extent_cost;
-
-    LOG(ERROR) << "CACHE_DAEMON: process all exceed: " << page_cache_extent_write_count << ", " << block_cache_extent_write_count;
 
     if (page_cache_extent_write_count <= 0 && block_cache_extent_write_count <= 0) {
         return 0;
