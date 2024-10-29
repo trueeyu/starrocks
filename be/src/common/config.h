@@ -1502,6 +1502,8 @@ CONF_mInt64(cache_transfer_times, "10");
 CONF_mInt64(cache_transfer_size, "134217728");
 CONF_mInt64(cache_transfer_extent_percent, "90");
 
+CONF_mInt64(cache_min_size, "1073741824");
+
 // us
 CONF_mInt32(random_io_time, "10000");
 

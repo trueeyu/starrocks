@@ -344,6 +344,26 @@ struct PageCacheStats {
                 extent_usage, extent_hit_count, extent_cost);
     }
 
+    bool extent_exceed() {
+        if (extent_usage >= extent_capacity * 0.9) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool reach_min() {
+        if (base_usage - config::cache_transfer_size <= config::cache_min_size) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    double extent_cache_opt() {
+        return extent_cost * 0.1 / (extent_capacity / 1024 / 1024);
+    }
+
     void fill(MetricRegistry* metric) {
         lookup_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_lookup_count"))->value();
         base_hit_count = ((UIntGauge*)metric->get_metric("lxh_page_cache_base_hit_count"))->value();
@@ -389,11 +409,159 @@ struct BlockCacheStats {
                 lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
                 extent_usage, extent_hit_count, extent_cost);
     }
+
+    bool reach_min() {
+        if (base_usage - config::cache_transfer_size <= config::cache_min_size) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    double extent_cache_opt() {
+        return extent_cost * 0.1 / (extent_capacity / 1024 / 1024);
+    }
+
+    bool extent_exceed() {
+        if (extent_usage >= extent_capacity * 0.9) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 };
+
+bool extent_exceed(int64_t extent_capacity, int64_t extent_usage) {
+    if (extent_usage >= extent_capacity * 0.9) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+int64_t process_page_cache_exceed(PageCacheStats* page_cache_start, PageCacheStats* page_cache_end) {
+    int64_t page_cache_extent_write_count = page_cache_end->extent_hit_count - page_cache_start->extent_hit_count;
+    if (page_cache_extent_write_count <= 0) {
+        return 0;
+    } else {
+        return config::cache_transfer_size;
+    }
+}
+
+int64_t process_block_cache_exceed(BlockCacheStats* block_cache_start, BlockCacheStats* block_cache_end) {
+    int64_t block_cache_extent_write_count = block_cache_end->extent_hit_count - block_cache_start->extent_hit_count;
+    if (block_cache_extent_write_count <= 0) {
+        return 0;
+    } else {
+        return config::cache_transfer_size;
+    }
+}
+
+int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* page_cache_end,
+                           BlockCacheStats* block_cache_start, BlockCacheStats* block_cache_end) {
+    int64_t page_cache_extent_write_count = page_cache_end->extent_hit_count - page_cache_start->extent_hit_count;
+    int64_t block_cache_extent_write_count = block_cache_end->extent_hit_count - block_cache_end->extent_hit_count;
+
+    int64_t page_cache_extent_cost = page_cache_end->extent_cost - page_cache_start->extent_cost;
+    int64_t block_cache_extent_cost = block_cache_end->extent_cost - block_cache_start->extent_cost;
+
+    if (page_cache_extent_write_count <= 0 && block_cache_extent_write_count <= 0) {
+        return 0;
+    } else if (page_cache_extent_write_count <= 0) {
+        if (page_cache_end->reach_min()) {
+            return 0;
+        } else {
+            return -config::cache_transfer_size;
+        }
+    } else if (block_cache_extent_write_count <= 0) {
+        if (block_cache_end->reach_min()) {
+            return 0;
+        } else {
+            return config::cache_transfer_size;
+        }
+    } else {
+        double page_cache_opt_time = page_cache_extent_cost * 1.0 / (page_cache_end->extent_capacity / 1024 / 1024);
+        double block_cache_opt_time = block_cache_extent_cost * 1.0 / (block_cache_end->extent_capacity / 1024 / 1024);
+        if (page_cache_opt_time > block_cache_opt_time) {
+            if (page_cache_opt_time * 1.0 / block_cache_opt_time > 1.2) {
+                if (block_cache_end->reach_min()) {
+                    return 0;
+                } else {
+                    return config::cache_transfer_size;
+                }
+            } else {
+                return 0;
+            }
+        } else {
+            if (block_cache_opt_time * 1.0 / page_cache_opt_time > 1.2) {
+                if (page_cache_end->reach_min()) {
+                    return 0;
+                } else {
+                    return -config::cache_transfer_size;
+                }
+            } else {
+                return 0;
+            }
+        }
+    }
+}
+
+void inc_page_cache_size(int64_t size) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
+    int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+    int64_t base_capacity = cur_base_capacity + size;
+    int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                               config::block_cache_extent_percent,
+                                                               config::block_cache_extent_lower_percent,
+                                                               config::block_cache_extent_upper_percent);
+    StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
+    LOG(ERROR) << "CACHE_DAEMON: inc page cache size: " << size;
+}
+
+void dec_page_cache_size(int64_t size) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
+    int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+    int64_t base_capacity = cur_base_capacity - size;
+    int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                               config::block_cache_extent_percent,
+                                                               config::block_cache_extent_lower_percent,
+                                                               config::block_cache_extent_upper_percent);
+    StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
+    LOG(ERROR) << "CACHE_DAEMON: dec page cache size: " << size;
+}
+
+void inc_block_cache_size(int64_t size) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
+    int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
+    int64_t base_capacity = cur_base_capacity + size;
+    int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                               config::block_cache_extent_percent,
+                                                               config::block_cache_extent_lower_percent,
+                                                               config::block_cache_extent_upper_percent);
+    auto st = BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
+    LOG(ERROR) << "CACHE_DAEMON: inc block cache size: " << size << ":" << st;
+}
+
+void dec_block_cache_size(int64_t size) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
+    int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
+    int64_t base_capacity = cur_base_capacity - size;
+    int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                               config::block_cache_extent_percent,
+                                                               config::block_cache_extent_lower_percent,
+                                                               config::block_cache_extent_upper_percent);
+    auto st = BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
+    LOG(ERROR) << "CACHE_DAEMON: dec block cache size: " << size << ":" << st;
+}
 
 void cache_daemon(void* arg_this) {
     int64_t interval = config::cache_transfer_interval;
+    int64_t transfer_times = config::cache_transfer_times;
     int64_t one_time_interval = interval / config::cache_transfer_times;
+    std::vector<PageCacheStats> page_cache_stats(transfer_times);
+    std::vector<BlockCacheStats> block_cache_stats(transfer_times);
+    int64_t cur_index = 0;
+    int64_t total_count = 0;
     //int64_t transfer_size = config::cache_transfer_size;
     //int64_t transfer_extent_percent = config::cache_transfer_extent_percent;
 
@@ -412,14 +580,73 @@ void cache_daemon(void* arg_this) {
             continue;
         }
 
-        PageCacheStats page_cache_stats;
-        page_cache_stats.fill(metric);
+        total_count++;
+        page_cache_stats[cur_index].fill(metric);
+        block_cache_stats[cur_index].fill(metric);
 
-        BlockCacheStats block_cache_stats;
-        block_cache_stats.fill(metric);
+        auto* page_cache_stat = &page_cache_stats[cur_index];
+        auto* block_cache_stat = &block_cache_stats[cur_index];
+        int64_t end_index = cur_index;
+        int64_t start_index = 0;
+        cur_index++;
+        if (cur_index >= transfer_times) {
+            cur_index = 0;
+            start_index = 0;
+        } else {
+            start_index = cur_index;
+        }
 
-        LOG(ERROR) << "PAGE_CACHE_METRICS: " << page_cache_stats.to_string();
-        LOG(ERROR) << "BLOCK_CACHE_METRICS: " << block_cache_stats.to_string();
+        LOG(ERROR) << "CACHE_DAEMON: PAGE_CACHE_METRICS: " << start_index << "," << end_index << page_cache_stat->to_string();
+        LOG(ERROR) << "CACHE_DAEMON: BLOCK_CACHE_METRICS: " << start_index << "," << end_index << block_cache_stat->to_string();
+
+        if (total_count <= transfer_times) {
+            LOG(ERROR) << "CACHE_DAEMON: start times: " << total_count;
+            continue;
+        }
+
+        if (!page_cache_stat->extent_exceed() && !block_cache_stat->extent_exceed()) {
+            LOG(ERROR) << "CACHE_DAEMON: all cache not exceed, continue";
+            continue;
+        } else if (page_cache_stat->extent_exceed() && block_cache_stat->extent_exceed()) {
+            LOG(ERROR) << "CACHE_DAEMON: all cache exceed";
+            auto* start_page_cache_stat = &page_cache_stats[start_index];
+            auto* start_block_cache_stat = &block_cache_stats[start_index];
+            auto* end_page_cache_stat = &page_cache_stats[end_index];
+            auto* end_block_cache_stat = &block_cache_stats[end_index];
+            int64_t transfer_size = process_all_exceed(start_page_cache_stat, end_page_cache_stat,
+                                                       start_block_cache_stat, end_block_cache_stat);
+            if (transfer_size == 0) {
+                continue;
+            } else if (transfer_size > 0) {
+                inc_page_cache_size(transfer_size);
+                dec_block_cache_size(transfer_size);
+            } else {
+                dec_page_cache_size(-transfer_size);
+                inc_block_cache_size(-transfer_size);
+            }
+        } else if (page_cache_stat->extent_exceed()) {
+            LOG(ERROR) << "CACHE_DAEMON: page cache exceed";
+            auto* start_page_cache_stat = &page_cache_stats[start_index];
+            auto* end_page_cache_stat = &page_cache_stats[end_index];
+            int64 transfer_size = process_page_cache_exceed(start_page_cache_stat, end_page_cache_stat);
+            if (transfer_size == 0) {
+                continue;
+            } else {
+                inc_page_cache_size(transfer_size);
+                dec_block_cache_size(transfer_size);
+            }
+        } else {
+            LOG(ERROR) << "CACHE_DAEMON: block cache exceed";
+            auto* start_block_cache_stat = &block_cache_stats[start_index];
+            auto* end_block_cache_stat = &block_cache_stats[end_index];
+            int64 transfer_size = process_block_cache_exceed(start_block_cache_stat, end_block_cache_stat);
+            if (transfer_size == 0) {
+                continue;
+            } else {
+                inc_block_cache_size(transfer_size);
+                dec_page_cache_size(transfer_size);
+            }
+        }
     }
 }
 
