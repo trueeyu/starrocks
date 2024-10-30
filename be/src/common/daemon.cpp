@@ -643,11 +643,14 @@ void cache_daemon(void* arg_this) {
         auto* block_cache_stat = &block_cache_stats[cur_index];
         int64_t end_index = cur_index;
         int64_t start_index = 0;
-        int64_t last_index = 0;
+        int64_t inc_index_1 = 0;
+        int64_t inc_index_2 = 0;
         if (cur_index == 0) {
-            last_index = transfer_times - 1;
+            inc_index_1 = transfer_times - 1;
+            inc_index_2 = cur_index;
         } else {
-            last_index = cur_index - 1;
+            inc_index_1 = cur_index - 1;
+            inc_index_2 = cur_index;
         }
         if (cur_index + 1 >= transfer_times) {
             cur_index = 0;
@@ -664,8 +667,8 @@ void cache_daemon(void* arg_this) {
             continue;
         }
 
-        PageCacheStats inc_page_cache_stat = PageCacheStats::calc_inc_metric(&page_cache_stats[last_index], &page_cache_stats[cur_index]);
-        BlockCacheStats inc_block_cache_stat = BlockCacheStats::calc_inc_metric(&block_cache_stats[last_index], &block_cache_stats[cur_index]);
+        PageCacheStats inc_page_cache_stat = PageCacheStats::calc_inc_metric(&page_cache_stats[inc_index_1], &page_cache_stats[inc_index_2]);
+        BlockCacheStats inc_block_cache_stat = BlockCacheStats::calc_inc_metric(&block_cache_stats[inc_index_1], &block_cache_stats[inc_index_2]);
 
         LOG(ERROR) << "CACHE_DAEMON: INC PAGE: " << inc_page_cache_stat.to_string();
         LOG(ERROR) << "CACHE_DAEMON: INC BLOCK: " << inc_block_cache_stat.to_string();
