@@ -664,8 +664,8 @@ void cache_daemon(void* arg_this) {
         } else {
             last_index = cur_index - 1;
         }
-        PageCacheStats inc_page_cache_stat = PageCacheStats::calc_inc_metric(&page_cache_stats[end_index], &page_cache_stats[start_index]);
-        BlockCacheStats inc_block_cache_stat = BlockCacheStats::calc_inc_metric(&block_cache_stats[end_index], &block_cache_stats[start_index]);
+        PageCacheStats inc_page_cache_stat = PageCacheStats::calc_inc_metric(&page_cache_stats[last_index], &page_cache_stats[cur_index]);
+        BlockCacheStats inc_block_cache_stat = BlockCacheStats::calc_inc_metric(&block_cache_stats[last_index], &block_cache_stats[cur_index]);
 
         LOG(ERROR) << "CACHE_DAEMON: INC PAGE: " << inc_page_cache_stat.to_string();
         LOG(ERROR) << "CACHE_DAEMON: INC BLOCK: " << inc_block_cache_stat.to_string();
