@@ -1507,4 +1507,6 @@ CONF_mInt64(cache_min_size, "1073741824");
 // us
 CONF_mInt32(random_io_time, "10000");
 
+CONF_mDouble(transfer_quota_percent, "2.0");
+
 } // namespace starrocks::config

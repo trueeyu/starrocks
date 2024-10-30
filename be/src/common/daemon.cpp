@@ -398,6 +398,7 @@ struct PageCacheStats {
         stat.base_usage = end->base_usage - start->base_usage;
         stat.extent_usage = end->extent_usage - start->extent_usage;
         stat.scan_time = end->scan_time - start->scan_time;
+        stat.extent_cost = end->extent_cost - start->extent_cost;
 
         return stat;
     }
@@ -449,6 +450,7 @@ struct BlockCacheStats {
         stat.base_usage = end->base_usage - start->base_usage;
         stat.extent_usage = end->extent_usage - start->extent_usage;
         stat.scan_time = end->scan_time - start->scan_time;
+        stat.extent_cost = end->extent_cost - start->extent_cost;
 
         return stat;
     }
@@ -533,12 +535,12 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
     } else {
         double page_cache_opt_time = page_cache_extent_cost * 1.0 / (page_cache_end->extent_capacity / 1024 / 1024);
         double block_cache_opt_time = block_cache_extent_cost * 1.0 / (block_cache_end->extent_capacity / 1024 / 1024);
-        LOG(ERROR) << "CACHE_DAEMON: opt_time" << page_cache_opt_time << "," << block_cache_opt_time
+        LOG(ERROR) << "CACHE_DAEMON: opt_time: " << page_cache_opt_time << "," << block_cache_opt_time
                    << "," << page_cache_extent_cost << "," << block_cache_extent_cost
                    << "," << page_cache_end->extent_capacity/1024/1024
                    << "," << block_cache_end->extent_capacity/1024/1024;
         if (page_cache_opt_time > block_cache_opt_time) {
-            if (page_cache_opt_time * 1.0 / block_cache_opt_time > 1.2) {
+            if (page_cache_opt_time * 1.0 / block_cache_opt_time > config::transfer_quota_percent) {
                 if (block_cache_end->reach_min()) {
                     return 0;
                 } else {
@@ -548,7 +550,7 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
                 return 0;
             }
         } else {
-            if (block_cache_opt_time * 1.0 / page_cache_opt_time > 1.2) {
+            if (block_cache_opt_time * 1.0 / page_cache_opt_time > config::transfer_quota_percent) {
                 if (page_cache_end->reach_min()) {
                     return 0;
                 } else {

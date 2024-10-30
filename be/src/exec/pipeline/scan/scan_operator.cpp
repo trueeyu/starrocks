@@ -595,11 +595,9 @@ void ScanOperator::_merge_chunk_source_profiles(RuntimeState* state) {
         query_ctx = state->exec_env()->query_context_mgr()->get(state->query_id());
         DCHECK(query_ctx != nullptr);
     }
-    /*
     if (!query_ctx->enable_profile()) {
         return;
     }
-    */
     std::vector<RuntimeProfile*> profiles(_chunk_source_profiles.size());
     for (auto i = 0; i < _chunk_source_profiles.size(); i++) {
         profiles[i] = _chunk_source_profiles[i].get();

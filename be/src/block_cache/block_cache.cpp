@@ -59,6 +59,7 @@ METRIC_DEFINE_UINT_GAUGE(lxh_datacache_mem_meta, MetricUnit::BYTES);
 
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_miss_time, MetricUnit::OPERATIONS);
 METRIC_DEFINE_UINT_GAUGE(lxh_datacache_io_time, MetricUnit::OPERATIONS);
+METRIC_DEFINE_UINT_GAUGE(lxh_datacache_io_count, MetricUnit::OPERATIONS);
 
 
 METRIC_DEFINE_UINT_GAUGE(lxh_interface_write_buffer_count, MetricUnit::OPERATIONS);
@@ -107,6 +108,7 @@ Status BlockCache::init(const CacheOptions& options) {
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_mem_meta", &lxh_datacache_mem_meta);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_miss_time", &lxh_datacache_miss_time);
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_io_time", &lxh_datacache_io_time);
+    StarRocksMetrics::instance()->metrics()->register_metric("lxh_datacache_io_count", &lxh_datacache_io_count);
 
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_lookup_count", [this]() {
       DataCacheMetrics datacache_metrics = cache_metrics(1);
@@ -173,6 +175,9 @@ Status BlockCache::init(const CacheOptions& options) {
     });
     StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_io_time", [this]() {
         lxh_datacache_io_time.set_value(GlobalEnv::GetInstance()->_total_data_cache_io_time);
+    });
+    StarRocksMetrics::instance()->metrics()->register_hook("lxh_datacache_io_count", [this]() {
+        lxh_datacache_io_count.set_value(GlobalEnv::GetInstance()->_total_data_cache_io_count);
     });
 
     StarRocksMetrics::instance()->metrics()->register_metric("lxh_interface_writer_buffer_count",
