@@ -540,11 +540,18 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
                    << "," << page_cache_end->extent_capacity/1024/1024
                    << "," << block_cache_end->extent_capacity/1024/1024;
         if (page_cache_opt_time > block_cache_opt_time) {
-            if (page_cache_opt_time * 1.0 / block_cache_opt_time > config::transfer_quota_percent) {
+            double over_percent = page_cache_opt_time * 1.0 / block_cache_opt_time;
+            if (over_percent > config::transfer_quota_percent) {
                 if (block_cache_end->reach_min()) {
                     return 0;
                 } else {
-                    return config::cache_transfer_size;
+                    if (over_percent > 100) {
+                        return config::cache_transfer_size * 3;
+                    } else if (over_percent > 10) {
+                        return config::cache_transfer_size * 2;
+                    } else {
+                        return config::cache_transfer_size;
+                    }
                 }
             } else {
                 return 0;
@@ -554,7 +561,13 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
                 if (page_cache_end->reach_min()) {
                     return 0;
                 } else {
-                    return -config::cache_transfer_size;
+                    if (over_percent > 100) {
+                        return -(config::cache_transfer_size*3);
+                    } else if (over_percent > 10) {
+                        return -(config::cache_transfer_size * 2);
+                    } else {
+                        return -config::cache_transfer_size;
+                    }
                 }
             } else {
                 return 0;
