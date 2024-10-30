@@ -326,18 +326,18 @@ void init_minidump() {
 }
 
 struct PageCacheStats {
-    size_t lookup_count = 0;
+    int64_t lookup_count = 0;
 
-    size_t base_capacity = 0;
-    size_t base_usage = 0;
-    size_t base_hit_count = 0;
+    int64_t base_capacity = 0;
+    int64_t base_usage = 0;
+    int64_t base_hit_count = 0;
 
-    size_t extent_capacity = 0;
-    size_t extent_usage = 0;
-    size_t extent_hit_count = 0;
-    size_t extent_cost = 0;
+    int64_t extent_capacity = 0;
+    int64_t extent_usage = 0;
+    int64_t extent_hit_count = 0;
+    int64_t extent_cost = 0;
 
-    size_t scan_time = 0;
+    int64_t scan_time = 0;
 
     std::string to_string() {
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usage{$2}, base_hit_count{$3}, "
@@ -404,18 +404,18 @@ struct PageCacheStats {
 };
 
 struct BlockCacheStats {
-    size_t lookup_count = 0;
+    int64_t lookup_count = 0;
 
-    size_t base_capacity = 0;
-    size_t base_usage = 0;
-    size_t base_hit_count = 0;
+    int64_t base_capacity = 0;
+    int64_t base_usage = 0;
+    int64_t base_hit_count = 0;
 
-    size_t extent_capacity = 0;
-    size_t extent_usage = 0;
-    size_t extent_hit_count = 0;
-    size_t extent_cost = 0;
+    int64_t extent_capacity = 0;
+    int64_t extent_usage = 0;
+    int64_t extent_hit_count = 0;
+    int64_t extent_cost = 0;
 
-    size_t scan_time = 0;
+    int64_t scan_time = 0;
 
     void fill(MetricRegistry* metric) {
         lookup_count = ((UIntGauge*)metric->get_metric("lxh_datacache_lookup_count"))->value();
