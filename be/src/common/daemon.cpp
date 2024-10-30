@@ -739,6 +739,8 @@ void cache_daemon(void* arg_this) {
                 continue;
             }
         }
+        total_count = 0;
+        cur_index = 0;
     }
 }
 
