@@ -337,11 +337,13 @@ struct PageCacheStats {
     size_t extent_hit_count = 0;
     size_t extent_cost = 0;
 
+    size_t scan_time = 0;
+
     std::string to_string() {
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usage{$2}, base_hit_count{$3}, "
-                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}, scan_time{$8}",
                 lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
-                extent_usage, extent_hit_count, extent_cost);
+                extent_usage, extent_hit_count, extent_cost, scan_time);
     }
 
     bool extent_exceed() {
@@ -383,6 +385,21 @@ struct PageCacheStats {
         extent_usage = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_usage"))->value();
 
         extent_cost = ((UIntGauge*)metric->get_metric("lxh_page_cache_extent_cost"))->value();
+        scan_time = GlobalEnv::GetInstance()->_total_page_cache_io_time;
+    }
+
+    static PageCacheStats calc_inc_metric(PageCacheStats* start, PageCacheStats* end) {
+        PageCacheStats stat;
+        stat.lookup_count = end->lookup_count - start->lookup_count;
+        stat.base_hit_count = end->base_hit_count - start->base_hit_count;
+        stat.extent_hit_count = end->extent_hit_count - start->extent_hit_count;
+        stat.base_capacity = end->base_capacity - start->base_capacity;
+        stat.extent_capacity = end->extent_capacity - start->extent_capacity;
+        stat.base_usage = end->base_usage - start->base_usage;
+        stat.extent_usage = end->extent_usage - start->extent_usage;
+        stat.scan_time = end->scan_time - start->scan_time;
+
+        return stat;
     }
 };
 
@@ -398,6 +415,8 @@ struct BlockCacheStats {
     size_t extent_hit_count = 0;
     size_t extent_cost = 0;
 
+    size_t scan_time = 0;
+
     void fill(MetricRegistry* metric) {
         lookup_count = ((UIntGauge*)metric->get_metric("lxh_datacache_lookup_count"))->value();
         base_hit_count = ((UIntGauge*)metric->get_metric("lxh_datacache_base_hit_count"))->value();
@@ -409,13 +428,29 @@ struct BlockCacheStats {
         extent_usage = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_usage"))->value();
 
         extent_cost = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_cost"))->value();
+
+        scan_time = GlobalEnv::GetInstance()->_total_data_cache_io_time;
     }
 
     std::string to_string() {
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usaeg{$2}, base_hit_count{$3},"
-                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}",
+                "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}, scan_time{$8}",
                 lookup_count, base_capacity, base_usage, base_hit_count, extent_capacity,
-                extent_usage, extent_hit_count, extent_cost);
+                extent_usage, extent_hit_count, extent_cost, scan_time);
+    }
+
+    static BlockCacheStats calc_inc_metric(BlockCacheStats* start, BlockCacheStats* end) {
+        BlockCacheStats stat;
+        stat.lookup_count = end->lookup_count - start->lookup_count;
+        stat.base_hit_count = end->base_hit_count - start->base_hit_count;
+        stat.extent_hit_count = end->extent_hit_count - start->extent_hit_count;
+        stat.base_capacity = end->base_capacity - start->base_capacity;
+        stat.extent_capacity = end->extent_capacity - start->extent_capacity;
+        stat.base_usage = end->base_usage - start->base_usage;
+        stat.extent_usage = end->extent_usage - start->extent_usage;
+        stat.scan_time = end->scan_time - start->scan_time;
+
+        return stat;
     }
 
     bool reach_min() {
@@ -622,6 +657,18 @@ void cache_daemon(void* arg_this) {
             LOG(ERROR) << "CACHE_DAEMON: start times: " << total_count << ", " << transfer_times;
             continue;
         }
+
+        int64_t last_index = 0;
+        if (cur_index == 0) {
+            last_index = transfer_times - 1;
+        } else {
+            last_index = cur_index - 1;
+        }
+        PageCacheStats inc_page_cache_stat = PageCacheStats::calc_inc_metric(&page_cache_stats[end_index], &page_cache_stats[start_index]);
+        BlockCacheStats inc_block_cache_stat = BlockCacheStats::calc_inc_metric(&block_cache_stats[end_index], &block_cache_stats[start_index]);
+
+        LOG(ERROR) << "CACHE_DAEMON: INC PAGE: " << inc_page_cache_stat.to_string();
+        LOG(ERROR) << "CACHE_DAEMON: INC BLOCK: " << inc_block_cache_stat.to_string();
 
         if (!page_cache_stat->extent_exceed() && !block_cache_stat->extent_exceed()) {
             LOG(ERROR) << "CACHE_DAEMON: all cache not exceed, continue";
