@@ -557,7 +557,8 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
                 return 0;
             }
         } else {
-            if (block_cache_opt_time * 1.0 / page_cache_opt_time > config::transfer_quota_percent) {
+            double over_percent = block_cache_opt_time * 1.0 / page_cache_opt_time;
+            if (over_percent > config::transfer_quota_percent) {
                 if (page_cache_end->reach_min()) {
                     return 0;
                 } else {
