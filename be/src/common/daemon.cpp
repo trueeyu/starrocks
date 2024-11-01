@@ -449,7 +449,7 @@ struct BlockCacheStats {
         extent_cost = ((UIntGauge*)metric->get_metric("lxh_datacache_extent_cost"))->value();
 
         scan_time = GlobalEnv::GetInstance()->_total_data_cache_io_time;
-        scan_count = GlobalEnv::GetInstance()->_total_page_cache_io_count;
+        scan_count = GlobalEnv::GetInstance()->_total_data_cache_io_count;
         miss_time = GlobalEnv::GetInstance()->_total_block_cache_miss_time;
     }
 
@@ -683,6 +683,7 @@ void cache_daemon(void* arg_this) {
         if (metric == nullptr) {
             continue;
         }
+        metric->trigger_hook();
 
         total_count++;
         page_cache_stats[cur_index].fill(metric);
