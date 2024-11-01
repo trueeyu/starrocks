@@ -131,7 +131,6 @@ Status init_datacache(GlobalEnv* global_env, const std::vector<StorePath>& stora
         cache_options.skip_read_factor = starrocks::config::datacache_skip_read_factor;
         cache_options.scheduler_threads_per_cpu = starrocks::config::datacache_scheduler_threads_per_cpu;
         cache_options.engine = config::datacache_engine;
-        cache_options.alloc_mem_threshold = 98;
         return cache->init(cache_options);
     }
     return Status::OK();
