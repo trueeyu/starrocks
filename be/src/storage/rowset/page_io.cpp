@@ -250,6 +250,7 @@ Status PageIO::read_and_decompress_page(const PageReadOptions& opts, PageHandle*
 
     if (opts.use_page_cache) {
         // insert this page into cache and return the cache handle
+        GlobalEnv::GetInstance()->_total_page_cache_write_count++;
         cache->insert(cache_key, page_slice, &cache_handle, opts.kept_in_memory, cost);
         *handle = PageHandle(std::move(cache_handle));
     } else {

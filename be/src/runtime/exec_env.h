@@ -165,6 +165,7 @@ public:
     std::atomic<uint64_t> _total_data_cache_io_time = 0;
     std::atomic<uint64_t> _total_page_cache_io_count = 0;
     std::atomic<uint64_t> _total_data_cache_io_count = 0;
+    std::atomic<uint64_t> _total_page_cache_write_count = 0;
 
 private:
     static bool _is_init;

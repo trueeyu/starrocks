@@ -340,13 +340,15 @@ struct PageCacheStats {
     int64_t scan_time = 0;
     int64_t scan_count = 0;
     int64_t miss_time = 0;
+    int64_t write_count = 0;
 
     std::string to_string() {
         double hit_rate = 0;
         if (base_hit_count != 0) {
             hit_rate = base_hit_count * 1.0 / lookup_count;
         }
-        std::string part = strings::Substitute("hit_rate{$0}, scan_count{$1}, miss_time{$2}", hit_rate, scan_count, miss_time/1000/1000);
+        std::string part = strings::Substitute("hit_rate{$0}, scan_count{$1}, miss_time{$2}, write_count{$3}",
+                                               hit_rate, scan_count, miss_time/1000/1000, write_count);
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usage{$2}, base_hit_count{$3}, "
                 "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}, scan_time{$8}, "
                 "$9",
@@ -396,6 +398,7 @@ struct PageCacheStats {
         scan_time = GlobalEnv::GetInstance()->_total_page_cache_io_time;
         scan_count = GlobalEnv::GetInstance()->_total_page_cache_io_count;
         miss_time = GlobalEnv::GetInstance()->_total_page_cache_miss_time;
+        write_count = GlobalEnv::GetInstance()->_total_page_cache_write_count;
     }
 
     static PageCacheStats calc_inc_metric(PageCacheStats* start, PageCacheStats* end) {
@@ -411,6 +414,7 @@ struct PageCacheStats {
         stat.extent_cost = end->extent_cost - start->extent_cost;
         stat.scan_count = end->scan_count - start->scan_count;
         stat.miss_time = end->miss_time - start->miss_time;
+        stat.write_count = end->write_count - start->write_count;
 
         return stat;
     }
@@ -433,6 +437,7 @@ struct BlockCacheStats {
     int64_t scan_time = 0;
     int64_t scan_count = 0;
     int64_t miss_time = 0;
+    int64_t write_count = 0;
 
     void fill(MetricRegistry* metric) {
         lookup_count = ((UIntGauge*)metric->get_metric("lxh_datacache_lookup_count"))->value();
@@ -451,6 +456,7 @@ struct BlockCacheStats {
         scan_time = GlobalEnv::GetInstance()->_total_data_cache_io_time;
         scan_count = GlobalEnv::GetInstance()->_total_data_cache_io_count;
         miss_time = GlobalEnv::GetInstance()->_total_block_cache_miss_time;
+        write_count = ((UIntGauge*)metric->get_metric("lxh_datacache_write_success_count"))->value();
     }
 
     std::string to_string() {
@@ -459,11 +465,11 @@ struct BlockCacheStats {
             hit_rate = base_hit_count * 1.0 / lookup_count;
         }
         double base_buffer_hit_rate = 0;
-        if (base_buffer_hit_count + base_buffer_miss_count != 0) {
+        if ((base_buffer_hit_count + base_buffer_miss_count) != 0) {
             base_buffer_hit_rate = base_buffer_hit_count * 1.0 / (base_buffer_hit_count + base_buffer_miss_count);
         }
-        std::string part = strings::Substitute("hit_rate{$0}, base_buffer_hit_rate{$1}, scan_count{$2}, miss_time{$3}",
-                                               hit_rate, base_buffer_hit_rate, scan_count, miss_time/1000/1000);
+        std::string part = strings::Substitute("hit_rate{$0}, base_buffer_hit_rate{$1}, scan_count{$2}, miss_time{$3},"
+                "write_count{$4}", hit_rate, base_buffer_hit_rate, scan_count, miss_time/1000/1000, write_count);
         return strings::Substitute("lookup_count{$0}, base_capacity{$1}, base_usage{$2}, base_hit_count{$3},"
                 "extent_capacity{$4}, extent_usage{$5}, extent_hit_count{$6}, extent_cost{$7}, scan_time{$8}, "
                 "$9",
@@ -484,6 +490,7 @@ struct BlockCacheStats {
         stat.extent_cost = end->extent_cost - start->extent_cost;
         stat.scan_count = end->scan_count - start->scan_count;
         stat.miss_time = end->miss_time - start->miss_time;
+        stat.write_count = end->write_count - start->write_count;
 
         return stat;
     }
