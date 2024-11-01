@@ -433,16 +433,12 @@ Status ScanOperator::_trigger_next_scan(RuntimeState* state, int chunk_source_in
 #if !defined(ADDRESS_SANITIZER) && !defined(LEAK_SANITIZER) && !defined(THREAD_SANITIZER)
             FAIL_POINT_SCOPE(mem_alloc_error);
 #endif
-
-            const auto io_task_exec_start_nano = MonotonicNanos();
-            DeferOp timer_defer([chunk_source, io_task_exec_start_nano]() {
-                COUNTER_UPDATE(chunk_source->io_task_exec_timer(), MonotonicNanos() - io_task_exec_start_nano);
-                COUNTER_UPDATE(chunk_source->scan_timer(), MonotonicNanos() - io_task_exec_start_nano);
+            DeferOp timer_defer([chunk_source]() {
+                COUNTER_SET(chunk_source->scan_timer(),
+                            chunk_source->io_task_wait_timer()->value() + chunk_source->io_task_exec_timer()->value());
             });
             COUNTER_UPDATE(chunk_source->io_task_wait_timer(), MonotonicNanos() - io_task_start_nano);
-            COUNTER_UPDATE(chunk_source->scan_timer(), MonotonicNanos() - io_task_start_nano);
-
-            //SCOPED_TIMER(chunk_source->io_task_exec_timer());
+            SCOPED_TIMER(chunk_source->io_task_exec_timer());
 
             int64_t prev_cpu_time = chunk_source->get_cpu_time_spent();
             int64_t prev_scan_rows = chunk_source->get_scan_rows();
