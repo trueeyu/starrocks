@@ -560,12 +560,12 @@ int64_t process_all_exceed(PageCacheStats* page_cache_start, PageCacheStats* pag
             return config::cache_transfer_size;
         }
     } else {
-        double page_cache_opt_time = page_cache_extent_cost * 1.0 / (page_cache_end->extent_capacity / 1024 / 1024);
-        double block_cache_opt_time = block_cache_extent_cost * 1.0 / (block_cache_end->extent_capacity / 1024 / 1024);
+        double page_cache_opt_time = page_cache_extent_cost * 1.0 / (page_cache_end->extent_usage / 1024 / 1024);
+        double block_cache_opt_time = block_cache_extent_cost * 1.0 / (block_cache_end->extent_usage / 1024 / 1024);
         LOG(ERROR) << "CACHE_DAEMON: opt_time: " << page_cache_opt_time << "," << block_cache_opt_time
                    << "," << page_cache_extent_cost << "," << block_cache_extent_cost
-                   << "," << page_cache_end->extent_capacity/1024/1024
-                   << "," << block_cache_end->extent_capacity/1024/1024;
+                   << "," << page_cache_end->extent_usage/1024/1024
+                   << "," << block_cache_end->extent_usage/1024/1024;
         if (page_cache_opt_time > block_cache_opt_time) {
             double over_percent = page_cache_opt_time * 1.0 / block_cache_opt_time;
             if (over_percent > config::transfer_quota_percent) {

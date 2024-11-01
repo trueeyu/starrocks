@@ -264,6 +264,7 @@ ConnectorScanOperator::~ConnectorScanOperator() {
             GlobalEnv::GetInstance()->_total_data_cache_io_time.fetch_add(scan_timer->value(),
                                                                           std::memory_order_relaxed);
         }
+        GlobalEnv::GetInstance()->_total_data_cache_io_count++;
     }
 }
 

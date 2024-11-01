@@ -70,6 +70,7 @@ OlapScanOperator::~OlapScanOperator() {
             GlobalEnv::GetInstance()->_total_page_cache_io_time.fetch_add(scan_timer->value(),
                                                                           std::memory_order_relaxed);
         }
+        GlobalEnv::GetInstance()->_total_page_cache_io_count++;
     }
 
     auto* state = runtime_state();
