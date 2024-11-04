@@ -1508,6 +1508,6 @@ CONF_mInt64(cache_min_size, "1073741824");
 CONF_mInt32(random_io_time, "10000");
 
 CONF_mDouble(transfer_quota_percent, "2.0");
-CONF_mInt32(external_mode, 1); // 1(all), 2(first block), 3(first block small)
+CONF_mInt32(external_mode, "1"); // 1(all), 2(first block), 3(first block small)
 
 } // namespace starrocks::config
