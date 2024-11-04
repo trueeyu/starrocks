@@ -27,6 +27,7 @@ namespace starrocks {
 Status StarCacheWrapper::init(const CacheOptions& options) {
     starcache::CacheOptions opt;
     opt.mem_quota_bytes = options.mem_space_size;
+    opt.mem_extent_quota_bytes = options.extent_mem_space_size;
     for (auto& dir : options.disk_spaces) {
         opt.disk_dir_spaces.push_back({.path = dir.path, .quota_bytes = dir.size});
     }
@@ -36,9 +37,11 @@ Status StarCacheWrapper::init(const CacheOptions& options) {
     opt.enable_os_page_cache = !options.enable_direct_io;
     opt.scheduler_thread_ratio_per_cpu = options.scheduler_threads_per_cpu;
     opt.max_flying_memory_mb = options.max_flying_memory_mb;
+    opt.cache_value_inline_size_threshold = 0;
     _cache_adaptor.reset(starcache::create_default_adaptor(options.skip_read_factor));
     opt.cache_adaptor = _cache_adaptor.get();
     opt.instance_name = "dla_cache";
+    opt.alloc_mem_threshold = 98;
     _enable_tiered_cache = options.enable_tiered_cache;
     _cache = std::make_unique<starcache::StarCache>();
     return to_status(_cache->init(opt));
@@ -56,6 +59,7 @@ Status StarCacheWrapper::write_buffer(const std::string& key, const IOBuffer& bu
     opts.async = options->async;
     opts.keep_alive = options->allow_zero_copy;
     opts.callback = options->callback;
+    opts.cost = options->cost;
     opts.mode = _enable_tiered_cache ? starcache::WriteOptions::WriteMode::WRITE_BACK
                                      : starcache::WriteOptions::WriteMode::WRITE_THROUGH;
     opts.evict_probability = options->evict_probability;
@@ -134,8 +138,10 @@ Status StarCacheWrapper::remove(const std::string& key) {
     return Status::OK();
 }
 
-Status StarCacheWrapper::update_mem_quota(size_t quota_bytes, bool flush_to_disk) {
-    return to_status(_cache->update_mem_quota(quota_bytes, flush_to_disk));
+Status StarCacheWrapper::update_mem_quota(size_t base_quota_bytes, size_t extent_quota_bytes, bool flush_to_disk) {
+    _cache->update_mem_quota(base_quota_bytes, flush_to_disk);
+    _cache->update_extent_mem_quota(extent_quota_bytes);
+    return Status::OK();
 }
 
 Status StarCacheWrapper::update_disk_spaces(const std::vector<DirSpace>& spaces) {
@@ -148,15 +154,18 @@ Status StarCacheWrapper::update_disk_spaces(const std::vector<DirSpace>& spaces)
 }
 
 const DataCacheMetrics StarCacheWrapper::cache_metrics(int level) {
+    CHECK(_cache != nullptr);
     auto metrics = _cache->metrics(level);
     // Now the EEXIST is treated as an failed status in starcache, which will cause the write_fail_count too large
     // in many cases because we write cache with `overwrite=false` now. It makes users confused.
     // As real writing failure rarely occursso currently, so we temporarily adjust it here.
     // Once the starcache library is update, the following lines will be removed.
+    /*
     if (metrics.detail_l2) {
         metrics.detail_l2->write_success_count += metrics.detail_l2->write_fail_count;
         metrics.detail_l2->write_fail_count = 0;
     }
+    */
     return metrics;
 }
 

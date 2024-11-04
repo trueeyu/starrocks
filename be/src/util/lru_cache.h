@@ -29,7 +29,8 @@ enum class ChargeMode {
 
 // Create a new cache with a fixed size capacity.  This implementation
 // of Cache uses a least-recently-used eviction policy.
-extern Cache* new_lru_cache(size_t capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
+extern Cache* new_lru_cache(size_t base_capacity, size_t extent_capacity,
+                            ChargeMode charge_mode = ChargeMode::VALUESIZE);
 
 class CacheKey {
 public:
@@ -141,7 +142,7 @@ public:
     // value will be passed to "deleter".
     virtual Handle* insert(const CacheKey& key, void* value, size_t charge,
                            void (*deleter)(const CacheKey& key, void* value),
-                           CachePriority priority = CachePriority::NORMAL, size_t value_size = 0) = 0;
+                           CachePriority priority, size_t value_size, size_t cost) = 0;
 
     // If the cache has no mapping for "key", returns NULL.
     //
@@ -185,14 +186,24 @@ public:
 
     virtual void get_cache_status(rapidjson::Document* document) = 0;
 
-    virtual void set_capacity(size_t capacity) = 0;
-    virtual size_t get_capacity() const = 0;
-    virtual size_t get_memory_usage() const = 0;
+    virtual void set_capacity(size_t base_capacity, size_t extent_capacity) = 0;
+
+    virtual size_t get_base_capacity() const = 0;
+    virtual size_t get_extent_capacity() const = 0;
+
+    virtual size_t get_base_memory_usage() const = 0;
+    virtual size_t get_extent_memory_usage() const = 0;
+
     virtual size_t get_lookup_count() const = 0;
-    virtual size_t get_hit_count() const = 0;
+
+    virtual size_t get_base_hit_count() const = 0;
+    virtual uint64_t get_extent_hit_count() const = 0;
+    virtual size_t get_extent_write_count() const = 0;
+
+    virtual size_t get_extent_cost() const = 0;
 
     //  Decrease or increase cache capacity.
-    virtual bool adjust_capacity(int64_t delta, size_t min_capacity = 0) = 0;
+    virtual bool adjust_capacity(int64_t delta) = 0;
 
 private:
     Cache(const Cache&) = delete;
@@ -209,7 +220,10 @@ typedef struct LRUHandle {
     LRUHandle* prev;
     size_t charge;
     size_t key_length;
+
     bool in_cache; // Whether entry is in the cache.
+    bool extent = false;
+
     uint32_t refs;
     uint32_t hash; // Hash of key(); used for fast sharding and comparisons
     CachePriority priority = CachePriority::NORMAL;
@@ -229,6 +243,10 @@ typedef struct LRUHandle {
     void free() {
         (*deleter)(key(), value);
         ::free(this);
+    }
+
+    void free_value() {
+        (*deleter)(key(), value);
     }
 
 } LRUHandle;
@@ -268,49 +286,86 @@ private:
 // A single shard of sharded cache.
 class LRUCache {
 public:
+    // done
     LRUCache();
+    // done
     ~LRUCache() noexcept;
 
+    // done
     // Separate from constructor so caller can easily make an array of LRUCache
-    void set_capacity(size_t capacity);
+    void set_base_capacity(size_t capacity);
+    void set_extent_capacity(size_t capacity);
 
+    // done
     // Like Cache methods, but with an extra "hash" parameter.
     Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
                           void (*deleter)(const CacheKey& key, void* value),
-                          CachePriority priority = CachePriority::NORMAL, size_t value_size = 0);
+                          CachePriority priority, size_t value_size, size_t cost);
+    // done
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
+    // done
     void release(Cache::Handle* handle);
+    // done
     void erase(const CacheKey& key, uint32_t hash);
+    // done
     int prune();
 
+    // done
     uint64_t get_lookup_count() const;
-    uint64_t get_hit_count() const;
-    size_t get_usage() const;
-    size_t get_capacity() const;
+    uint64_t get_base_hit_count() const;
+    uint64_t get_extent_hit_count() const;
+    uint64_t get_extent_write_count() const;
+    uint64_t get_extent_cost() const;
+
+    // done
+    size_t get_base_usage() const;
+    size_t get_extent_usage() const;
+
+    // done
+    size_t get_base_capacity() const;
+    size_t get_extent_capacity() const;
 
 private:
+    // done
     void _lru_remove(LRUHandle* e);
+    // done
     void _lru_append(LRUHandle* list, LRUHandle* e);
+    // done
     bool _unref(LRUHandle* e);
-    void _evict_from_lru(size_t charge, std::vector<LRUHandle*>* deleted);
-    void _evict_one_entry(LRUHandle* e);
 
-    // Initialized before use.
-    size_t _capacity{0};
+    // done
+    void _evict_from_base_lru(size_t charge, std::vector<LRUHandle*>* deleted);
+    void _evict_from_extent_lru(std::vector<LRUHandle*>* deleted);
+    void _evict_from_base_to_extent_lru(size_t charge);
+
+    // done (base or extent)
+    void _evict_one_entry(LRUHandle* e);
+    void _evict_one_entry_from_base_to_extent(LRUHandle* e);
 
     // _mutex protects the following state.
     mutable std::mutex _mutex;
-    size_t _usage{0};
+
+    // Initialized before use.
+    size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
+
+    size_t _base_usage = 0;
+    size_t _extent_usage = 0;
 
     // Dummy head of LRU list.
     // lru.prev is newest entry, lru.next is oldest entry.
     // Entries have refs==1 and in_cache==true.
-    LRUHandle _lru;
+    LRUHandle _base_lru;
+    LRUHandle _extent_lru;
 
     HandleTable _table;
 
-    uint64_t _lookup_count{0};
-    uint64_t _hit_count{0};
+    uint64_t _lookup_count = 0;
+    uint64_t _base_hit_count = 0;
+    uint64_t _extent_hit_count = 0;
+
+    uint64_t _extent_write_count = 0;
+    uint64_t _extent_cost = 0;
 };
 
 static const int kNumShardBits = 5;
@@ -318,35 +373,57 @@ static const int kNumShards = 1 << kNumShardBits;
 
 class ShardedLRUCache : public Cache {
 public:
-    explicit ShardedLRUCache(size_t capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
+    // done
+    explicit ShardedLRUCache(size_t base_capacity, size_t extent_capacity,
+                             ChargeMode charge_mode = ChargeMode::VALUESIZE);
     ~ShardedLRUCache() override = default;
+
     Handle* insert(const CacheKey& key, void* value, size_t charge, void (*deleter)(const CacheKey& key, void* value),
-                   CachePriority priority = CachePriority::NORMAL, size_t value_size = 0) override;
+                   CachePriority priority, size_t value_size, size_t cost) override;
+    // done
     Handle* lookup(const CacheKey& key) override;
+
+    // done
     void release(Handle* handle) override;
+    // done
     void erase(const CacheKey& key) override;
+    // done
     void* value(Handle* handle) override;
+    // done
     Slice value_slice(Handle* handle) override;
     uint64_t new_id() override;
     void prune() override;
     void get_cache_status(rapidjson::Document* document) override;
-    void set_capacity(size_t capacity) override;
-    size_t get_memory_usage() const override;
-    size_t get_capacity() const override;
+    void set_capacity(size_t base_capacity, size_t extent_capacity) override;
+
+    size_t get_base_memory_usage() const override;
+    size_t get_extent_memory_usage() const override;
+
+    size_t get_base_capacity() const override;
+    size_t get_extent_capacity() const override;
+
     uint64_t get_lookup_count() const override;
-    uint64_t get_hit_count() const override;
-    bool adjust_capacity(int64_t delta, size_t min_capacity = 0) override;
+    uint64_t get_base_hit_count() const override;
+    uint64_t get_extent_hit_count() const override;
+
+    uint64_t get_extent_write_count() const override;
+    uint64_t get_extent_cost() const override;
+
+    bool adjust_capacity(int64_t delta) override;
 
 private:
     static uint32_t _hash_slice(const CacheKey& s);
     static uint32_t _shard(uint32_t hash);
-    void _set_capacity(size_t capacity);
+    void _set_capacity(size_t base_capacity, size_t extent_capacity);
     size_t _get_stat(size_t (LRUCache::*mem_fun)() const) const;
 
     LRUCache _shards[kNumShards];
     std::mutex _mutex;
     uint64_t _last_id;
-    size_t _capacity;
+
+    size_t _base_capacity = 0;
+    size_t _extent_capacity = 0;
+
     ChargeMode _charge_mode;
 };
 

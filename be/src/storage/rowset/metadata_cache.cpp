@@ -28,7 +28,7 @@ void MetadataCache::create_cache(size_t capacity) {
 }
 
 MetadataCache::MetadataCache(size_t capacity) {
-    _cache.reset(new_lru_cache(capacity));
+    _cache.reset(new_lru_cache(capacity, 0));
 }
 
 void MetadataCache::cache_rowset(Rowset* ptr) {
@@ -44,15 +44,15 @@ void MetadataCache::warmup_rowset(Rowset* ptr) {
 }
 
 size_t MetadataCache::get_memory_usage() const {
-    return _cache->get_memory_usage();
+    return _cache->get_base_memory_usage();
 }
 
 void MetadataCache::set_capacity(size_t capacity) {
-    _cache->set_capacity(capacity);
+    _cache->set_capacity(capacity, 0);
 }
 
 void MetadataCache::_insert(const std::string& key, Rowset* ptr, size_t size) {
-    Cache::Handle* handle = _cache->insert(CacheKey(key), ptr, size, _cache_value_deleter);
+    Cache::Handle* handle = _cache->insert(CacheKey(key), ptr, size, _cache_value_deleter, CachePriority::NORMAL, 0, 0);
     _cache->release(handle);
 }
 

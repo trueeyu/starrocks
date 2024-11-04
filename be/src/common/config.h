@@ -1483,4 +1483,31 @@ CONF_mBool(enable_bit_unpack_simd, "true");
 
 CONF_mInt32(max_committed_without_schema_rowset, "1000");
 
+CONF_mString(cache_size, "4294967296"); // total cache size
+
+CONF_mInt64(page_cache_init_percent, "50");
+CONF_mInt64(page_cache_extent_percent, "20");
+CONF_mInt64(page_cache_extent_lower_percent, "10");
+CONF_mInt64(page_cache_extent_upper_percent, "20");
+
+CONF_mInt64(block_cache_init_percent, "50");
+CONF_mInt64(block_cache_extent_percent, "20");
+CONF_mInt64(block_cache_extent_lower_percent, "10");
+CONF_mInt64(block_cache_extent_upper_percent, "20");
+
+CONF_mBool(enable_cache_transfer, "false");
+
+CONF_mInt64(cache_transfer_interval, "100");
+CONF_mInt64(cache_transfer_times, "10");
+CONF_mInt64(cache_transfer_size, "134217728");
+CONF_mInt64(cache_transfer_extent_percent, "90");
+
+CONF_mInt64(cache_min_size, "1073741824");
+
+// us
+CONF_mInt32(random_io_time, "10000");
+
+CONF_mDouble(transfer_quota_percent, "2.0");
+CONF_mInt32(external_mode, "1"); // 1(all), 2(first block), 3(first block small)
+
 } // namespace starrocks::config

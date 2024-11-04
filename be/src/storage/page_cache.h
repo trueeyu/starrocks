@@ -78,7 +78,7 @@ public:
     };
 
     // Create global instance of this class
-    static void create_global_cache(MemTracker* mem_tracker, size_t capacity);
+    static void create_global_cache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity);
 
     static void release_global_cache();
 
@@ -86,7 +86,7 @@ public:
     // Client should call create_global_cache before.
     static StoragePageCache* instance() { return _s_instance; }
 
-    StoragePageCache(MemTracker* mem_tracker, size_t capacity);
+    StoragePageCache(MemTracker* mem_tracker, size_t base_capacity, size_t extent_capacity);
 
     // Lookup the given page in the cache.
     //
@@ -98,23 +98,31 @@ public:
     bool lookup(const CacheKey& key, PageCacheHandle* handle);
 
     // Insert a page with key into this cache.
-    // Given hanlde will be set to valid reference.
+    // Given handle will be set to valid reference.
     // This function is thread-safe, and when two clients insert two same key
     // concurrently, this function can assure that only one page is cached.
     // The in_memory page will have higher priority.
-    void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory = false);
+    void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory, size_t cost);
 
-    size_t memory_usage() const { return _cache->get_memory_usage(); }
+    size_t base_memory_usage() const { return _cache->get_base_memory_usage(); }
+    size_t extent_memory_usage() const { return _cache->get_extent_memory_usage(); }
 
-    void set_capacity(size_t capacity);
+    void set_capacity(size_t base_capacity, size_t extent_capacity);
 
-    size_t get_capacity();
+    size_t get_base_capacity();
+    size_t get_extent_capacity();
+
+    size_t get_base_usage() { return _cache->get_base_memory_usage(); }
+    size_t get_extent_usage() { return _cache->get_extent_memory_usage(); }
 
     uint64_t get_lookup_count();
+    uint64_t get_base_hit_count();
+    uint64_t get_extent_hit_count();
 
-    uint64_t get_hit_count();
+    uint64_t get_extent_write_count();
+    uint64_t get_extent_cost();
 
-    bool adjust_capacity(int64_t delta, size_t min_capacity = 0);
+    bool adjust_capacity(int64_t delta);
 
     void prune();
 

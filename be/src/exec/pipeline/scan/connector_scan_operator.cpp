@@ -227,7 +227,9 @@ struct ConnectorScanOperatorAdaptiveProcessor {
 
 ConnectorScanOperator::ConnectorScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_sequence, int32_t dop,
                                              ScanNode* scan_node)
-        : ScanOperator(factory, id, driver_sequence, dop, scan_node) {}
+        : ScanOperator(factory, id, driver_sequence, dop, scan_node) {
+    VLOG(3) << "LXH: construct connector scan operator";
+}
 
 int64_t ConnectorScanOperator::_adjust_scan_mem_limit(int64_t old_value, int64_t new_value) {
     auto* factory = down_cast<ConnectorScanOperatorFactory*>(_factory);
@@ -251,6 +253,19 @@ int64_t ConnectorScanOperator::_adjust_scan_mem_limit(int64_t old_value, int64_t
     VLOG_OPERATOR << build_debug_string();
 
     return new_scan_mem_limit;
+}
+
+ConnectorScanOperator::~ConnectorScanOperator() {
+    for (auto& p : _chunk_source_profiles) {
+        VLOG(3) << "LXH: destruct connector scan operator";
+        auto* scan_timer = p->get_counter("ScanTime");
+        if (scan_timer != nullptr) {
+            VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
+            GlobalEnv::GetInstance()->_total_data_cache_io_time.fetch_add(scan_timer->value(),
+                                                                          std::memory_order_relaxed);
+        }
+        GlobalEnv::GetInstance()->_total_data_cache_io_count++;
+    }
 }
 
 Status ConnectorScanOperator::do_prepare(RuntimeState* state) {
@@ -649,6 +664,7 @@ ConnectorChunkSource::ConnectorChunkSource(ScanOperator* op, RuntimeProfile* run
 }
 
 ConnectorChunkSource::~ConnectorChunkSource() {
+
     if (_runtime_state != nullptr) {
         close(_runtime_state);
     }
@@ -772,6 +788,7 @@ Status ConnectorChunkSource::_open_data_source(RuntimeState* state, bool* mem_al
         }
         VLOG_OPERATOR << build_debug_string("consume");
     }
+    VLOG(3) << "open data source: " << _data_source->name();
     RETURN_IF_ERROR(_data_source->open(state));
     if (!_data_source->has_any_predicate() && _limit != -1 && _limit < state->chunk_size()) {
         _ck_acc.set_max_size(_limit);

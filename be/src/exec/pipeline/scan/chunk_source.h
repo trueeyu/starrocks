@@ -105,7 +105,7 @@ protected:
     ChunkBufferTokenPtr _chunk_token;
     std::atomic<bool> _reach_limit = false;
 
-private:
+public:
     // _scan_timer = _io_task_wait_timer + _io_task_exec_timer
     RuntimeProfile::Counter* _scan_timer = nullptr;
     RuntimeProfile::Counter* _io_task_wait_timer = nullptr;

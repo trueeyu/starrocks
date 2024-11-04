@@ -23,6 +23,10 @@ class DataCacheUtils {
 public:
     static void set_metrics_from_thrift(TDataCacheMetrics& t_metrics, const DataCacheMetrics& metrics);
 
+    static Status parse_conf_cache_mem_size(const std::string& conf_mem_size_str, int64_t mem_limit, int64_t* mem_size);
+    static int64_t calc_extent_size(int64_t cache_size, int64_t base_size, int64_t extent_percent,
+                                    int64_t extent_lower_percent, int64_t extent_upper_percent);
+
     static Status parse_conf_datacache_mem_size(const std::string& conf_mem_size_str, int64_t mem_limit,
                                                 size_t* mem_size);
 

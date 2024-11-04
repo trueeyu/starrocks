@@ -661,6 +661,11 @@ void ConnectorScanNode::close(RuntimeState* state) {
 
 Status ConnectorScanNode::set_scan_ranges(const std::vector<TScanRangeParams>& scan_ranges) {
     _scan_ranges = scan_ranges;
+    VLOG(3) << "set_scan_ranges: " << _scan_ranges.size();
+    for (size_t i = 0; i < scan_ranges.size(); i++) {
+        VLOG(3) << "set_scan_range: " << i << ":" << scan_ranges[i].scan_range.hdfs_scan_range.offset <<
+                ":" << scan_ranges[i].scan_range.hdfs_scan_range.length;
+    }
     if (!accept_empty_scan_ranges() && scan_ranges.size() == 0) {
         // If scan ranges size is zero,
         // it means data source provider does not support reading by scan ranges.

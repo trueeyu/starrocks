@@ -270,6 +270,7 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
         auto [owner_id, is_eos] = _should_emit_eos(res);
         eval_runtime_bloom_filters(res.get());
         res->owner_info().set_owner_id(owner_id, is_eos);
+        VLOG(3) << "pull chunk: " << res->num_rows();
     }
 
     return res;
@@ -308,6 +309,8 @@ Status ScanOperator::_try_to_trigger_next_scan(RuntimeState* state) {
 
     int to_sched[_io_tasks_per_scan_operator];
     int size = 0;
+
+    VLOG(3) << "trigger: " << _io_tasks_per_scan_operator;
 
     // right here, we want total running io tasks as `total_cnt`
     {
@@ -430,7 +433,6 @@ Status ScanOperator::_trigger_next_scan(RuntimeState* state, int chunk_source_in
 #if !defined(ADDRESS_SANITIZER) && !defined(LEAK_SANITIZER) && !defined(THREAD_SANITIZER)
             FAIL_POINT_SCOPE(mem_alloc_error);
 #endif
-
             DeferOp timer_defer([chunk_source]() {
                 COUNTER_SET(chunk_source->scan_timer(),
                             chunk_source->io_task_wait_timer()->value() + chunk_source->io_task_exec_timer()->value());
@@ -566,6 +568,7 @@ Status ScanOperator::_pickup_morsel(RuntimeState* state, int chunk_source_index)
         COUNTER_UPDATE(_morsels_counter, 1);
 
         {
+            VLOG(3) << "create chunk source: " << chunk_source_index;
             SCOPED_TIMER(_prepare_chunk_source_timer);
             _chunk_sources[chunk_source_index] = create_chunk_source(std::move(morsel), chunk_source_index);
             auto status = _chunk_sources[chunk_source_index]->prepare(state);

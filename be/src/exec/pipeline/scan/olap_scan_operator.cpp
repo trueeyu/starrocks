@@ -57,10 +57,22 @@ const std::vector<ExprContext*>& OlapScanOperatorFactory::partition_exprs() cons
 OlapScanOperator::OlapScanOperator(OperatorFactory* factory, int32_t id, int32_t driver_sequence, int32_t dop,
                                    ScanNode* scan_node, OlapScanContextPtr ctx)
         : ScanOperator(factory, id, driver_sequence, dop, scan_node), _ctx(std::move(ctx)) {
+    VLOG(3) << "LXH: construct olap scan operator";
     _ctx->ref();
 }
 
 OlapScanOperator::~OlapScanOperator() {
+    VLOG(3) << "LXH: destruct olap scan operator";
+    for (auto& p : _chunk_source_profiles) {
+        auto* scan_timer = p->get_counter("ScanTime");
+        if (scan_timer != nullptr) {
+            VLOG(3) << "LXH: chunk_source active time: " << scan_timer->value();
+            GlobalEnv::GetInstance()->_total_page_cache_io_time.fetch_add(scan_timer->value(),
+                                                                          std::memory_order_relaxed);
+        }
+        GlobalEnv::GetInstance()->_total_page_cache_io_count++;
+    }
+
     auto* state = runtime_state();
     if (state == nullptr) {
         return;

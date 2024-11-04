@@ -42,7 +42,7 @@ public:
 
     Status remove(const std::string& key) override;
 
-    Status update_mem_quota(size_t quota_bytes, bool flush_to_disk) override;
+    Status update_mem_quota(size_t base_quota_bytes, size_t extent_quota_bytes, bool flush_to_disk) override;
 
     Status update_disk_spaces(const std::vector<DirSpace>& spaces) override;
 

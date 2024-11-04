@@ -99,7 +99,7 @@ public:
 
     size_t get_cache_mem_usage() const {
         DCHECK(_func_cache != nullptr);
-        return _func_cache->get_memory_usage();
+        return _func_cache->get_base_memory_usage();
     }
 
     static std::string dump_module_ir(const llvm::Module& module);

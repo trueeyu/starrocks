@@ -74,13 +74,13 @@ inline std::string cache_key(uint32_t tablet_id, int64_t txn_id) {
 }
 
 PersistentIndexBlockCache::PersistentIndexBlockCache(MemTracker* mem_tracker, int64_t cache_limit)
-        : _cache(new_lru_cache(cache_limit)) {
+        : _cache(new_lru_cache(cache_limit, 0)) {
     _mem_tracker = std::make_unique<MemTracker>(cache_limit, "lake_persistent_index_block_cache", mem_tracker);
 }
 
 void PersistentIndexBlockCache::update_memory_usage() {
     std::lock_guard<std::mutex> lg(_mutex);
-    size_t current_mem_usage = _cache->get_memory_usage();
+    size_t current_mem_usage = _cache->get_base_memory_usage();
     if (_memory_usage > current_mem_usage) {
         _mem_tracker->release(_memory_usage - current_mem_usage);
     } else {

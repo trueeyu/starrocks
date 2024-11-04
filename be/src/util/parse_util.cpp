@@ -40,6 +40,7 @@
 namespace starrocks {
 
 int64_t ParseUtil::parse_mem_spec(const std::string& mem_spec_str, const int64_t memory_limit) {
+    LOG(ERROR) << "parse str: " << mem_spec_str;
     bool is_percent = false;
     if (mem_spec_str.empty()) {
         return 0;
@@ -109,6 +110,7 @@ int64_t ParseUtil::parse_mem_spec(const std::string& mem_spec_str, const int64_t
             bytes = limit_val;
         }
     }
+    LOG(ERROR) << "parse success: " << bytes;
 
     // Accept -1 as indicator for infinite memory that we report by a 0 return value.
     if (bytes == -1) {

@@ -224,7 +224,7 @@ TEST_F(PersistentIndexSstableTest, test_persistent_index_sstable) {
     std::unique_ptr<PersistentIndexSstable> sst = std::make_unique<PersistentIndexSstable>();
     ASSIGN_OR_ABORT(auto read_file, fs::new_random_access_file(lake::join_path(kTestDir, filename)));
     std::unique_ptr<Cache> cache_ptr;
-    cache_ptr.reset(new_lru_cache(100));
+    cache_ptr.reset(new_lru_cache(100, 0));
     PersistentIndexSstablePB sstable_pb;
     sstable_pb.set_filename(filename);
     sstable_pb.set_filesize(filesize);

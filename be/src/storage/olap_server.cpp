@@ -273,11 +273,11 @@ void evict_pagecache(StoragePageCache* cache, int64_t bytes_to_dec, std::atomic<
             if (UNLIKELY(stoped)) {
                 return;
             }
-            cache->adjust_capacity(-GCBYTES_ONE_STEP, kcacheMinSize);
+            cache->adjust_capacity(-GCBYTES_ONE_STEP);
             bytes -= GCBYTES_ONE_STEP;
         }
         if (bytes > 0) {
-            cache->adjust_capacity(-bytes, kcacheMinSize);
+            cache->adjust_capacity(-bytes);
         }
     }
 }
@@ -328,7 +328,7 @@ void* StorageEngine::_adjust_pagecache_callback(void* arg_this) {
         int64_t memory_high = memtracker->limit() * memory_high_level / 100;
         if (delta_urgent > 0) {
             // Memory usage exceeds memory_urgent_level, reduce size immediately.
-            cache->adjust_capacity(-delta_urgent, kcacheMinSize);
+            cache->adjust_capacity(-delta_urgent);
             size_t bytes_to_dec = dec_advisor->bytes_should_gc(MonoTime::Now(), memory_urgent - memory_high);
             evict_pagecache(cache, static_cast<int64_t>(bytes_to_dec), _bg_worker_stopped);
             continue;
@@ -340,7 +340,7 @@ void* StorageEngine::_adjust_pagecache_callback(void* arg_this) {
             evict_pagecache(cache, static_cast<int64_t>(bytes_to_dec), _bg_worker_stopped);
         } else {
             int64_t max_cache_size = std::max(GlobalEnv::GetInstance()->get_storage_page_cache_size(), kcacheMinSize);
-            int64_t cur_cache_size = cache->get_capacity();
+            int64_t cur_cache_size = cache->get_base_capacity();
             if (cur_cache_size >= max_cache_size) {
                 continue;
             }

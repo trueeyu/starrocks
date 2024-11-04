@@ -17,7 +17,7 @@
 #include "util/defer_op.h"
 namespace starrocks::query_cache {
 
-CacheManager::CacheManager(size_t capacity) : _cache(capacity) {}
+CacheManager::CacheManager(size_t capacity) : _cache(capacity, 0) {}
 static void delete_cache_entry(const CacheKey& key, void* value) {
     auto* cache_value = (CacheValue*)value;
     delete cache_value;
@@ -25,7 +25,8 @@ static void delete_cache_entry(const CacheKey& key, void* value) {
 
 void CacheManager::populate(const std::string& key, const CacheValue& value) {
     auto* cache_value = new CacheValue(value);
-    auto* handle = _cache.insert(key, cache_value, cache_value->size(), &delete_cache_entry, CachePriority::NORMAL);
+    auto* handle = _cache.insert(key, cache_value, cache_value->size(), &delete_cache_entry, CachePriority::NORMAL,
+                                 0, 0);
     _cache.release(handle);
 }
 
@@ -40,11 +41,11 @@ StatusOr<CacheValue> CacheManager::probe(const std::string& key) {
 }
 
 size_t CacheManager::memory_usage() {
-    return _cache.get_memory_usage();
+    return _cache.get_base_memory_usage();
 }
 
 size_t CacheManager::capacity() {
-    return _cache.get_capacity();
+    return _cache.get_base_capacity();
 }
 
 size_t CacheManager::lookup_count() {
@@ -52,14 +53,14 @@ size_t CacheManager::lookup_count() {
 }
 
 size_t CacheManager::hit_count() {
-    return _cache.get_hit_count();
+    return _cache.get_base_hit_count();
 }
 
 void CacheManager::invalidate_all() {
-    auto old_capacity = _cache.get_capacity();
+    auto old_capacity = _cache.get_base_capacity();
     // set capacity of cache to zero, the cache shall prune all cache entries.
-    _cache.set_capacity(0);
-    _cache.set_capacity(old_capacity);
+    _cache.set_capacity(0, 0);
+    _cache.set_capacity(old_capacity, 0);
 }
 
 } // namespace starrocks::query_cache

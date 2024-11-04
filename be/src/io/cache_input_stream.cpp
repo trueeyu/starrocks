@@ -22,6 +22,7 @@
 #include "util/hash_util.hpp"
 #include "util/runtime_profile.h"
 #include "util/stack_util.h"
+#include "runtime/exec_env.h"
 
 namespace starrocks::io {
 
@@ -96,7 +97,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
                 strings::memcpy_inlined(out, sb->buffer.data() + offset - sb->offset, size);
                 if (_enable_populate_cache) {
                     _populate_to_cache((const char*)sb->buffer.data() + block_offset - sb->offset, block_offset,
-                                       load_size, sb);
+                                       load_size, sb, 0);
                 }
                 return Status::OK();
             }
@@ -113,6 +114,7 @@ Status CacheInputStream::_read_block_from_local(const int64_t offset, const int6
         options.use_adaptor = _enable_cache_io_adaptor;
         SCOPED_RAW_TIMER(&read_cache_ns);
         if (_enable_block_buffer) {
+            VLOG(3) << "cache read buffer: " << _cache_key << ":" << block_offset << ":" << load_size;
             res = _cache->read_buffer(_cache_key, block_offset, load_size, &block.buffer, &options);
             read_size = load_size;
         } else {
@@ -167,9 +169,12 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     int64_t out_remain_size = size;
     char* out_pointer_cursor = out;
 
+    VLOG(3) << "READ_FROM_REMOTE: " << block_start_offset << ":" << block_end_offset;
+
     for (int64_t read_offset_cursor = block_start_offset; read_offset_cursor < block_end_offset;) {
         // Everytime read at most one buffer size
         const int64_t read_size = std::min(_buffer_size, block_end_offset - read_offset_cursor);
+        VLOG(3) << "READ_SIZE_1: " << block_end_offset - read_offset_cursor << ":" << read_size;
         char* src = nullptr;
 
         // check [read_offset_cursor, read_size) is already in SharedBuffer
@@ -190,6 +195,8 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
                 src = _buffer.data();
             }
         }
+        VLOG(3) << "READ_SIZE_2";
+        GlobalEnv::GetInstance()->_total_block_cache_miss_time += read_remote_ns;
 
         if (_enable_cache_io_adaptor) {
             int64_t delta_remote_bytes =
@@ -212,8 +219,10 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
             out_remain_size -= out_size;
         }
 
+        VLOG(3) << "READ_SIZE_3";
         if (_enable_populate_cache) {
-            _populate_to_cache(src, read_offset_cursor, read_size, sb);
+            VLOG(3) << "READ_SIZE_4";
+            _populate_to_cache(src, read_offset_cursor, read_size, sb, read_remote_ns);
         }
 
         read_offset_cursor += read_size;
@@ -267,6 +276,7 @@ struct ReadFromRemoteIORange {
 };
 
 Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
+    VLOG(3) << "INPUT STREAM read 2";
     const int64_t origin_offset = offset;
     count = std::min(_size - offset, count);
     if (count < 0) {
@@ -281,6 +291,8 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
     const int64_t end_block_id = (end_offset - 1) / _block_size;
 
     std::vector<ReadFromRemoteIORange> need_read_from_remote{};
+
+    VLOG(3) << "READ_AT_FULLY: " << _block_size << ":" << start_block_id << ":" << end_block_id;
 
     for (int64_t i = start_block_id; i <= end_block_id; i++) {
         size_t off = std::max(offset, i * _block_size);
@@ -342,6 +354,7 @@ Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count)
 }
 
 StatusOr<int64_t> CacheInputStream::read(void* data, int64_t count) {
+    VLOG(3) << "INPUT STREAM read 1";
     count = std::min(_size - _offset, count);
     RETURN_IF_ERROR(read_at_fully(_offset, data, count));
     _offset += count;
@@ -349,6 +362,7 @@ StatusOr<int64_t> CacheInputStream::read(void* data, int64_t count) {
 }
 
 Status CacheInputStream::seek(int64_t offset) {
+    VLOG(3) << "INPUT STREAM read 3";
     if (offset < 0 || offset >= _size) return Status::InvalidArgument(fmt::format("Invalid offset {}", offset));
     _offset = offset;
     return _sb_stream->seek(offset);
@@ -367,21 +381,28 @@ int64_t CacheInputStream::get_align_size() const {
 }
 
 StatusOr<std::string_view> CacheInputStream::peek(int64_t count) {
+    VLOG(3) << "INPUT STREAM read 4";
     // if app level uses zero copy read, it does bypass the cache layer.
     // so here we have to fill cache manually.
     SharedBufferPtr sb;
+    VLOG(3) << "peek: " << count;
     ASSIGN_OR_RETURN(auto s, _sb_stream->peek_shared_buffer(count, &sb));
     if (_enable_populate_cache) {
-        _populate_to_cache(s.data(), _offset, count, sb);
+        _populate_to_cache(s.data(), _offset, count, sb, 0);
     }
     return s;
 }
 
-void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t count, const SharedBufferPtr& sb) {
+void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t count, const SharedBufferPtr& sb,
+                                          size_t cost) {
     int64_t begin = offset / _block_size * _block_size;
     int64_t end = std::min((offset + count + _block_size - 1) / _block_size * _block_size, _size);
+
+    VLOG(3) << "populate: " << offset << ":" << count << ":" << begin << ":" << end;
+
     p -= (offset - begin);
-    auto f = [sb, this](const char* buf, size_t off, size_t size) {
+    size_t block_count = (end - begin) / _block_size + ((end - begin) % _block_size != 0);
+    auto f = [sb, this, cost, block_count](const char* buf, size_t off, size_t size, bool first_block) {
         DCHECK(off % _block_size == 0);
         if (_already_populated_blocks.contains(off / _block_size)) {
             // Already populate in CacheInputStream's lifecycle, ignore this time
@@ -394,6 +415,21 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
         options.evict_probability = _datacache_evict_probability;
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
+        if (config::external_mode == 1) {
+            options.cost = cost / block_count;
+        } else if (config::external_mode == 2) {
+            if (first_block) {
+                options.cost = cost;
+            } else {
+                options.cost = 0;
+            }
+        } else if (config::external_mode == 3) {
+            if (first_block) {
+                options.cost = cost / block_count;
+            } else {
+                options.cost = 0;
+            }
+        }
         if (options.async && sb) {
             auto cb = [sb](int code, const std::string& msg) {
                 // We only need to keep the shared buffer pointer
@@ -402,6 +438,7 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
             options.callback = cb;
             options.allow_zero_copy = true;
         }
+        VLOG(3) << "WRITE_BUFFER: " << _cache_key << ":" << off << ":" << size;
         Status r = _cache->write_buffer(_cache_key, off, size, buf, &options);
         if (r.ok() || r.is_already_exist()) {
             _already_populated_blocks.emplace(off / _block_size);
@@ -422,9 +459,11 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
         }
     };
 
+    bool first_block = true;
     while (begin < end) {
         size_t size = std::min(_block_size, end - begin);
-        f(p, begin, size);
+        f(p, begin, size, first_block);
+        first_block = false;
         begin += size;
         p += size;
     }

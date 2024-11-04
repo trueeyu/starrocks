@@ -237,6 +237,15 @@ Status set_config(const std::string& field, const std::string& value) {
     return Status::OK();
 }
 
+bool config_exist(const std::string& field) {
+    auto it = Field::fields().find(field);
+    if (it == Field::fields().end()) {
+        return false;
+    } else {
+        return true;
+    }
+}
+
 std::vector<ConfigInfo> list_configs() {
     std::vector<ConfigInfo> infos;
     for (const auto& [name, field] : Field::fields()) {

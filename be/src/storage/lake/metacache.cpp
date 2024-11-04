@@ -84,12 +84,12 @@ static bvar::PassiveStatus<size_t> g_metacache_capacity("lake", "metacache_capac
 static bvar::PassiveStatus<size_t> g_metacache_usage("lake", "metacache_usage", get_metacache_usage, nullptr);
 #endif
 
-Metacache::Metacache(int64_t cache_capacity) : _cache(new_lru_cache(cache_capacity)) {}
+Metacache::Metacache(int64_t cache_capacity) : _cache(new_lru_cache(cache_capacity, 0)) {}
 
 Metacache::~Metacache() = default;
 
 void Metacache::insert(std::string_view key, CacheValue* ptr, size_t size) {
-    Cache::Handle* handle = _cache->insert(CacheKey(key), ptr, size, cache_value_deleter);
+    Cache::Handle* handle = _cache->insert(CacheKey(key), ptr, size, cache_value_deleter, CachePriority::NORMAL, 0, 0);
     _cache->release(handle);
 }
 
@@ -260,11 +260,11 @@ void Metacache::erase(std::string_view key) {
 }
 
 void Metacache::update_capacity(size_t new_capacity) {
-    size_t old_capacity = _cache->get_capacity();
+    size_t old_capacity = _cache->get_base_capacity();
     int64_t delta = (int64_t)new_capacity - (int64_t)old_capacity;
     if (delta != 0) {
         (void)_cache->adjust_capacity(delta);
-        VLOG(5) << "Changed metadache capacity from " << old_capacity << " to " << _cache->get_capacity();
+        VLOG(5) << "Changed metadache capacity from " << old_capacity << " to " << _cache->get_base_capacity();
     }
 }
 
@@ -273,11 +273,11 @@ void Metacache::prune() {
 }
 
 size_t Metacache::memory_usage() const {
-    return _cache->get_memory_usage();
+    return _cache->get_base_memory_usage();
 }
 
 size_t Metacache::capacity() const {
-    return _cache->get_capacity();
+    return _cache->get_base_capacity();
 }
 
 } // namespace starrocks::lake

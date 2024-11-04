@@ -71,13 +71,59 @@
 #include "service/staros_worker.h"
 #endif // USE_STAROS
 
+#include "block_cache/datacache_utils.h"
+#include "runtime/exec_env.h"
+
 namespace starrocks {
 
 const static std::string HEADER_JSON = "application/json";
 
 std::atomic<UpdateConfigAction*> UpdateConfigAction::_instance(nullptr);
 
+Status UpdateConfigAction::update_cache(const std::string& name, const std::string& value) {
+    int64_t cache_size = GlobalEnv::GetInstance()->get_cache_size();
+    if (name == "inc_page_cache_size") {
+        int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+        int64_t base_capacity = cur_base_capacity + std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::page_cache_extent_percent,
+                                                                   config::page_cache_extent_lower_percent,
+                                                                   config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "inc page cache capacity: " << base_capacity << "," << extent_capacity;
+        StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
+    } else if (name == "dec_page_cache_size") {
+        int64_t cur_base_capacity = StoragePageCache::instance()->get_base_capacity();
+        int64_t base_capacity = cur_base_capacity - std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::page_cache_extent_percent,
+                                                                   config::page_cache_extent_lower_percent,
+                                                                   config::page_cache_extent_upper_percent);
+        LOG(ERROR) << "dec page cache capacity: " << base_capacity << "," << extent_capacity;
+        StoragePageCache::instance()->set_capacity(base_capacity, extent_capacity);
+    } else if (name == "inc_block_cache_size") {
+        int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
+        int64_t base_capacity = cur_base_capacity + std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::block_cache_extent_percent,
+                                                                   config::block_cache_extent_lower_percent,
+                                                                   config::block_cache_extent_upper_percent);
+        LOG(ERROR) << "inc block cache capacity: " << base_capacity << "," << extent_capacity;
+        auto st = BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
+    } else if (name == "dec_block_cache_size") {
+        int64_t cur_base_capacity = BlockCache::instance()->mem_quota();
+        size_t base_capacity = cur_base_capacity - std::stol(value);
+        int64_t extent_capacity = DataCacheUtils::calc_extent_size(cache_size, base_capacity,
+                                                                   config::block_cache_extent_percent,
+                                                                   config::block_cache_extent_lower_percent,
+                                                                   config::block_cache_extent_upper_percent);
+        LOG(ERROR) << "desc block cache capacity: " << base_capacity << "," << extent_capacity;
+        BlockCache::instance()->update_mem_quota(base_capacity, extent_capacity, false);
+    }
+    return Status::OK();
+}
+
 Status UpdateConfigAction::update_config(const std::string& name, const std::string& value) {
+    LOG(ERROR) << "update config: " << name << ":" << value;
     std::call_once(_once_flag, [&]() {
         _config_callback.emplace("scanner_thread_pool_thread_num", [&]() {
             LOG(INFO) << "set scanner_thread_pool_thread_num:" << config::scanner_thread_pool_thread_num;
@@ -86,15 +132,15 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
         _config_callback.emplace("storage_page_cache_limit", [&]() {
             int64_t cache_limit = GlobalEnv::GetInstance()->get_storage_page_cache_size();
             cache_limit = GlobalEnv::GetInstance()->check_storage_page_cache_size(cache_limit);
-            StoragePageCache::instance()->set_capacity(cache_limit);
+            StoragePageCache::instance()->set_capacity(cache_limit, 0);
         });
         _config_callback.emplace("disable_storage_page_cache", [&]() {
             if (config::disable_storage_page_cache) {
-                StoragePageCache::instance()->set_capacity(0);
+                StoragePageCache::instance()->set_capacity(0, 0);
             } else {
                 int64_t cache_limit = GlobalEnv::GetInstance()->get_storage_page_cache_size();
                 cache_limit = GlobalEnv::GetInstance()->check_storage_page_cache_size(cache_limit);
-                StoragePageCache::instance()->set_capacity(cache_limit);
+                StoragePageCache::instance()->set_capacity(cache_limit, 0);
             }
         });
         _config_callback.emplace("datacache_mem_size", [&]() {
@@ -108,7 +154,7 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
                 LOG(WARNING) << "Failed to update datacache mem size";
                 return;
             }
-            (void)BlockCache::instance()->update_mem_quota(mem_size, true);
+            (void)BlockCache::instance()->update_mem_quota(mem_size, 0, true);
         });
         _config_callback.emplace("datacache_disk_size", [&]() {
             std::vector<DirSpace> spaces;
@@ -285,14 +331,19 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
 #endif // USE_STAROS
     });
 
-    Status s = config::set_config(name, value);
-    if (s.ok()) {
-        LOG(INFO) << "set_config " << name << "=" << value << " success";
-        if (_config_callback.count(name)) {
-            _config_callback[name]();
+    if (!config::config_exist(name)) {
+        update_cache(name, value);
+        return Status::OK();
+    } else {
+        Status s = config::set_config(name, value);
+        if (s.ok()) {
+            LOG(INFO) << "set_config " << name << "=" << value << " success";
+            if (_config_callback.count(name)) {
+                _config_callback[name]();
+            }
         }
+        return s;
     }
-    return s;
 }
 
 void UpdateConfigAction::handle(HttpRequest* req) {

@@ -87,7 +87,7 @@ public:
     std::vector<int> _deleted_values;
     Cache* _cache;
 
-    CacheTest() : _cache(new_lru_cache(kCacheSize)) { _s_current = this; }
+    CacheTest() : _cache(new_lru_cache(kCacheSize, 0)) { _s_current = this; }
 
     ~CacheTest() override { delete _cache; }
 
@@ -105,13 +105,14 @@ public:
 
     void Insert(int key, int value, int charge) {
         std::string result;
-        _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter));
+        _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter,
+                                       CachePriority::NORMAL, 0, 0));
     }
 
     void InsertDurable(int key, int value, int charge) {
         std::string result;
         _cache->release(_cache->insert(EncodeKey(&result, key), EncodeValue(value), charge, &CacheTest::Deleter,
-                                       CachePriority::DURABLE));
+                                       CachePriority::DURABLE, 0, 0));
     }
 
     void Erase(int key) {
@@ -241,35 +242,35 @@ static void insert_LRUCache(LRUCache& cache, const CacheKey& key, int value, Cac
 
 TEST_F(CacheTest, Usage) {
     LRUCache cache;
-    cache.set_capacity(1000);
+    cache.set_base_capacity(1000);
 
     CacheKey key1("100");
     insert_LRUCache(cache, key1, 100, CachePriority::NORMAL);
-    ASSERT_EQ(100, cache.get_usage());
+    ASSERT_EQ(100, cache.get_base_usage());
 
     CacheKey key2("200");
     insert_LRUCache(cache, key2, 200, CachePriority::DURABLE);
-    ASSERT_EQ(300, cache.get_usage());
+    ASSERT_EQ(300, cache.get_base_usage());
 
     CacheKey key3("300");
     insert_LRUCache(cache, key3, 300, CachePriority::NORMAL);
-    ASSERT_EQ(600, cache.get_usage());
+    ASSERT_EQ(600, cache.get_base_usage());
 
     CacheKey key4("400");
     insert_LRUCache(cache, key4, 400, CachePriority::NORMAL);
-    ASSERT_EQ(1000, cache.get_usage());
+    ASSERT_EQ(1000, cache.get_base_usage());
 
     CacheKey key5("500");
     insert_LRUCache(cache, key5, 500, CachePriority::NORMAL);
-    ASSERT_EQ(700, cache.get_usage());
+    ASSERT_EQ(700, cache.get_base_usage());
 
     CacheKey key6("600");
     insert_LRUCache(cache, key6, 600, CachePriority::NORMAL);
-    ASSERT_EQ(800, cache.get_usage());
+    ASSERT_EQ(800, cache.get_base_usage());
 
     CacheKey key7("950");
     insert_LRUCache(cache, key7, 950, CachePriority::DURABLE);
-    ASSERT_EQ(950, cache.get_usage());
+    ASSERT_EQ(950, cache.get_base_usage());
 }
 
 TEST_F(CacheTest, HeavyEntries) {
@@ -317,13 +318,14 @@ TEST_F(CacheTest, SetCapacity) {
     // Insert kCacheSize entries, but not releasing.
     for (int i = 0; i < 32; i++) {
         std::string result;
-        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
+        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter,
+                                    CachePriority::NORMAL, 0, 0);
     }
-    ASSERT_EQ(kCacheSize, _cache->get_capacity());
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(kCacheSize, _cache->get_base_capacity());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
     _cache->set_capacity(kCacheSize * 2);
-    ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(kCacheSize * 2, _cache->get_base_capacity());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
 
     // Test2: decrease capacity
     // insert more elements to cache, then release 32,
@@ -331,21 +333,22 @@ TEST_F(CacheTest, SetCapacity) {
     // then release 32, usage should be 32.
     for (int i = 32; i < 64; i++) {
         std::string result;
-        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter);
+        handles[i] = _cache->insert(EncodeKey(&result, i), EncodeValue(1000 + kCacheSize), 1, &CacheTest::Deleter,
+                                    CachePriority::NORMAL, 0, 0);
     }
-    ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(64, _cache->get_memory_usage());
+    ASSERT_EQ(kCacheSize * 2, _cache->get_base_capacity());
+    ASSERT_EQ(64, _cache->get_base_memory_usage());
     for (int i = 0; i < 32; i++) {
         _cache->release(handles[i]);
     }
-    ASSERT_EQ(kCacheSize * 2, _cache->get_capacity());
-    ASSERT_EQ(64, _cache->get_memory_usage());
+    ASSERT_EQ(kCacheSize * 2, _cache->get_base_capacity());
+    ASSERT_EQ(64, _cache->get_base_memory_usage());
     _cache->set_capacity(32);
-    ASSERT_EQ(32, _cache->get_capacity());
+    ASSERT_EQ(32, _cache->get_base_capacity());
     for (int i = 32; i < 64; i++) {
         _cache->release(handles[i]);
     }
-    ASSERT_EQ(32, _cache->get_memory_usage());
+    ASSERT_EQ(32, _cache->get_base_memory_usage());
 }
 
 } // namespace starrocks

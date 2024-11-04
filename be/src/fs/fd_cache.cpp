@@ -25,7 +25,7 @@ static void fd_deleter(const CacheKey& key, void* value) {
     ::close(fd);
 }
 
-FdCache::FdCache(size_t capacity) : _cache(new_lru_cache(capacity)) {}
+FdCache::FdCache(size_t capacity) : _cache(new_lru_cache(capacity, 0)) {}
 
 FdCache::~FdCache() {
     delete _cache;
@@ -33,7 +33,8 @@ FdCache::~FdCache() {
 
 FdCache::Handle* FdCache::insert(std::string_view path, int fd) {
     void* value = reinterpret_cast<void*>(static_cast<uintptr_t>(fd)); // NOLINT
-    Cache::Handle* h = _cache->insert(CacheKey(path.data(), path.size()), value, 1, fd_deleter);
+    Cache::Handle* h = _cache->insert(CacheKey(path.data(), path.size()), value, 1, fd_deleter,
+                                      CachePriority::NORMAL, 0, 0);
     return reinterpret_cast<FdCache::Handle*>(h);
 }
 
