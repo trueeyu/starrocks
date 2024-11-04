@@ -491,6 +491,8 @@ struct BlockCacheStats {
         stat.scan_count = end->scan_count - start->scan_count;
         stat.miss_time = end->miss_time - start->miss_time;
         stat.write_count = end->write_count - start->write_count;
+        stat.base_buffer_hit_count = end->base_buffer_hit_count - start->base_buffer_hit_count;
+        stat.base_buffer_miss_count = end->base_buffer_miss_count - start->base_buffer_miss_count;
 
         return stat;
     }
