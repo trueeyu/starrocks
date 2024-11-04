@@ -402,7 +402,7 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
 
     p -= (offset - begin);
     size_t block_count = (end - begin) / _block_size + ((end - begin) % _block_size != 0);
-    auto f = [sb, this, cost, block_count](const char* buf, size_t off, size_t size) {
+    auto f = [sb, this, cost, block_count](const char* buf, size_t off, size_t size, bool first_block) {
         DCHECK(off % _block_size == 0);
         if (_already_populated_blocks.contains(off / _block_size)) {
             // Already populate in CacheInputStream's lifecycle, ignore this time
@@ -415,7 +415,21 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
         options.evict_probability = _datacache_evict_probability;
         options.priority = _priority;
         options.ttl_seconds = _ttl_seconds;
-        options.cost = cost / block_count;
+        if (config::external_mode == 1) {
+            options.cost = cost / block_count;
+        } else if (config::external_mode == 2) {
+            if (first_block) {
+                options.cost = cost;
+            } else {
+                options.cost = 0;
+            }
+        } else if (config::external_mode == 3) {
+            if (first_block) {
+                options.cost = cost / block_count;
+            } else {
+                options.cost = 0;
+            }
+        }
         if (options.async && sb) {
             auto cb = [sb](int code, const std::string& msg) {
                 // We only need to keep the shared buffer pointer
@@ -445,9 +459,11 @@ void CacheInputStream::_populate_to_cache(const char* p, int64_t offset, int64_t
         }
     };
 
+    bool first_block = true;
     while (begin < end) {
         size_t size = std::min(_block_size, end - begin);
-        f(p, begin, size);
+        f(p, begin, size, first_block);
+        first_block = false;
         begin += size;
         p += size;
     }
