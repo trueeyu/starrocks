@@ -14,7 +14,6 @@
 
 #include "chunks_sorter_topn.h"
 
-#include "column/column_helper.h"
 #include "column/type_traits.h"
 #include "exec/sorting/merge.h"
 #include "exec/sorting/sort_permute.h"
@@ -108,6 +107,7 @@ Status ChunksSorterTopn::do_done(RuntimeState* state) {
 }
 
 std::vector<JoinRuntimeFilter*>* ChunksSorterTopn::runtime_filters(ObjectPool* pool) {
+    LOG(ERROR) << "LXH: get filter";
     if (!_init_merged_segment) {
         return nullptr;
     }
@@ -123,20 +123,26 @@ std::vector<JoinRuntimeFilter*>* ChunksSorterTopn::runtime_filters(ObjectPool* p
     size_t current_max_value_row_id = _topn_type == TTopNType::RANK ? order_by_column->size() - 1 : max_value_row_id;
     // _topn_type != TTopNType::RANK means we need reserve the max_value
     bool is_close_interval = _topn_type == TTopNType::RANK || _sort_desc.num_columns() != 1;
+    bool has_null = false;
+
+    LOG(ERROR) << "LXH: order_by_column: " << order_by_column->has_null() << ":" << current_max_value_row_id
+            << ":" << order_by_column->is_null(current_max_value_row_id);
 
     if (order_by_column->is_null(current_max_value_row_id)) {
-        return nullptr;
+        has_null = true;
     }
 
     if (_runtime_filter.empty()) {
-        auto rf = type_dispatch_predicate<JoinRuntimeFilter*>(
-                (*_sort_exprs)[0]->root()->type().type, false, detail::SortRuntimeFilterBuilder(), pool,
-                order_by_column, current_max_value_row_id, _sort_desc.descs[0].asc_order(), is_close_interval);
+        auto rf = type_dispatch_predicate<JoinRuntimeFilter*>((*_sort_exprs)[0]->root()->type().type, false,
+                                                              detail::SortRuntimeFilterBuilder(), pool, order_by_column,
+                                                              current_max_value_row_id, _sort_desc.descs[0].asc_order(),
+                                                              is_close_interval, has_null);
         _runtime_filter.emplace_back(rf);
     } else {
-        type_dispatch_predicate<std::nullptr_t>(
-                (*_sort_exprs)[0]->root()->type().type, false, detail::SortRuntimeFilterUpdater(),
-                _runtime_filter.back(), order_by_column, current_max_value_row_id, _sort_desc.descs[0].asc_order());
+        type_dispatch_predicate<std::nullptr_t>((*_sort_exprs)[0]->root()->type().type, false,
+                                                detail::SortRuntimeFilterUpdater(), _runtime_filter.back(),
+                                                order_by_column, current_max_value_row_id,
+                                                _sort_desc.descs[0].asc_order(), has_null);
     }
 
     return &_runtime_filter;

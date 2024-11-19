@@ -81,6 +81,7 @@ Status HiveDataSource::open(RuntimeState* state) {
         _scan_range.offset = split_context->split_start;
         _scan_range.length = split_context->split_end - split_context->split_start;
     }
+    LOG(ERROR) << "LXH: OPEN: " << _scan_range.relative_path << ":" << _scan_range.offset << ":" << _scan_range.length;
 
     if (_scan_range.file_length == 0) {
         _no_data = true;
@@ -195,15 +196,24 @@ void HiveDataSource::_update_has_any_predicate() {
 }
 
 Status HiveDataSource::_init_conjunct_ctxs(RuntimeState* state) {
+    LOG(ERROR) << "LXH: init conjunct_ctxs";
     const auto& hdfs_scan_node = _provider->_hdfs_scan_node;
     if (hdfs_scan_node.__isset.min_max_conjuncts) {
         RETURN_IF_ERROR(
                 Expr::create_expr_trees(&_pool, hdfs_scan_node.min_max_conjuncts, &_min_max_conjunct_ctxs, state));
+        LOG(ERROR) << "LXH: init conjunct_ctxs: min_max: " << _min_max_conjunct_ctxs.size();
+        for (size_t i = 0; i < _min_max_conjunct_ctxs.size(); i++) {
+            LOG(ERROR) << "LXH: init min/max conjunct: " << i << ":" << _min_max_conjunct_ctxs[i]->root()->debug_string();
+        }
     }
 
     if (hdfs_scan_node.__isset.partition_conjuncts) {
         RETURN_IF_ERROR(
                 Expr::create_expr_trees(&_pool, hdfs_scan_node.partition_conjuncts, &_partition_conjunct_ctxs, state));
+        LOG(ERROR) << "LXH: init conjunct_ctxs: partition: " << _partition_conjunct_ctxs.size();
+        for (size_t i = 0; i < _partition_conjunct_ctxs.size(); i++) {
+            LOG(ERROR) << "LXH: init partition conjunct: " << i << ":" << _partition_conjunct_ctxs[i]->root()->debug_string();
+        }
         _has_partition_conjuncts = true;
     }
 
@@ -429,6 +439,7 @@ Status HiveDataSource::_decompose_conjunct_ctxs(RuntimeState* state) {
             }
         }
         if (!single_slot || slot_ids.empty()) {
+            LOG(ERROR) << "LXH: MULTI: " << ctx->root()->debug_string();
             _scanner_conjunct_ctxs.emplace_back(ctx);
             for (SlotId slot_id : slot_ids) {
                 _slots_of_mutli_slot_conjunct.insert(slot_id);
@@ -441,6 +452,7 @@ Status HiveDataSource::_decompose_conjunct_ctxs(RuntimeState* state) {
             if (_conjunct_ctxs_by_slot.find(slot_id) == _conjunct_ctxs_by_slot.end()) {
                 _conjunct_ctxs_by_slot.insert({slot_id, std::vector<ExprContext*>()});
             }
+            LOG(ERROR) << "LXH: SINGLE: " << ctx->root()->debug_string();
             _conjunct_ctxs_by_slot[slot_id].emplace_back(ctx);
         }
     }

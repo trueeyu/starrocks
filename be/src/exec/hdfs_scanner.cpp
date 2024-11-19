@@ -217,7 +217,7 @@ Status HdfsScanner::open(RuntimeState* runtime_state) {
     RETURN_IF_ERROR(_build_scanner_context());
     RETURN_IF_ERROR(do_open(runtime_state));
     _opened = true;
-    VLOG_FILE << "open file success: " << _scanner_params.path << ", scan range = ["
+    LOG(ERROR) << "LXH: open file success: " << _scanner_params.path << ", scan range = ["
               << _scanner_params.scan_range->offset << ","
               << (_scanner_params.scan_range->length + _scanner_params.scan_range->offset) << "]";
     return Status::OK();

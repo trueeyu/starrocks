@@ -73,7 +73,8 @@ private:
     size_t _raw_read_rows = 0;
 
     // get predicate
-    StatusOr<PredicatesPtrs> _get_predicates(const ColumnIdToGlobalDictMap* global_dictmaps, size_t idx);
+    StatusOr<PredicatesRawPtrs > _get_predicates(const ColumnIdToGlobalDictMap* global_dictmaps, size_t idx,
+                                                ObjectPool* object_pool);
 
     PredicatesRawPtrs _as_raw_predicates(const std::vector<std::unique_ptr<ColumnPredicate>>& predicates);
 

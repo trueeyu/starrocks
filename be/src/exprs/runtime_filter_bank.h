@@ -71,6 +71,10 @@ public:
     static bool filter_zonemap_with_min_max(LogicalType type, const JoinRuntimeFilter* filter, const Column* min_column,
                                             const Column* max_column);
 
+    static std::vector<bool> filter_zonemap_with_min_max_batch(LogicalType type, const JoinRuntimeFilter* filter,
+                                                               ColumnPtr min_column, ColumnPtr max_column,
+                                                               const std::vector<bool>& has_nulls);
+
     // create min/max predicate from filter.
     static void create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
                                                const JoinRuntimeFilter* filter, Expr** min_max_predicate);
@@ -158,7 +162,7 @@ public:
     int32_t filter_id() const { return _filter_id; }
     bool skip_wait() const { return _skip_wait; }
     bool is_topn_filter() const { return _is_topn_filter; }
-    ExprContext* probe_expr_ctx() { return _probe_expr_ctx; }
+    ExprContext* probe_expr_ctx() const { return _probe_expr_ctx; }
     bool is_bound(const std::vector<TupleId>& tuple_ids) const { return _probe_expr_ctx->root()->is_bound(tuple_ids); }
     // Disable pushing down runtime filters when:
     //  - partition_by_exprs have multi columns;

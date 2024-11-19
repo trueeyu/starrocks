@@ -130,6 +130,28 @@ public:
 
     void clear();
 
+    std::string debug_string() const {
+        std::stringstream ss;
+        if constexpr (std::is_integral_v<T> && !std::is_same_v<T, int128_t>) {
+            ss << "COLUMN_NAME:" << _column_name << ", ";
+            ss << "COLUMN_TYPE:" << _column_type << ", ";
+            ss << "MIN:" << _type_min << ", ";
+            ss << "MAX:" << _type_max << ", ";
+            ss << "LOW:" << _low_value << ", ";
+            ss << "HIGH:" << _high_value << ", ";
+            ss << "LOW_OP:" << _low_op << ", ";
+            ss << "HIGH_OP:" << _high_op << ", ";
+            ss << "FIX_VALUES:" << _fixed_values.size() << "(";
+            for (auto& item : _fixed_values) {
+                ss << item << ",";
+            }
+            ss << "), ";
+            ss << "INDEX_FILTER:" << (int)_is_index_filter_only << ", ";
+            ss << "INIT_STATE:" << (int)_is_init_state << ", ";
+        }
+        return ss.str();
+    }
+
 private:
     std::string _column_name;
     LogicalType _column_type{TYPE_UNKNOWN}; // Column type (eg: TINYINT,SMALLINT,INT,BIGINT)

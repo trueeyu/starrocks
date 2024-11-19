@@ -192,7 +192,9 @@ void translate_to_string_value(const ColumnPtr& col, size_t i, std::string& valu
 }
 
 Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string>& min_values,
-                                                   const std::vector<std::string>& max_values, ExprContext* ctx,
+                                                   const std::vector<std::string>& max_values,
+                                                   const std::vector<int64_t>& null_counts,
+                                                   ExprContext* ctx,
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
     const Expr* root_expr = ctx->root();
@@ -200,12 +202,14 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
     const Expr* c = root_expr->get_child(0);
     LogicalType ltype = c->type().type;
     ColumnPtr values;
+    bool has_null = false;
     switch (ltype) {
 #define M(NAME)                                                                                                \
     case LogicalType::NAME: {                                                                                  \
         const auto* in_filter = dynamic_cast<const VectorizedInConstPredicate<LogicalType::NAME>*>(root_expr); \
         if (in_filter != nullptr) {                                                                            \
             values = in_filter->get_all_values();                                                              \
+            has_null = in_filter->null_in_set();                                                               \
             break;                                                                                             \
         } else {                                                                                               \
             return Status::OK();                                                                               \
@@ -256,6 +260,11 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
 
         translate_to_string_value(min_col, i, min_value);
         translate_to_string_value(max_col, i, max_value);
+
+        if (has_null && null_counts[i] > 0) {
+            selected[i] = 1;
+            continue;
+        }
 
         Filter filter(values->size(), 1);
 

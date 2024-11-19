@@ -213,9 +213,39 @@ struct FilterZoneMapWithMinMaxOp {
     }
 };
 
+struct FilterZoneMapWithMinMaxOpBatch {
+    template <LogicalType ltype>
+    std::vector<bool> operator()(const JoinRuntimeFilter* expr, ColumnPtr min_column, const ColumnPtr max_column,
+                                 std::vector<bool> has_nulls) {
+        using CppType = RunTimeCppType<ltype>;
+        auto* filter = (RuntimeBloomFilter<ltype>*)(expr);
+        size_t size = has_nulls.size();
+        std::vector<bool> results(size, 0);
+        ColumnViewer<ltype> min_viewer(min_column);
+        ColumnViewer<ltype> max_viewer(max_column);
+        for(size_t i = 0; i < size; i++) {
+            if (filter->has_null() && has_nulls[i]) {
+                results[i] = false;
+                continue;
+            }
+            CppType min_value = min_viewer.value(i);
+            CppType max_value = max_viewer.value(i);
+            results[i] = filter->filter_zonemap_with_min_max(&min_value, &max_value);
+        }
+        return results;
+    }
+};
+
 bool RuntimeFilterHelper::filter_zonemap_with_min_max(LogicalType type, const JoinRuntimeFilter* filter,
                                                       const Column* min_column, const Column* max_column) {
     return type_dispatch_filter(type, false, FilterZoneMapWithMinMaxOp(), filter, min_column, max_column);
+}
+
+std::vector<bool> RuntimeFilterHelper::filter_zonemap_with_min_max_batch(LogicalType type, const JoinRuntimeFilter* filter,
+                                                            ColumnPtr min_column, ColumnPtr max_column,
+                                                            const std::vector<bool>& has_nulls) {
+    std::vector<bool> default_values(has_nulls.size(), 0);
+    return type_dispatch_filter(type, default_values, FilterZoneMapWithMinMaxOpBatch(), filter, min_column, max_column, has_nulls);
 }
 
 Status RuntimeFilterBuildDescriptor::init(ObjectPool* pool, const TRuntimeFilterDescription& desc,
@@ -783,13 +813,17 @@ template <LogicalType Type>
 class MinMaxPredicate : public Expr {
 public:
     using CppType = RunTimeCppType<Type>;
-    MinMaxPredicate(SlotId slot_id, const CppType& min_value, const CppType& max_value)
-            : Expr(TypeDescriptor(Type), false), _slot_id(slot_id), _min_value(min_value), _max_value(max_value) {
+    MinMaxPredicate(SlotId slot_id, const CppType& min_value, const CppType& max_value, bool has_null)
+            : Expr(TypeDescriptor(Type), false),
+              _slot_id(slot_id),
+              _min_value(min_value),
+              _max_value(max_value),
+              _has_null(has_null) {
         _node_type = TExprNodeType::RUNTIME_FILTER_MIN_MAX_EXPR;
     }
     ~MinMaxPredicate() override = default;
     Expr* clone(ObjectPool* pool) const override {
-        return pool->add(new MinMaxPredicate<Type>(_slot_id, _min_value, _max_value));
+        return pool->add(new MinMaxPredicate<Type>(_slot_id, _min_value, _max_value, _has_null));
     }
 
     bool is_constant() const override { return false; }
@@ -803,7 +837,12 @@ public:
         uint8_t* res = result->get_data().data();
 
         if (col->only_null()) {
-            return result;
+            if (_has_null) {
+                return result;
+            } else {
+                memset(res, 0x0, size);
+                return result;
+            }
         }
 
         if (col->is_constant()) {
@@ -827,8 +866,14 @@ public:
                 res[i] = (data[i] >= _min_value && data[i] <= _max_value);
             }
             // we take null as true value.
-            for (int i = 0; i < size; i++) {
-                res[i] = res[i] | null_data[i];
+            if (_has_null) {
+                for (int i = 0; i < size; i++) {
+                    res[i] = res[i] | null_data[i];
+                }
+            } else {
+                for (int i = 0; i < size; i++) {
+                    res[i] = res[i];
+                }
             }
         } else {
             CppType* data = ColumnHelper::cast_to_raw<Type>(col)->get_data().data();
@@ -860,6 +905,7 @@ private:
     SlotId _slot_id;
     const CppType _min_value;
     const CppType _max_value;
+    bool _has_null = false;
 };
 
 class MinMaxPredicateBuilder {
@@ -870,8 +916,8 @@ public:
     template <LogicalType ltype>
     Expr* operator()() {
         auto* bloom_filter = (RuntimeBloomFilter<ltype>*)(_filter);
-        MinMaxPredicate<ltype>* p =
-                _pool->add(new MinMaxPredicate<ltype>(_slot_id, bloom_filter->min_value(), bloom_filter->max_value()));
+        MinMaxPredicate<ltype>* p = _pool->add(new MinMaxPredicate<ltype>(
+                _slot_id, bloom_filter->min_value(), bloom_filter->max_value(), bloom_filter->has_null()));
         return p;
     }
 
@@ -884,7 +930,7 @@ private:
 void RuntimeFilterHelper::create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
                                                          const JoinRuntimeFilter* filter, Expr** min_max_predicate) {
     *min_max_predicate = nullptr;
-    if (filter == nullptr || filter->has_null()) return;
+    if (filter == nullptr) return;
     if (slot_type == TYPE_CHAR || slot_type == TYPE_VARCHAR) return;
     auto res = type_dispatch_filter(slot_type, (Expr*)nullptr, MinMaxPredicateBuilder(pool, slot_id, filter));
     *min_max_predicate = res;

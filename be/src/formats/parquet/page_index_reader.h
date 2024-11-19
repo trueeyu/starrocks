@@ -26,6 +26,7 @@
 #include "common/statusor.h"
 #include "exprs/expr_context.h"
 #include "exprs/function_context.h"
+#include "exprs/runtime_filter_bank.h"
 #include "formats/parquet/column_reader.h"
 #include "formats/parquet/group_reader.h"
 #include "formats/parquet/schema.h"
@@ -66,13 +67,17 @@ public:
     PageIndexReader(GroupReader* group_reader, RandomAccessFile* file,
                     const std::unordered_map<SlotId, std::unique_ptr<ColumnReader>>& column_readers,
                     const tparquet::RowGroup* meta, const std::vector<ExprContext*>& min_max_conjunct_ctxs,
-                    const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot)
+                    const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot,
+                    const RuntimeFilterProbeCollector* runtime_filter_collector,
+                    const std::vector<SlotDescriptor*>& slot_descs)
             : _group_reader(group_reader),
               _file(file),
               _column_readers(column_readers),
               _row_group_metadata(meta),
               _min_max_conjunct_ctxs(min_max_conjunct_ctxs),
-              _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot) {}
+              _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot),
+              _runtime_filter_collector(runtime_filter_collector),
+              _slot_descs(slot_descs) {}
 
     StatusOr<bool> generate_read_range(SparseRange<uint64_t>& sparse_range);
 
@@ -87,6 +92,7 @@ private:
     Status _deal_with_more_conjunct(const std::vector<ExprContext*>& ctxs, const tparquet::ColumnIndex& column_index,
                                     const tparquet::OffsetIndex& offset_index, const ParquetField* field,
                                     const std::string& timezone, Filter& page_filter);
+    bool _runtime_filter_has_this_slot(SlotId id);
 
     GroupReader* _group_reader = nullptr;
     RandomAccessFile* _file = nullptr;
@@ -100,6 +106,9 @@ private:
 
     // conjuncts by slot
     const std::unordered_map<SlotId, std::vector<ExprContext*>>& _conjunct_ctxs_by_slot;
+
+    const RuntimeFilterProbeCollector* _runtime_filter_collector = nullptr;
+    std::vector<SlotDescriptor*> _slot_descs;
 };
 
 } // namespace starrocks::parquet

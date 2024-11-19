@@ -55,10 +55,80 @@ Status ColumnOrPredicate::_evaluate(const Column* column, uint8_t* selection, ui
     return Status::OK();
 }
 
+std::string ColumnOrPredicate::debug_string() const {
+    std::stringstream ss;
+    ss << "OR(";
+    for (size_t i = 0; i < _child.size(); i++) {
+        ss << i << ":" << _child[i]->debug_string() << ",";
+    }
+    ss << ");";
+    return ss.str();
+}
+
 Status ColumnOrPredicate::convert_to(const ColumnPredicate** output, const TypeInfoPtr& target_type_ptr,
                                      ObjectPool* obj_pool) const {
     ColumnOrPredicate* new_pred =
             obj_pool->add(new ColumnOrPredicate(get_type_info(target_type_ptr.get()), _column_id));
+    for (auto pred : _child) {
+        const ColumnPredicate* new_child = nullptr;
+        RETURN_IF_ERROR(pred->convert_to(&new_child, get_type_info(target_type_ptr.get()), obj_pool));
+        new_pred->_child.emplace_back(new_child);
+    }
+    *output = new_pred;
+    return Status::OK();
+}
+
+Status ColumnAndPredicate::evaluate(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
+    return _evaluate(column, selection, from, to);
+}
+
+Status ColumnAndPredicate::evaluate_and(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
+    for (const ColumnPredicate* child : _child) {
+        RETURN_IF_ERROR(child->evaluate_and(column, selection, from, to));
+    }
+    return Status::OK();
+}
+
+Status ColumnAndPredicate::evaluate_or(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
+    _buff.resize(column->size());
+    RETURN_IF_ERROR(_evaluate(column, _buff.data(), from, to));
+    const uint8_t* p = _buff.data();
+    for (uint16_t i = from; i < to; i++) {
+        selection[i] |= p[i];
+    }
+    return Status::OK();
+}
+
+std::string ColumnAndPredicate::debug_string() const {
+    std::stringstream ss;
+    ss << "AND(";
+    for (size_t i=0; i < _child.size(); i++) {
+        ss << i << ":" << _child[i]->debug_string() << ",";
+    }
+    ss << ")";
+    return ss.str();
+}
+
+Status ColumnAndPredicate::_evaluate(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
+    RETURN_IF_ERROR(_child[0]->evaluate(column, selection, from, to));
+    for (size_t i = 1; i < _child.size(); i++) {
+        RETURN_IF_ERROR(_child[i]->evaluate_and(column, selection, from, to));
+    }
+    return Status::OK();
+}
+
+// return false if page not satisfied
+bool ColumnAndPredicate::zone_map_filter(const ZoneMapDetail& detail) const {
+    for (const ColumnPredicate* child : _child) {
+        RETURN_IF(!child->zone_map_filter(detail), false);
+    }
+    return _child.empty();
+}
+
+Status ColumnAndPredicate::convert_to(const ColumnPredicate** output, const TypeInfoPtr& target_type_ptr,
+                                      ObjectPool* obj_pool) const {
+    ColumnAndPredicate* new_pred =
+            obj_pool->add(new ColumnAndPredicate(get_type_info(target_type_ptr.get()), _column_id));
     for (auto pred : _child) {
         const ColumnPredicate* new_child = nullptr;
         RETURN_IF_ERROR(pred->convert_to(&new_child, get_type_info(target_type_ptr.get()), obj_pool));

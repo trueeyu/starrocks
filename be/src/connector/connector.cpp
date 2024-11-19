@@ -84,15 +84,20 @@ Status DataSource::parse_runtime_filters(RuntimeState* state) {
     for (const auto& item : _runtime_filters->descriptors()) {
         RuntimeFilterProbeDescriptor* probe = item.second;
         DCHECK(runtime_bloom_filter_eval_context.driver_sequence != -1);
+        LOG(ERROR) << "LXH: PREPARE_RUNTIME 1";
         const JoinRuntimeFilter* filter = probe->runtime_filter(runtime_bloom_filter_eval_context.driver_sequence);
         if (filter == nullptr) continue;
+        LOG(ERROR) << "LXH: PREPARE_RUNTIME 2";
         SlotId slot_id;
         if (!probe->is_probe_slot_ref(&slot_id)) continue;
+        LOG(ERROR) << "LXH: PREPARE_RUNTIME 3";
         LogicalType slot_type = probe->probe_expr_type();
         Expr* min_max_predicate = nullptr;
         RuntimeFilterHelper::create_min_max_value_predicate(state->obj_pool(), slot_id, slot_type, filter,
                                                             &min_max_predicate);
+        LOG(ERROR) << "LXH: PREPARE_RUNTIME 4";
         if (min_max_predicate != nullptr) {
+            LOG(ERROR) << "LXH: PREPARE_RUNTIME 4";
             ExprContext* ctx = state->obj_pool()->add(new ExprContext(min_max_predicate));
             RETURN_IF_ERROR(ctx->prepare(state));
             RETURN_IF_ERROR(ctx->open(state));
