@@ -383,6 +383,8 @@ public:
 
     bool is_not_in() const { return _is_not_in; }
 
+    void set_is_not_in(bool is_not_in) { _is_not_in = is_not_in; }
+
     bool null_in_set() const { return _null_in_set; }
 
     void set_null_in_set(bool v) { _null_in_set = v; }
@@ -414,7 +416,7 @@ private:
         }
     }
 
-    const bool _is_not_in{false};
+    bool _is_not_in{false};
     bool _is_prepare{false};
     bool _null_in_set{false};
     bool _is_join_runtime_filter = false;

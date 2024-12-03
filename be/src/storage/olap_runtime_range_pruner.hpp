@@ -19,9 +19,13 @@
 #include <utility>
 
 #include "exec/olap_common.h"
+#include "exec/olap_scan_prepare.h"
+#include "exprs/binary_predicate.h"
 #include "exprs/runtime_filter_bank.h"
 #include "runtime/global_dict/config.h"
 #include "runtime/runtime_state.h"
+#include "storage/column_and_predicate.h"
+#include "storage/column_or_predicate.h"
 #include "storage/column_predicate.h"
 #include "storage/olap_runtime_range_pruner.h"
 #include "storage/predicate_parser.h"
@@ -63,6 +67,7 @@ struct RuntimeColumnPredicateBuilder {
             range.set_index_filter_only(true);
 
             const JoinRuntimeFilter* rf = desc->runtime_filter(driver_sequence);
+            bool has_null = rf->has_null();
 
             // applied global-dict optimized column
             if constexpr (ltype == TYPE_VARCHAR) {
@@ -92,7 +97,27 @@ struct RuntimeColumnPredicateBuilder {
                 preds.emplace_back(p);
             }
 
-            return preds;
+            if (has_null) {
+                std::vector<const ColumnPredicate*> new_preds;
+
+                ColumnAndPredicate* and_pred = new ColumnAndPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
+                object_pool->add(and_pred);
+                and_pred->add_child(preds.begin(), preds.end());
+
+                ColumnPredicate* null_pred =
+                        new_column_null_predicate(preds[0]->type_info_ptr(), preds[0]->column_id(), true);
+                object_pool->add(null_pred);
+
+                ColumnOrPredicate* or_pred = new ColumnOrPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
+                object_pool->add(or_pred);
+                or_pred->add_child(and_pred);
+                or_pred->add_child(null_pred);
+                new_preds.template emplace_back(or_pred);
+
+                return new_preds;
+            } else {
+                return preds;
+            }
         }
     }
 
@@ -198,6 +223,7 @@ inline Status OlapRuntimeScanRangePruner::_update(const ColumnIdToGlobalDictMap*
     if (_arrived_runtime_filters_masks.empty()) {
         return Status::OK();
     }
+    ObjectPool object_pool;
     for (size_t i = 0; i < _arrived_runtime_filters_masks.size(); ++i) {
         // 1. runtime filter arrived
         // 2. runtime filter updated and read rows greater than rf_update_threhold
@@ -224,8 +250,8 @@ inline Status OlapRuntimeScanRangePruner::_update(const ColumnIdToGlobalDictMap*
 
 inline auto OlapRuntimeScanRangePruner::_get_predicates(const ColumnIdToGlobalDictMap* global_dictmaps, size_t idx,
                                                         ObjectPool* pool) -> StatusOr<PredicatesRawPtrs> {
-    auto rf = _unarrived_runtime_filters[idx]->runtime_filter(_driver_sequence);
-    if (rf->has_null()) return PredicatesRawPtrs{};
+    //auto rf = _unarrived_runtime_filters[idx]->runtime_filter(_driver_sequence);
+    //if (rf->has_null()) return PredicatesRawPtrs{};
     // convert to olap filter
     auto slot_desc = _slot_descs[idx];
     return type_dispatch_predicate<StatusOr<PredicatesRawPtrs>>(

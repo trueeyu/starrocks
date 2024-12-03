@@ -117,6 +117,11 @@ public:
         return 1;
     }
 
+    SlotId get_slot_id() const { return _slot_id; }
+
+    CppType get_min_value() const { return _min_value; }
+    CppType get_max_value() const { return _max_value; }
+
     std::string debug_string() const override {
         std::stringstream out;
         auto expr_debug_string = Expr::debug_string();

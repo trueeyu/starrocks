@@ -252,7 +252,9 @@ StatusOr<ExprContext*> BoxedExprContext::expr_context(ObjectPool* obj_pool, Runt
 template <BoxedExprType E, CompoundNodeType Type>
 ChunkPredicateBuilder<E, Type>::ChunkPredicateBuilder(const ScanConjunctsManagerOptions& opts, std::vector<E> exprs,
                                                       bool is_root_builder)
-        : _opts(opts), _exprs(std::move(exprs)), _is_root_builder(is_root_builder), _normalized_exprs(_exprs.size()) {}
+        : _opts(opts), _exprs(std::move(exprs)), _is_root_builder(is_root_builder), _normalized_exprs(_exprs.size()) {
+    runtime_filters_normalized.resize(_opts.runtime_filters->size(), false);
+}
 
 template <BoxedExprType E, CompoundNodeType Type>
 StatusOr<bool> ChunkPredicateBuilder<E, Type>::parse_conjuncts() {
@@ -360,7 +362,6 @@ template <LogicalType SlotType, typename RangeValueType, bool Negative>
 requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize_in_or_equal_predicate(
         const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range) {
     // clang-format on
-
     Status status;
 
     for (size_t i = 0; i < _exprs.size(); i++) {
@@ -385,8 +386,7 @@ requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize
                     continue;
                 }
 
-                if (is_not_in<Negative>(pred) || pred->null_in_set() ||
-                    pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
+                if (is_not_in<Negative>(pred) || pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
                     continue;
                 }
 
@@ -462,7 +462,7 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
                         continue;
                     }
 
-                    if (is_not_in<Negative>(pred) || pred->null_in_set() ||
+                    if (is_not_in<Negative>(pred) ||
                         pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
                         continue;
                     }
@@ -541,6 +541,199 @@ Status ChunkPredicateBuilder<E, Type>::normalize_binary_predicate(const SlotDesc
     }
 
     return Status::OK();
+}
+
+template <class RuntimeFilter, class Decoder>
+struct MinMaxParser {
+    MinMaxParser(const RuntimeFilter* runtime_filter_, Decoder* decoder)
+            : runtime_filter(runtime_filter_), decoder(decoder) {}
+    auto min_value() {
+        auto code = runtime_filter->min_value();
+        return decoder->decode(code);
+    }
+    auto max_value() {
+        auto code = runtime_filter->max_value();
+        return decoder->decode(code);
+    }
+
+private:
+    const RuntimeFilter* runtime_filter;
+    const Decoder* decoder;
+};
+
+template <BoxedExprType E, CompoundNodeType Type>
+template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
+void ChunkPredicateBuilder<E, Type>::build_minmax_range_null(ObjectPool* pool, Range& range,
+                                                             const JoinRuntimeFilter* rf, Expr* col_ref,
+                                                             Args&&... args) {
+    const RuntimeBloomFilter<mapping_type>* filter = down_cast<const RuntimeBloomFilter<mapping_type>*>(rf);
+    using CppType = typename RunTimeTypeTraits<mapping_type>::CppType;
+    using DecoderType = Decoder<typename RunTimeTypeTraits<mapping_type>::CppType>;
+    DecoderType decoder(std::forward<Args>(args)...);
+    MinMaxParser<RuntimeBloomFilter<mapping_type>, DecoderType> parser(filter, &decoder);
+    auto min_value = parser.min_value();
+    auto max_value = parser.max_value();
+    const TypeDescriptor& col_type = col_ref->type();
+
+    std::vector<BoxedExpr> containers;
+
+    ColumnPtr const_min_col = ColumnHelper::create_const_column<mapping_type>(min_value, 1);
+    ColumnPtr const_max_col = ColumnHelper::create_const_column<mapping_type>(max_value, 1);
+    VectorizedLiteral* min_literal = new VectorizedLiteral(std::move(const_min_col), col_type);
+    VectorizedLiteral* max_literal = new VectorizedLiteral(std::move(const_max_col), col_type);
+
+    Expr* left_expr = nullptr;
+    if (filter->left_close_interval()) {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::GE);
+        left_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        left_expr->add_child(col_ref);
+        left_expr->add_child(min_literal);
+    } else {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::GT);
+        left_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        left_expr->add_child(col_ref);
+        left_expr->add_child(min_literal);
+    }
+
+    Expr* right_expr = nullptr;
+    if (filter->right_close_interval()) {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::LE);
+        right_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        right_expr->add_child(col_ref);
+        right_expr->add_child(max_literal);
+    } else {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::LT);
+        right_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        right_expr->add_child(col_ref);
+        right_expr->add_child(max_literal);
+    }
+
+    TExprNode null_pred_node;
+    null_pred_node.node_type = TExprNodeType::FUNCTION_CALL;
+    TFunction fn;
+    fn.name.function_name = "is_null_pred";
+    null_pred_node.__set_fn(fn);
+    TTypeNode type_node;
+    type_node.type = TTypeNodeType::SCALAR;
+    TScalarType scalar_type;
+    scalar_type.__set_type(TPrimitiveType::BOOLEAN);
+    type_node.__set_scalar_type(scalar_type);
+    null_pred_node.type.types.emplace_back(type_node);
+    auto* null_pred = VectorizedIsNullPredicateFactory::from_thrift(null_pred_node);
+    null_pred->add_child(col_ref);
+
+    TExprNode and_pred_node;
+    and_pred_node.node_type = TExprNodeType::COMPOUND_PRED;
+    and_pred_node.num_children = 2;
+    and_pred_node.is_nullable = false;
+    and_pred_node.__set_opcode(TExprOpcode::COMPOUND_AND);
+    and_pred_node.__set_child_type(to_thrift(col_type.type));
+    and_pred_node.__set_type(TypeDescriptor(TYPE_BOOLEAN).to_thrift());
+    Expr* and_expr = VectorizedCompoundPredicateFactory::from_thrift(and_pred_node);
+    and_expr->add_child(left_expr);
+    and_expr->add_child(right_expr);
+
+    containers.emplace_back(and_expr);
+    containers.emplace_back(null_pred);
+
+    ChunkPredicateBuilder<BoxedExpr, CompoundNodeType::OR> child_builder(_opts, containers, false);
+
+    auto normalized = child_builder.parse_conjuncts();
+    if (!normalized.ok()) {
+    } else if (normalized.value()) {
+        _child_builders.emplace_back(child_builder);
+    } else {
+    }
+}
+
+template <BoxedExprType E, CompoundNodeType Type>
+template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
+void ChunkPredicateBuilder<E, Type>::build_minmax_range_reverse(ObjectPool* pool, Range& range,
+                                                                const JoinRuntimeFilter* rf, Expr* col_ref,
+                                                                Args&&... args) {
+    const RuntimeBloomFilter<mapping_type>* filter = down_cast<const RuntimeBloomFilter<mapping_type>*>(rf);
+    using CppType = typename RunTimeTypeTraits<mapping_type>::CppType;
+    using DecoderType = Decoder<typename RunTimeTypeTraits<mapping_type>::CppType>;
+    DecoderType decoder(std::forward<Args>(args)...);
+    MinMaxParser<RuntimeBloomFilter<mapping_type>, DecoderType> parser(filter, &decoder);
+    auto min_value = parser.min_value();
+    auto max_value = parser.max_value();
+    const TypeDescriptor& col_type = col_ref->type();
+
+    std::vector<BoxedExpr> containers;
+
+    ColumnPtr const_min_col = ColumnHelper::create_const_column<mapping_type>(min_value, 1);
+    ColumnPtr const_max_col = ColumnHelper::create_const_column<mapping_type>(max_value, 1);
+    VectorizedLiteral* min_literal = new VectorizedLiteral(std::move(const_min_col), col_type);
+    VectorizedLiteral* max_literal = new VectorizedLiteral(std::move(const_max_col), col_type);
+
+    Expr* left_expr = nullptr;
+    if (filter->left_close_interval()) {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::LT);
+        left_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        left_expr->add_child(col_ref);
+        left_expr->add_child(min_literal);
+    } else {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::LE);
+        left_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        left_expr->add_child(col_ref);
+        left_expr->add_child(min_literal);
+    }
+
+    Expr* right_expr = nullptr;
+    if (filter->right_close_interval()) {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::GT);
+        right_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        right_expr->add_child(col_ref);
+        right_expr->add_child(max_literal);
+    } else {
+        TExprNode node;
+        node.node_type = TExprNodeType::BINARY_PRED;
+        node.type = TypeDescriptor(TYPE_BOOLEAN).to_thrift();
+        node.child_type = to_thrift(col_type.type);
+        node.__set_opcode(TExprOpcode::GE);
+        right_expr = VectorizedBinaryPredicateFactory::from_thrift(node);
+        right_expr->add_child(col_ref);
+        right_expr->add_child(max_literal);
+    }
+    containers.emplace_back(left_expr);
+    containers.emplace_back(right_expr);
+
+    ChunkPredicateBuilder<BoxedExpr, CompoundNodeType::OR> child_builder(_opts, containers, false);
+    auto normalized = child_builder.parse_conjuncts();
+    if (!normalized.ok()) {
+    } else if (normalized.value()) {
+        _child_builders.emplace_back(child_builder);
+    } else {
+    }
 }
 
 template <BoxedExprType E, CompoundNodeType Type>
@@ -651,6 +844,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
     }
 
     // bloom runtime filter
+    int i = 0;
     for (const auto& it : _opts.runtime_filters->descriptors()) {
         RuntimeFilterProbeDescriptor* desc = it.second;
         const JoinRuntimeFilter* rf = desc->runtime_filter(_opts.driver_sequence);
@@ -661,9 +855,12 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
         // probe expr is slot ref and slot id matches.
         if (!desc->is_probe_slot_ref(&slot_id) || slot_id != slot.id()) continue;
 
+        runtime_filters_normalized[i] = true;
+
         // runtime filter existed and does not have null.
         if (rf == nullptr) {
             rt_ranger_params.add_unarrived_rf(desc, &slot, _opts.driver_sequence);
+            i++;
             continue;
         }
 
@@ -700,6 +897,26 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                             *range, rf, nullptr);
                 }
             }
+        } else if constexpr (is_integer_type_2(SlotType)) {
+            if (rf->has_null()) {
+                if (Negative) {
+                    CHECK(false);
+                } else {
+                    build_minmax_range_null<RangeType, ValueType, SlotType,
+                                            detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
+                            _opts.obj_pool, *range, rf, desc->probe_expr_ctx()->root(), nullptr);
+                }
+            } else {
+                if (Negative) {
+                    build_minmax_range_reverse<RangeType, ValueType, SlotType,
+                                               detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
+                            _opts.obj_pool, *range, rf, desc->probe_expr_ctx()->root(), nullptr);
+                } else {
+                    detail::RuntimeColumnPredicateBuilder::build_minmax_range<
+                            RangeType, ValueType, SlotType, detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
+                            *range, rf, nullptr);
+                }
+            }
         } else {
             if (rf->has_null()) {
                 normalized_rf_with_null<SlotType, SlotType, detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
@@ -710,6 +927,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                                                                                                             nullptr);
             }
         }
+        i++;
     }
 
     return Status::OK();

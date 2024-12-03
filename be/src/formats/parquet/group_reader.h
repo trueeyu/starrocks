@@ -102,6 +102,9 @@ struct GroupReaderParam {
     const std::vector<ColumnPtr>* partition_values = nullptr;
     // not existed column
     const std::vector<SlotDescriptor*>* not_existed_slots = nullptr;
+    const RuntimeFilterProbeCollector* runtime_filter_collector = nullptr;
+    std::vector<SlotDescriptor*> slot_descs;
+    const PredicateTree* predicate_tree = nullptr;
 };
 
 class PageIndexReader;

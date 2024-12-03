@@ -187,17 +187,21 @@ Status FileReader::_build_split_tasks() {
 
 bool FileReader::_filter_group_with_min_max_conjuncts(const GroupReaderPtr& group_reader) {
     // filter by min/max conjunct ctxs.
+    LOG(ERROR) << "LXH: FILTER_GROUP: " << _scanner_ctx->min_max_conjunct_ctxs.size();
     if (!_scanner_ctx->min_max_conjunct_ctxs.empty()) {
         const TupleDescriptor& tuple_desc = *(_scanner_ctx->min_max_tuple_desc);
         ChunkPtr min_chunk = ChunkHelper::new_chunk(tuple_desc, 0);
         ChunkPtr max_chunk = ChunkHelper::new_chunk(tuple_desc, 0);
+        std::vector<bool> has_nulls(tuple_desc.slots().size(), 0);
 
-        auto st = _read_min_max_chunk(group_reader, tuple_desc.slots(), &min_chunk, &max_chunk);
+        auto st = _read_min_max_chunk(group_reader, tuple_desc.slots(), &min_chunk, &max_chunk, has_nulls);
         if (!st.ok()) {
             // if there are some error when dealing statistics, shouldn't return the error status,
             // just read data ignore the statistics.
             return false;
         }
+        LOG(ERROR) << "LXH: MIN: " << min_chunk->debug_row(0);
+        LOG(ERROR) << "LXH: MAX: " << max_chunk->debug_row(0);
 
         for (auto& min_max_conjunct_ctx : _scanner_ctx->min_max_conjunct_ctxs) {
             auto res_min = min_max_conjunct_ctx->evaluate(min_chunk.get());
@@ -231,6 +235,8 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
         const std::vector<SlotDescriptor*>& slots = _scanner_ctx->slot_descs;
 
         for (auto& it : _scanner_ctx->runtime_filter_collector->descriptors()) {
+            LOG(ERROR) << "LXH: FILTER_GROUP_WITH_BLOOM: " << it.second->debug_string();
+
             RuntimeFilterProbeDescriptor* rf_desc = it.second;
             // external node won't have colocate runtime filter
             const JoinRuntimeFilter* filter = rf_desc->runtime_filter(-1);
@@ -277,10 +283,14 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
 bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_reader) {
     // runtime_in_filter, the sql-original in_filter and is_null/not_null filter will be in
     // _scanner_ctx->conjunct_ctxs_by_slot
+    LOG(ERROR) << "LXH: FILTER GROUP WITH MORE FILTER: " << _scanner_ctx->conjunct_ctxs_by_slot.size();
     for (const auto& kv : _scanner_ctx->conjunct_ctxs_by_slot) {
         StatisticsHelper::StatSupportedFilter filter_type;
+        LOG(ERROR) << "LXH: filter group start: " << kv.first;
         for (auto ctx : kv.second) {
+            LOG(ERROR) << "LXH: filter group start ctx: " << kv.first << ":" << ctx->root()->debug_string();
             if (StatisticsHelper::can_be_used_for_statistics_filter(ctx, filter_type)) {
+                LOG(ERROR) << "LXH: filter group start ctx use stats filter: " << kv.first << ":" << ctx->root()->debug_string();
                 SlotDescriptor* slot = nullptr;
                 for (auto s : _scanner_ctx->slot_descs) {
                     if (s->id() == kv.first) {
@@ -347,6 +357,8 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                 } else if (filter_type == StatisticsHelper::StatSupportedFilter::RF_MIN_MAX) {
                     // already process in `_filter_group_with_bloom_filter_min_max_conjuncts`.
                 }
+            } else {
+                LOG(ERROR) << "LXH: filter group start ctx not use stats filter: " << kv.first << ":" << ctx->root()->debug_string();
             }
         }
     }
@@ -423,7 +435,7 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
 }
 
 Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
-                                       ChunkPtr* min_chunk, ChunkPtr* max_chunk) const {
+                                       ChunkPtr* min_chunk, ChunkPtr* max_chunk, std::vector<bool>& has_nulls) const {
     const HdfsScannerContext& ctx = *_scanner_ctx;
 
     for (size_t i = 0; i < slots.size(); i++) {
@@ -439,6 +451,7 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
                 // column not exist in parquet file
                 (*min_chunk)->columns()[i]->append_nulls(1);
                 (*max_chunk)->columns()[i]->append_nulls(1);
+                has_nulls[i] = true;
             } else {
                 // is partition column
                 auto* const_column = ColumnHelper::as_raw_column<ConstColumn>(ctx.partition_values[col_idx]);
@@ -446,9 +459,11 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
                 if (data_column->is_nullable()) {
                     (*min_chunk)->columns()[i]->append_nulls(1);
                     (*max_chunk)->columns()[i]->append_nulls(1);
+                    has_nulls[i] = true;
                 } else {
                     (*min_chunk)->columns()[i]->append(*data_column, 0, 1);
                     (*max_chunk)->columns()[i]->append(*data_column, 0, 1);
+                    has_nulls[i] = false;
                 }
             }
         } else if (!column_meta->__isset.statistics) {
@@ -472,6 +487,11 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
             if (field == nullptr) {
                 LOG(WARNING) << "Can't get " + slot->col_name() + "'s ParquetField in _read_min_max_chunk.";
                 return Status::InternalError(strings::Substitute("Can't get $0 field", slot->col_name()));
+            }
+            if (column_meta->statistics.null_count > 0) {
+                has_nulls[i] = true;
+            } else {
+                has_nulls[i] = false;
             }
 
             RETURN_IF_ERROR(StatisticsHelper::get_min_max_value(_file_metadata.get(), slot->type(), column_meta, field,
@@ -507,6 +527,7 @@ bool FileReader::_select_row_group(const tparquet::RowGroup& row_group) {
     const auto* scan_range = _scanner_ctx->scan_range;
     size_t scan_start = scan_range->offset;
     size_t scan_end = scan_range->length + scan_start;
+    LOG(ERROR) << "LXH: SELECT_ROW_GROUP_2: " << scan_start << ":" << scan_end << ":" << row_group_start;
     if (row_group_start >= scan_start && row_group_start < scan_end) {
         return true;
     }
@@ -531,16 +552,22 @@ Status FileReader::_init_group_readers() {
     _group_reader_param.not_existed_slots = &fd_scanner_ctx.not_existed_slots;
     // for pageIndex
     _group_reader_param.min_max_conjunct_ctxs = fd_scanner_ctx.min_max_conjunct_ctxs;
+    _group_reader_param.runtime_filter_collector = fd_scanner_ctx.runtime_filter_collector;
+    _group_reader_param.slot_descs = fd_scanner_ctx.slot_descs;
     _group_reader_param.predicate_tree = &fd_scanner_ctx.predicate_tree;
 
     int64_t row_group_first_row = 0;
     // select and create row group readers.
+    LOG(ERROR) << "LXH: GROUP_COUNT: " << _file_metadata->t_metadata().row_groups.size();
     for (size_t i = 0; i < _file_metadata->t_metadata().row_groups.size(); i++) {
+        LOG(ERROR) << "LXH: GROUP_COUNT 1: " << i << ":" << _scanner_ctx->scan_range->offset << ":"
+                << _scanner_ctx->scan_range->length;
         if (i > 0) {
             row_group_first_row += _file_metadata->t_metadata().row_groups[i - 1].num_rows;
         }
 
         if (!_select_row_group(_file_metadata->t_metadata().row_groups[i])) {
+            LOG(ERROR) << "LXH: GROUP_COUNT 2: " << i;
             continue;
         }
 
@@ -552,10 +579,12 @@ Status FileReader::_init_group_readers() {
 
         // You should call row_group_reader->init() before _filter_group()
         if (_filter_group(row_group_reader)) {
+            LOG(ERROR) << "LXH: GROUP_COUNT 3: " << i;
             DLOG(INFO) << "row group " << i << " of file has been filtered by min/max conjunct";
             _group_reader_param.stats->parquet_filtered_row_groups += 1;
             continue;
         }
+        LOG(ERROR) << "LXH: GROUP_COUNT 4: " << i;
 
         _row_group_readers.emplace_back(row_group_reader);
         int64_t num_rows = _file_metadata->t_metadata().row_groups[i].num_rows;
