@@ -109,7 +109,7 @@ private:
     // make min/max chunk from stats of row group meta
     // exist=true: group meta contain statistics info
     Status _read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
-                               ChunkPtr* min_chunk, ChunkPtr* max_chunk) const;
+                               ChunkPtr* min_chunk, ChunkPtr* max_chunk, std::vector<bool>& has_nulls) const;
 
     // only scan partition column + not exist column
     Status _exec_no_materialized_column_scan(ChunkPtr* chunk);
@@ -122,13 +122,6 @@ private:
 
     // Validate the magic bytes and get the length of metadata
     StatusOr<uint32_t> _parse_metadata_length(const std::vector<char>& footer_buff) const;
-
-    // get min/max value from row group stats
-    Status _get_min_max_value(const SlotDescriptor* slot, const tparquet::ColumnMetaData* column_meta,
-                              const ParquetField* field, std::vector<std::string>& min_values,
-                              std::vector<std::string>& max_values) const;
-
-    bool _has_correct_min_max_stats(const tparquet::ColumnMetaData& column_meta, const SortOrder& sort_order) const;
 
     Status _build_split_tasks();
 

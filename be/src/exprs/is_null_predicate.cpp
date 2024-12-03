@@ -100,6 +100,14 @@ public:
 };
 
 Expr* VectorizedIsNullPredicateFactory::from_thrift(const TExprNode& node) {
+    LOG(ERROR) << "LXH: IS_NULL_PRED: " << node.is_null_pred;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: opcode: " << (int)node.__isset.opcode << ":" << node.opcode;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: type: " << node.type;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: type_size: " << node.type.types.size();
+    LOG(ERROR) << "LXH: IS_NULL_PRED: node_type: " << node.node_type;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: child_type: " << (int)node.__isset.child_type << ":" << node.child_type;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: num_child: " << node.num_children;
+    LOG(ERROR) << "LXH: IS_NULL_PRED: func_name: " << node.fn.name.function_name;
     if (node.fn.name.function_name == "is_null_pred") {
         return new VectorizedIsNullPredicate(node);
     } else {

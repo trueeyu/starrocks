@@ -47,6 +47,14 @@ public:
     void set_num_rows(const size_t num_rows) { _num_rows = num_rows; }
     // FIXME: it's not rows in the zone, but incorrectly set to the segment rows
     size_t num_rows() const { return _num_rows; }
+    std::string debug_string() const {
+        std::stringstream ss;
+        ss << "HAS_NULL(" << (int)_has_null << "), ";
+        ss << "MIN(" << _min_value.debug_string() << "), ";
+        ss << "MAX(" << _min_value.debug_string() << "), ";
+        ss << "NUM_ROWS(" << _num_rows << "), ";
+        return ss.str();
+    }
 
 private:
     bool _has_null;

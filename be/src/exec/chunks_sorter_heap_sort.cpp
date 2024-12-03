@@ -161,6 +161,7 @@ Status ChunksSorterHeapSort::get_next(ChunkPtr* chunk, bool* eos) {
 }
 
 std::vector<JoinRuntimeFilter*>* ChunksSorterHeapSort::runtime_filters(ObjectPool* pool) {
+    LOG(ERROR) << "LXH: get filter";
     if (_sort_heap == nullptr || _sort_heap->size() < _number_of_rows_to_sort()) {
         return nullptr;
     }
@@ -175,19 +176,23 @@ std::vector<JoinRuntimeFilter*>* ChunksSorterHeapSort::runtime_filters(ObjectPoo
     const auto& top_cursor_column = top_cursor.data_segment()->order_by_columns[0];
     bool is_close_interval = _sort_desc.num_columns() != 1;
 
+    bool has_null = false;
     if (top_cursor_column->is_null(cursor_rid)) {
-        return nullptr;
+        has_null = true;
     }
+
+    LOG(ERROR) << "LXH: order_by_column: " << top_cursor_column->has_null() << ":" <<cursor_rid
+               << ":" << top_cursor_column->is_null(cursor_rid);
 
     if (_runtime_filter.empty()) {
         auto rf = type_dispatch_predicate<JoinRuntimeFilter*>(
                 (*_sort_exprs)[0]->root()->type().type, false, detail::SortRuntimeFilterBuilder(), pool,
-                top_cursor_column, cursor_rid, _sort_desc.descs[0].asc_order(), is_close_interval);
+                top_cursor_column, cursor_rid, _sort_desc.descs[0].asc_order(), is_close_interval, has_null);
         _runtime_filter.emplace_back(rf);
     } else {
-        type_dispatch_predicate<std::nullptr_t>((*_sort_exprs)[0]->root()->type().type, false,
-                                                detail::SortRuntimeFilterUpdater(), _runtime_filter.back(),
-                                                top_cursor_column, cursor_rid, _sort_desc.descs[0].asc_order());
+        type_dispatch_predicate<std::nullptr_t>(
+                (*_sort_exprs)[0]->root()->type().type, false, detail::SortRuntimeFilterUpdater(),
+                _runtime_filter.back(), top_cursor_column, cursor_rid, _sort_desc.descs[0].asc_order(), has_null);
     }
     return &_runtime_filter;
 }

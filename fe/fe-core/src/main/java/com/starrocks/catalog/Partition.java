@@ -309,7 +309,8 @@ public class Partition extends MetaObject implements GsonPostProcessable {
             if (subPartition.getName() == null) {
                 subPartition.setName(generatePhysicalPartitionName(subPartition.getId()));
             }
-            if (subPartition.getBaseIndex().getShardGroupId() == PhysicalPartition.INVALID_SHARD_GROUP_ID) {
+            if (subPartition.getBaseIndex() != null
+                    && subPartition.getBaseIndex().getShardGroupId() == PhysicalPartition.INVALID_SHARD_GROUP_ID) {
                 subPartition.getBaseIndex().setShardGroupId(getDefaultPhysicalPartition().getShardGroupId());
             }
 
