@@ -336,6 +336,29 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                     if (!selected[0]) {
                         return true;
                     }
+                } else if (filter_type == StatisticsHelper::StatSupportedFilter::RUNTIME_FILTER_MIN_MAX) {
+                    std::vector<string> min_values;
+                    std::vector<string> max_values;
+                    std::vector<int64_t> null_counts;
+
+                    const ParquetField* field = group_reader->get_column_parquet_field(slot->id());
+                    if (field == nullptr) {
+                        LOG(WARNING) << "Can't get " + slot->col_name() + "'s ParquetField in _read_min_max_chunk.";
+                        continue;
+                    }
+                    auto st = StatisticsHelper::get_min_max_value(_file_metadata.get(), slot->type(), column_meta,
+                                                                  field, min_values, max_values);
+                    if (!st.ok()) continue;
+                    Filter selected(min_values.size(), 1);
+                    null_counts.emplace_back(column_meta->statistics.null_count);
+                    st = StatisticsHelper::bloom_filter_on_min_max_stat(min_values, max_values, null_counts, ctx, field,
+                                                                        _scanner_ctx->timezone, selected);
+                    if (!st.ok()) {
+                        continue;
+                    }
+                    if (!selected[0]) {
+                        return true;
+                    }
                 }
             } else {
                 LOG(ERROR) << "LXH: filter group start ctx not use stats filter: " << kv.first << ":" << ctx->root()->debug_string();

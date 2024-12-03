@@ -156,6 +156,8 @@ bool StatisticsHelper::can_be_used_for_statistics_filter(ExprContext* ctx,
         } else {
             return false;
         }
+    } else if (root_expr->node_type() == TExprNodeType::RUNTIME_FILTER_MIN_MAX_EXPR) {
+        return true;
     } else {
         return false;
     }
@@ -191,10 +193,72 @@ void translate_to_string_value(const ColumnPtr& col, size_t i, std::string& valu
     });
 }
 
+Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::string>& min_values,
+                                                      const std::vector<std::string>& max_values,
+                                                      const std::vector<int64_t>& null_counts, ExprContext* ctx,
+                                                      const ParquetField* field, const std::string& timezone,
+                                                      Filter& selected) {
+    const Expr* root_expr = ctx->root();
+    LogicalType ltype = root_expr->type().type;
+    auto min_chunk = std::make_unique<Chunk>();
+    auto max_chunk = std::make_unique<Chunk>();
+    ColumnPtr min_column = ColumnHelper::create_column(root_expr->type(), true);
+    ColumnPtr max_column = ColumnHelper::create_column(root_expr->type(), true);
+    SlotId id;
+
+    ColumnPtr values;
+    bool has_null = false;
+    switch (ltype) {
+#define M(NAME)                                                                                          \
+    case LogicalType::NAME: {                                                                            \
+        const auto* min_max_filter = dynamic_cast<const MinMaxPredicate<LogicalType::NAME>*>(root_expr); \
+        id = min_max_filter->get_slot_id();                                                              \
+        min_chunk->append_column(min_column, id);                                                        \
+        max_chunk->append_column(max_column, id);                                                        \
+        has_null = min_max_filter->has_null();                                                           \
+        break;                                                                                           \
+    }
+        APPLY_FOR_ALL_SCALAR_TYPE(M);
+#undef M
+    default:
+        return Status::OK();
+    }
+
+    auto st = StatisticsHelper::decode_value_into_column(min_column, min_values, root_expr->type(), field, timezone);
+    if (!st.ok()) {
+        LOG(INFO) << "LXH: decode min value failed";
+        return Status::OK();
+    }
+    st = StatisticsHelper::decode_value_into_column(max_column, max_values, root_expr->type(), field, timezone);
+    if (!st.ok()) {
+        LOG(INFO) << "LXH: decode max value failed";
+        return Status::OK();
+    }
+
+    size_t page_num = min_values.size();
+
+    ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
+    ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
+    auto unpack_min_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, min_selected);
+    auto unpack_max_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, max_selected);
+    Filter min_filter = ColumnHelper::merge_nullable_filter(unpack_min_selected.get());
+    Filter max_filter = ColumnHelper::merge_nullable_filter(unpack_max_selected.get());
+    ColumnHelper::or_two_filters(&min_filter, max_filter.data());
+
+    if (has_null) {
+        for (size_t i = 0; i < min_filter.size(); i++) {
+            if (null_counts[i] > 0) {
+                min_filter[i] = 1;
+            }
+        }
+    }
+    ColumnHelper::merge_two_filters(&selected, min_filter.data());
+    return Status::OK();
+}
+
 Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string>& min_values,
                                                    const std::vector<std::string>& max_values,
-                                                   const std::vector<int64_t>& null_counts,
-                                                   ExprContext* ctx,
+                                                   const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
     const Expr* root_expr = ctx->root();
