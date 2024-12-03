@@ -74,7 +74,10 @@ public:
               _null_in_set(other._null_in_set),
               _is_join_runtime_filter(other._is_join_runtime_filter),
               _eq_null(other._eq_null),
-              _array_size(other._array_size) {}
+              _array_size(other._array_size),
+              _array_buffer(other._array_buffer),
+              _hash_set(other._hash_set),
+              _string_values(other._string_values) {}
 
     ~VectorizedInConstPredicate() override = default;
 
@@ -379,6 +382,8 @@ public:
 
     bool is_not_in() const { return _is_not_in; }
 
+    void set_is_not_in(bool is_not_in) { _is_not_in = is_not_in; }
+
     bool null_in_set() const { return _null_in_set; }
 
     void set_null_in_set(bool v) { _null_in_set = v; }
@@ -410,7 +415,7 @@ private:
         }
     }
 
-    const bool _is_not_in{false};
+    bool _is_not_in{false};
     bool _is_prepare{false};
     bool _null_in_set{false};
     bool _is_join_runtime_filter = false;

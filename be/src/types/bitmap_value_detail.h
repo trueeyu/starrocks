@@ -967,22 +967,22 @@ public:
     }
 
     type_of_iterator& operator++() { // ++i, must returned inc. value
-        if (i.has_value == true) roaring_uint32_iterator_advance(&i);
+        if (i.has_value == true) roaring_advance_uint32_iterator(&i);
         while (!i.has_value) {
             map_iter++;
             if (map_iter == map_end) return *this;
-            roaring_iterator_init(&map_iter->second.roaring, &i);
+            roaring_init_iterator(&map_iter->second.roaring, &i);
         }
         return *this;
     }
 
     type_of_iterator operator++(int) { // i++, must return orig. value
         Roaring64MapSetBitForwardIterator orig(*this);
-        roaring_uint32_iterator_advance(&i);
+        roaring_advance_uint32_iterator(&i);
         while (!i.has_value) {
             map_iter++;
             if (map_iter == map_end) return orig;
-            roaring_iterator_init(&map_iter->second.roaring, &i);
+            roaring_init_iterator(&map_iter->second.roaring, &i);
         }
         return orig;
     }
@@ -1005,11 +1005,11 @@ public:
             map_iter = parent.roarings.cend();
         } else {
             map_iter = parent.roarings.cbegin();
-            roaring_iterator_init(&map_iter->second.roaring, &i);
+            roaring_init_iterator(&map_iter->second.roaring, &i);
             while (!i.has_value) {
                 map_iter++;
                 if (map_iter == map_end) return;
-                roaring_iterator_init(&map_iter->second.roaring, &i);
+                roaring_init_iterator(&map_iter->second.roaring, &i);
             }
         }
     }

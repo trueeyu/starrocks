@@ -64,8 +64,10 @@ Status PartitionSortSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr
     RETURN_IF_ERROR(materialize_chunk);
     TRY_CATCH_BAD_ALLOC(RETURN_IF_ERROR(_chunks_sorter->update(state, materialize_chunk.value())));
 
+    LOG(ERROR) << "LXH: PUSH CHUNK: 1";
     const auto& build_runtime_filters = _sort_context->build_runtime_filters();
     if (!build_runtime_filters.empty()) {
+        LOG(ERROR) << "LXH: PUSH CHUNK: 2";
         auto runtime_filter = _chunks_sorter->runtime_filters(state->obj_pool());
         if (runtime_filter == nullptr) {
             return Status::OK();

@@ -468,7 +468,6 @@ public:
     using CppType = RunTimeCppType<Type>;
     using ColumnType = RunTimeColumnType<Type>;
     using ContainerType = RunTimeProxyContainerType<Type>;
-    using SelfType = RuntimeBloomFilter<Type>;
 
     RuntimeBloomFilter() { _init_min_max(); }
     ~RuntimeBloomFilter() override = default;

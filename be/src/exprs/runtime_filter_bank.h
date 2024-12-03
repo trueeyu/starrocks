@@ -71,9 +71,133 @@ public:
     static bool filter_zonemap_with_min_max(LogicalType type, const JoinRuntimeFilter* filter, const Column* min_column,
                                             const Column* max_column);
 
+    static std::vector<bool> filter_zonemap_with_min_max_batch(LogicalType type, const JoinRuntimeFilter* filter,
+                                                               ColumnPtr min_column, ColumnPtr max_column,
+                                                               const std::vector<bool>& has_nulls);
+
     // create min/max predicate from filter.
     static void create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
                                                const JoinRuntimeFilter* filter, Expr** min_max_predicate);
+};
+
+template <LogicalType Type>
+class MinMaxPredicate : public Expr {
+public:
+    using CppType = RunTimeCppType<Type>;
+    MinMaxPredicate(SlotId slot_id, const CppType& min_value, const CppType& max_value, bool has_null)
+            : Expr(TypeDescriptor(Type), false),
+              _slot_id(slot_id),
+              _min_value(min_value),
+              _max_value(max_value),
+              _has_null(has_null) {
+        _node_type = TExprNodeType::RUNTIME_FILTER_MIN_MAX_EXPR;
+    }
+    ~MinMaxPredicate() override = default;
+    Expr* clone(ObjectPool* pool) const override {
+        return pool->add(new MinMaxPredicate<Type>(_slot_id, _min_value, _max_value, _has_null));
+    }
+
+    SlotId get_slot_id() const { return _slot_id; }
+
+    bool is_constant() const override { return false; }
+    bool is_bound(const std::vector<TupleId>& tuple_ids) const override { return false; }
+
+    StatusOr<ColumnPtr> evaluate_with_filter(ExprContext* context, Chunk* ptr, uint8_t* filter) override {
+        const ColumnPtr col = ptr->get_column_by_slot_id(_slot_id);
+        size_t size = col->size();
+
+        std::shared_ptr<BooleanColumn> result(new BooleanColumn(size, 1));
+        uint8_t* res = result->get_data().data();
+
+        if (col->only_null()) {
+            if (_has_null) {
+                return result;
+            } else {
+                memset(res, 0x0, size);
+                return result;
+            }
+        }
+
+        if (col->is_constant()) {
+            CppType value = ColumnHelper::get_const_value<Type>(col);
+            if (!(value >= _min_value && value <= _max_value)) {
+                memset(res, 0x0, size);
+            }
+            return result;
+        }
+
+        // NOTE(yan): make sure following code can be compiled into SIMD instructions:
+        // in original version, we use
+        //   1. memcpy filter -> res
+        //   2. res[i] = res[i] && (null_data[i] || (data[i] >= _min_value && data[i] <= _max_value));
+        // but they can not be compiled into SIMD instructions.
+        if (col->is_nullable()) {
+            auto tmp = ColumnHelper::as_raw_column<NullableColumn>(col);
+            uint8_t* __restrict__ null_data = tmp->null_column_data().data();
+            CppType* __restrict__ data = ColumnHelper::cast_to_raw<Type>(tmp->data_column())->get_data().data();
+            for (int i = 0; i < size; i++) {
+                res[i] = (data[i] >= _min_value && data[i] <= _max_value);
+            }
+            // we take null as true value.
+            if (_has_null) {
+                for (int i = 0; i < size; i++) {
+                    res[i] = res[i] | null_data[i];
+                }
+            } else {
+                for (int i = 0; i < size; i++) {
+                    res[i] = res[i];
+                }
+            }
+        } else {
+            CppType* data = ColumnHelper::cast_to_raw<Type>(col)->get_data().data();
+            for (int i = 0; i < size; i++) {
+                res[i] = (data[i] >= _min_value && data[i] <= _max_value);
+            }
+        }
+
+        // NOTE(yan): filter can be used optionally.
+        // if (filter != nullptr) {
+        //     for (int i = 0; i < size; i++) {
+        //         res[i] = res[i] & filter[i];
+        //     }
+        // }
+
+        return result;
+    }
+
+    StatusOr<ColumnPtr> evaluate_checked(ExprContext* context, Chunk* ptr) override {
+        return evaluate_with_filter(context, ptr, nullptr);
+    }
+
+    int get_slot_ids(std::vector<SlotId>* slot_ids) const override {
+        slot_ids->emplace_back(_slot_id);
+        return 1;
+    }
+
+    bool has_null() const { return _has_null; }
+
+    std::string debug_string() const override {
+        std::stringstream out;
+        if constexpr (lt_is_sum_bigint<Type>) {
+            out << _slot_id;
+            out << ",";
+            out << _min_value;
+            out << ",";
+            out << _max_value;
+            out << ",";
+            out << _has_null;
+        }
+        return out.str();
+    }
+
+    CppType get_min_value() const { return _min_value; }
+    CppType get_max_value() const { return _max_value; }
+
+private:
+    SlotId _slot_id;
+    const CppType _min_value;
+    const CppType _max_value;
+    bool _has_null = false;
 };
 
 // how to generate & publish this runtime filter
@@ -158,7 +282,7 @@ public:
     int32_t filter_id() const { return _filter_id; }
     bool skip_wait() const { return _skip_wait; }
     bool is_topn_filter() const { return _is_topn_filter; }
-    ExprContext* probe_expr_ctx() { return _probe_expr_ctx; }
+    ExprContext* probe_expr_ctx() const { return _probe_expr_ctx; }
     bool is_bound(const std::vector<TupleId>& tuple_ids) const { return _probe_expr_ctx->root()->is_bound(tuple_ids); }
     // Disable pushing down runtime filters when:
     //  - partition_by_exprs have multi columns;
