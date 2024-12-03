@@ -156,6 +156,9 @@ bool StatisticsHelper::can_be_used_for_statistics_filter(ExprContext* ctx,
         } else {
             return false;
         }
+    } else if (root_expr->node_type() == TExprNodeType::RUNTIME_FILTER_MIN_MAX_EXPR) {
+        filter_type = StatisticsHelper::StatSupportedFilter::RUNTIME_FILTER_MIN_MAX;
+        return true;
     } else {
         return false;
     }
@@ -191,21 +194,187 @@ void translate_to_string_value(const ColumnPtr& col, size_t i, std::string& valu
     });
 }
 
+template <LogicalType type>
+Status StatisticsHelper::bloom_filter_on_min_max_stat_t(const std::vector<std::string>& min_values,
+                                                        const std::vector<std::string>& max_values,
+                                                        const std::vector<int64_t>& null_counts, ExprContext* ctx,
+                                                        const ParquetField* field, const std::string& timezone,
+                                                        Filter& selected) {
+    const Expr* root_expr = ctx->root();
+    LOG(ERROR) << "LXH: BLOOM_STAT_1: " << root_expr->debug_string();
+    LogicalType ltype = root_expr->type().type;
+    using CppType = RunTimeCppValueType<type>;
+    auto min_chunk = std::make_unique<Chunk>();
+    auto max_chunk = std::make_unique<Chunk>();
+    ColumnPtr min_column = ColumnHelper::create_column(root_expr->type(), true);
+    ColumnPtr max_column = ColumnHelper::create_column(root_expr->type(), true);
+    SlotId id;
+
+    ColumnPtr r_min_value = ColumnHelper::create_column(root_expr->type(), true);
+    ColumnPtr r_max_value = ColumnHelper::create_column(root_expr->type(), true);
+    bool has_null = false;
+    const auto* min_max_filter = dynamic_cast<const MinMaxPredicate<type>*>(root_expr);
+    id = min_max_filter->get_slot_id();
+    min_chunk->append_column(min_column, id);
+    max_chunk->append_column(max_column, id);
+    has_null = min_max_filter->has_null();
+    r_min_value->append_datum(Datum(min_max_filter->get_min_value()));
+    r_max_value->append_datum(Datum(min_max_filter->get_max_value()));
+
+    auto st = StatisticsHelper::decode_value_into_column(min_column, min_values, root_expr->type(), field, timezone);
+    if (!st.ok()) {
+        LOG(INFO) << "LXH: decode min value failed";
+        return Status::OK();
+    }
+    st = StatisticsHelper::decode_value_into_column(max_column, max_values, root_expr->type(), field, timezone);
+    if (!st.ok()) {
+        LOG(INFO) << "LXH: decode max value failed";
+        return Status::OK();
+    }
+
+    size_t page_num = min_values.size();
+
+    std::stringstream tmp_str_1;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_1 << (int)selected[i];
+        tmp_str_1 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str() << ":" << min_chunk->debug_row(0) << ":"
+               << max_chunk->debug_row(0);
+
+    for (size_t i = 0; i < min_values.size(); i++) {
+        if (!selected[i]) {
+            continue;
+        }
+
+        ObjectPool pool;
+        std::string min_value;
+        std::string max_value;
+
+        auto zonemap_min_v = ColumnHelper::get_data_column_by_type<type>(min_column.get())->get_data()[i];
+        auto zonemap_max_v = ColumnHelper::get_data_column_by_type<type>(max_column.get())->get_data()[i];
+        auto r_min_v = ColumnHelper::get_data_column_by_type<type>(r_min_value.get())->get_data()[0];
+        auto r_max_v = ColumnHelper::get_data_column_by_type<type>(r_max_value.get())->get_data()[0];
+
+        //translate_to_string_value(min_column, i, min_value);
+        //translate_to_string_value(max_column, i, max_value);
+        //translate_to_string_value(r_min_value, i, r_min_v);
+        //translate_to_string_value(r_max_value, i, r_max_v);
+        if (has_null && null_counts[i] > 0) {
+            selected[i] = 1;
+            continue;
+        }
+
+        if (zonemap_min_v > r_max_v || zonemap_max_v < r_min_v) {
+            selected[i] = 0;
+            continue;
+        }
+
+        /*
+        if (!SIMD::contain_nonzero(filter)) {
+            selected[i] = 0;
+            continue;
+        }
+        */
+
+        /*
+        RETURN_IF_ERROR(pred_le->evaluate_and(min_column.get(), filter.data()));
+        selected[i] = SIMD::contain_nonzero(filter) ? selected[i] : 0;
+        */
+    }
+
+    std::stringstream tmp_str_4;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_4 << (int)selected[i];
+        tmp_str_4 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
+
+    /*
+
+    ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
+    LOG(ERROR) << "LXH: BLOOM_STAT_2_1: " << min_selected->debug_string();
+    ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
+    auto unpack_min_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, min_selected);
+    auto unpack_max_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, max_selected);
+    Filter min_filter = ColumnHelper::merge_nullable_filter(unpack_min_selected.get());
+    Filter max_filter = ColumnHelper::merge_nullable_filter(unpack_max_selected.get());
+    ColumnHelper::or_two_filters(&min_filter, max_filter.data());
+
+    std::stringstream tmp_str_2;
+    for (size_t i = 0; i < min_filter.size(); i++) {
+        tmp_str_2 << (int)min_filter[i];
+        tmp_str_2 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_2.str();
+
+    if (has_null) {
+        for (size_t i = 0; i < min_filter.size(); i++) {
+            if (null_counts[i] > 0) {
+                min_filter[i] = 1;
+            }
+        }
+    }
+    std::stringstream tmp_str_3;
+    for (size_t i = 0; i < min_filter.size(); i++) {
+        tmp_str_3 << (int)min_filter[i];
+        tmp_str_3 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_3: " << tmp_str_3.str();
+
+    ColumnHelper::merge_two_filters(&selected, min_filter.data());
+    std::stringstream tmp_str_4;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_4 << (int)selected[i];
+        tmp_str_4 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
+    */
+
+    return Status::OK();
+}
+
+Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::string>& min_values,
+                                                      const std::vector<std::string>& max_values,
+                                                      const std::vector<int64_t>& null_counts, ExprContext* ctx,
+                                                      const ParquetField* field, const std::string& timezone,
+                                                      Filter& selected) {
+    const Expr* root_expr = ctx->root();
+    LogicalType ltype = root_expr->type().type;
+    switch (ltype) {
+#define M(NAME)                                                                                                   \
+    case LogicalType::NAME: {                                                                                     \
+        return bloom_filter_on_min_max_stat_t<LogicalType::NAME>(min_values, max_values, null_counts, ctx, field, \
+                                                                 timezone, selected);                             \
+    }
+        APPLY_FOR_ALL_SCALAR_TYPE(M);
+#undef M
+    default:
+        return Status::OK();
+    }
+    return Status::OK();
+}
+
 Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string>& min_values,
-                                                   const std::vector<std::string>& max_values, ExprContext* ctx,
+                                                   const std::vector<std::string>& max_values,
+                                                   const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
     const Expr* root_expr = ctx->root();
+    LOG(ERROR) << "LXH: FILTER_MIN_MAX: " << root_expr->debug_string() << ":" << root_expr->node_type() << ":"
+               << root_expr->op();
     DCHECK(root_expr->node_type() == TExprNodeType::IN_PRED && root_expr->op() == TExprOpcode::FILTER_IN);
     const Expr* c = root_expr->get_child(0);
     LogicalType ltype = c->type().type;
     ColumnPtr values;
+    bool has_null = false;
     switch (ltype) {
 #define M(NAME)                                                                                                \
     case LogicalType::NAME: {                                                                                  \
         const auto* in_filter = dynamic_cast<const VectorizedInConstPredicate<LogicalType::NAME>*>(root_expr); \
         if (in_filter != nullptr) {                                                                            \
             values = in_filter->get_all_values();                                                              \
+            has_null = in_filter->null_in_set();                                                               \
             break;                                                                                             \
         } else {                                                                                               \
             return Status::OK();                                                                               \
@@ -257,6 +426,11 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
         translate_to_string_value(min_col, i, min_value);
         translate_to_string_value(max_col, i, max_value);
 
+        if (has_null && null_counts[i] > 0) {
+            selected[i] = 1;
+            continue;
+        }
+
         Filter filter(values->size(), 1);
 
         ColumnPredicate* pred_ge = pool.add(new_column_ge_predicate(get_type_info(ltype), 0, min_value));
@@ -271,6 +445,41 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
     }
 
     return Status::OK();
+}
+
+Status StatisticsHelper::get_min_max_value(const FileMetaData* file_metadata, const TypeDescriptor& type,
+                                           const tparquet::ColumnMetaData* column_meta, const ParquetField* field,
+                                           std::vector<std::string>& min_values, std::vector<std::string>& max_values) {
+    // When statistics is empty, column_meta->__isset.statistics is still true,
+    // but statistics.__isset.xxx may be false, so judgment is required here.
+    bool is_set_min_max = (column_meta->statistics.__isset.max && column_meta->statistics.__isset.min) ||
+                          (column_meta->statistics.__isset.max_value && column_meta->statistics.__isset.min_value);
+    if (!is_set_min_max) {
+        return Status::Aborted("No exist min/max");
+    }
+
+    DCHECK_EQ(field->physical_type, column_meta->type);
+    auto sort_order = sort_order_of_logical_type(type.type);
+
+    if (!has_correct_min_max_stats(file_metadata, *column_meta, sort_order)) {
+        return Status::Aborted("The file has incorrect order");
+    }
+
+    if (column_meta->statistics.__isset.min_value) {
+        min_values.emplace_back(column_meta->statistics.min_value);
+        max_values.emplace_back(column_meta->statistics.max_value);
+    } else {
+        min_values.emplace_back(column_meta->statistics.min);
+        max_values.emplace_back(column_meta->statistics.max);
+    }
+
+    return Status::OK();
+}
+
+bool StatisticsHelper::has_correct_min_max_stats(const FileMetaData* file_metadata,
+                                                 const tparquet::ColumnMetaData& column_meta,
+                                                 const SortOrder& sort_order) {
+    return file_metadata->writer_version().HasCorrectStatistics(column_meta, sort_order);
 }
 
 } // namespace starrocks::parquet

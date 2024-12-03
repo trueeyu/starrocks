@@ -47,6 +47,7 @@ public:
 protected:
     friend class Expr;
     Predicate(const TExprNode& node) : Expr(node) {}
+    Predicate(const Predicate& predicate) : Expr(predicate) {}
 };
 
 } // namespace starrocks

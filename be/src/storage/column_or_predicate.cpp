@@ -55,6 +55,16 @@ Status ColumnOrPredicate::_evaluate(const Column* column, uint8_t* selection, ui
     return Status::OK();
 }
 
+std::string ColumnOrPredicate::debug_string() const {
+    std::stringstream ss;
+    ss << "OR(";
+    for (size_t i = 0; i < _child.size(); i++) {
+        ss << i << ":" << _child[i]->debug_string() << ",";
+    }
+    ss << ");";
+    return ss.str();
+}
+
 Status ColumnOrPredicate::convert_to(const ColumnPredicate** output, const TypeInfoPtr& target_type_ptr,
                                      ObjectPool* obj_pool) const {
     ColumnOrPredicate* new_pred =
@@ -66,19 +76,6 @@ Status ColumnOrPredicate::convert_to(const ColumnPredicate** output, const TypeI
     }
     *output = new_pred;
     return Status::OK();
-}
-
-std::string ColumnOrPredicate::debug_string() const {
-    std::stringstream ss;
-    ss << "OR(";
-    for (size_t i = 0; i < _child.size(); i++) {
-        if (i != 0) {
-            ss << ", ";
-        }
-        ss << i << ":" << _child[i]->debug_string();
-    }
-    ss << ")";
-    return ss.str();
 }
 
 } // namespace starrocks

@@ -19,9 +19,12 @@
 #include <utility>
 
 #include "exec/olap_common.h"
+#include "exec/olap_scan_prepare.h"
 #include "exprs/runtime_filter_bank.h"
+#include "exprs/binary_predicate.h"
 #include "runtime/global_dict/config.h"
 #include "runtime/runtime_state.h"
+#include "storage/column_or_predicate.h"
 #include "storage/column_predicate.h"
 #include "storage/olap_runtime_range_pruner.h"
 #include "storage/predicate_parser.h"
@@ -30,18 +33,18 @@ namespace starrocks {
 namespace detail {
 struct RuntimeColumnPredicateBuilder {
     template <LogicalType ltype>
-    StatusOr<std::vector<std::unique_ptr<ColumnPredicate>>> operator()(const ColumnIdToGlobalDictMap* global_dictmaps,
-                                                                       PredicateParser* parser,
-                                                                       const RuntimeFilterProbeDescriptor* desc,
-                                                                       const SlotDescriptor* slot,
-                                                                       int32_t driver_sequence) {
+    StatusOr<std::vector<const ColumnPredicate*>> operator()(const ColumnIdToGlobalDictMap* global_dictmaps,
+                                                             PredicateParser* parser,
+                                                             const RuntimeFilterProbeDescriptor* desc,
+                                                             const SlotDescriptor* slot, int32_t driver_sequence,
+                                                             ObjectPool* object_pool) {
         // keep consistent with ColumnRangeBuilder
         if constexpr (ltype == TYPE_TIME || ltype == TYPE_NULL || ltype == TYPE_JSON || lt_is_float<ltype> ||
                       lt_is_binary<ltype>) {
             DCHECK(false) << "unreachable path";
             return Status::NotSupported("unreachable path");
         } else {
-            std::vector<std::unique_ptr<ColumnPredicate>> preds;
+            std::vector<const ColumnPredicate*> preds;
 
             // Treat tinyint and boolean as int
             constexpr LogicalType limit_type = ltype == TYPE_TINYINT || ltype == TYPE_BOOLEAN ? TYPE_INT : ltype;
@@ -63,6 +66,7 @@ struct RuntimeColumnPredicateBuilder {
             range.set_index_filter_only(true);
 
             const JoinRuntimeFilter* rf = desc->runtime_filter(driver_sequence);
+            bool has_null = rf->has_null();
 
             // applied global-dict optimized column
             if constexpr (ltype == TYPE_VARCHAR) {
@@ -86,13 +90,35 @@ struct RuntimeColumnPredicateBuilder {
             }
 
             for (auto& f : filters) {
-                std::unique_ptr<ColumnPredicate> p(parser->parse_thrift_cond(f));
+                auto* p = parser->parse_thrift_cond(f);
+                object_pool->add(p);
+                //std::unique_ptr<ColumnPredicate> p(parser->parse_thrift_cond(f));
                 VLOG(2) << "build runtime predicate:" << p->debug_string();
                 p->set_index_filter_only(f.is_index_filter_only);
-                preds.emplace_back(std::move(p));
+                preds.emplace_back(p);
             }
 
-            return preds;
+            if (has_null) {
+                std::vector<const ColumnPredicate*> new_preds;
+
+                ColumnAndPredicate* and_pred = new ColumnAndPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
+                object_pool->add(and_pred);
+                and_pred->add_child(preds.begin(), preds.end());
+
+                ColumnPredicate* null_pred =
+                        new_column_null_predicate(preds[0]->type_info_ptr(), preds[0]->column_id(), true);
+                object_pool->add(null_pred);
+
+                ColumnOrPredicate* or_pred = new ColumnOrPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
+                object_pool->add(or_pred);
+                or_pred->add_child(and_pred);
+                or_pred->add_child(null_pred);
+                new_preds.template emplace_back(or_pred);
+
+                return new_preds;
+            } else {
+                return preds;
+            }
         }
     }
 
@@ -173,16 +199,21 @@ inline Status OlapRuntimeScanRangePruner::_update(const ColumnIdToGlobalDictMap*
     if (_arrived_runtime_filters_masks.empty()) {
         return Status::OK();
     }
+    ObjectPool object_pool;
     for (size_t i = 0; i < _arrived_runtime_filters_masks.size(); ++i) {
         // 1. runtime filter arrived
         // 2. runtime filter updated and read rows greater than rf_update_threhold
         // we will filter by index
         if (auto rf = _unarrived_runtime_filters[i]->runtime_filter(_driver_sequence)) {
             size_t rf_version = rf->rf_version();
+            LOG(ERROR) << "LXH: RUN_VERSION_1: " << rf_version << ":" << _rf_versions[i];
             if (_arrived_runtime_filters_masks[i] == 0 ||
                 (rf_version > _rf_versions[i] && raw_read_rows - _raw_read_rows > rf_update_threhold)) {
-                ASSIGN_OR_RETURN(auto predicates, _get_predicates(global_dictmaps, i));
-                auto raw_predicates = _as_raw_predicates(predicates);
+                ASSIGN_OR_RETURN(auto raw_predicates, _get_predicates(global_dictmaps, i, &object_pool));
+                for (size_t j = 0; j < raw_predicates.size(); j++) {
+                    LOG(ERROR) << "LXH: UPDATE: " << j << ":" << raw_predicates[j]->debug_string() << ":"
+                               << raw_predicates[j]->type();
+                }
                 if (!raw_predicates.empty()) {
                     RETURN_IF_ERROR(updater(raw_predicates.front()->column_id(), raw_predicates));
                 }
@@ -196,15 +227,15 @@ inline Status OlapRuntimeScanRangePruner::_update(const ColumnIdToGlobalDictMap*
     return Status::OK();
 }
 
-inline auto OlapRuntimeScanRangePruner::_get_predicates(const ColumnIdToGlobalDictMap* global_dictmaps, size_t idx)
-        -> StatusOr<PredicatesPtrs> {
-    auto rf = _unarrived_runtime_filters[idx]->runtime_filter(_driver_sequence);
-    if (rf->has_null()) return PredicatesPtrs{};
+inline auto OlapRuntimeScanRangePruner::_get_predicates(const ColumnIdToGlobalDictMap* global_dictmaps, size_t idx,
+                                                        ObjectPool* object_pool) -> StatusOr<PredicatesRawPtrs> {
+    //auto rf = _unarrived_runtime_filters[idx]->runtime_filter(_driver_sequence);
+    //if (rf->has_null()) return PredicatesRawPtrs {};
     // convert to olap filter
     auto slot_desc = _slot_descs[idx];
-    return type_dispatch_predicate<StatusOr<PredicatesPtrs>>(
+    return type_dispatch_predicate<StatusOr<PredicatesRawPtrs>>(
             slot_desc->type().type, false, detail::RuntimeColumnPredicateBuilder(), global_dictmaps, _parser,
-            _unarrived_runtime_filters[idx], slot_desc, _driver_sequence);
+            _unarrived_runtime_filters[idx], slot_desc, _driver_sequence, object_pool);
 }
 
 inline auto OlapRuntimeScanRangePruner::_as_raw_predicates(

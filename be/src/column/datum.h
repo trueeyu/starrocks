@@ -187,6 +187,40 @@ public:
         return std::visit([&](const auto& arg) { return is_equal(arg); }, key);
     }
 
+    std::string debug_string() const {
+        if (auto v = std::get_if<int8_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<uint8_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<int16_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<uint16_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<uint24_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<int32_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<uint32_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<int64_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<uint64_t>(&_value)) {
+            return std::to_string(*v);
+        }
+        if (auto v = std::get_if<Slice>(&_value)) {
+            return v->to_string();
+        }
+        return "";
+    }
+
 private:
     using Variant =
             std::variant<std::monostate, int8_t, uint8_t, int16_t, uint16_t, uint24_t, int32_t, uint32_t, int64_t,
