@@ -200,6 +200,7 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
                                                       const ParquetField* field, const std::string& timezone,
                                                       Filter& selected) {
     const Expr* root_expr = ctx->root();
+    LOG(ERROR) << "LXH: BLOOM_STAT_1: " << root_expr->debug_string();
     LogicalType ltype = root_expr->type().type;
     auto min_chunk = std::make_unique<Chunk>();
     auto max_chunk = std::make_unique<Chunk>();
@@ -238,6 +239,10 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
 
     size_t page_num = min_values.size();
 
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << min_chunk->debug_row(0);
+    LOG(ERROR) << "LXH: BLOOM_STAT_3: " << max_chunk->debug_row(0);
+    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << (int)selected[0];
+
     ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
     ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
     auto unpack_min_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, min_selected);
@@ -245,6 +250,7 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
     Filter min_filter = ColumnHelper::merge_nullable_filter(unpack_min_selected.get());
     Filter max_filter = ColumnHelper::merge_nullable_filter(unpack_max_selected.get());
     ColumnHelper::or_two_filters(&min_filter, max_filter.data());
+    LOG(ERROR) << "LXH: BLOOM_STAT_5: " << (int)min_filter[0];
 
     if (has_null) {
         for (size_t i = 0; i < min_filter.size(); i++) {
@@ -253,7 +259,9 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
             }
         }
     }
+    LOG(ERROR) << "LXH: BLOOM_STAT_6: " << (int)min_filter[0];
     ColumnHelper::merge_two_filters(&selected, min_filter.data());
+    LOG(ERROR) << "LXH: BLOOM_STAT_7: " << (int)selected[0];
     return Status::OK();
 }
 
