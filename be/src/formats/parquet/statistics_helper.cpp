@@ -244,9 +244,46 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         tmp_str_1 << (int)selected[i];
         tmp_str_1 << ",";
     }
-
     LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str() << ":" << min_chunk->debug_row(0)
                << ":" << max_chunk->debug_row(0);
+
+    for (size_t i = 0; i < min_values.size(); i++) {
+        if (!selected[i]) {
+            continue;
+        }
+
+        ObjectPool pool;
+        std::string min_value;
+        std::string max_value;
+
+        translate_to_string_value(min_column, i, min_value);
+        translate_to_string_value(max_column, i, max_value);
+        if (has_null && null_counts[i] > 0) {
+            selected[i] = 1;
+            continue;
+        }
+
+        Filter filter(values->size(), 1);
+
+        ColumnPredicate* pred_ge = pool.add(new_column_ge_predicate(get_type_info(ltype), 0, min_value));
+        RETURN_IF_ERROR(pred_ge->evaluate_and(values.get(), filter.data()));
+        if (!SIMD::contain_nonzero(filter)) {
+            selected[i] = 0;
+            continue;
+        }
+        ColumnPredicate* pred_le = pool.add(new_column_le_predicate(get_type_info(ltype), 0, max_value));
+        RETURN_IF_ERROR(pred_le->evaluate_and(values.get(), filter.data()));
+        selected[i] = SIMD::contain_nonzero(filter) ? selected[i] : 0;
+    }
+
+    std::stringstream tmp_str_4;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_4 << (int)selected[i];
+        tmp_str_4 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
+
+    /*
 
     ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
     LOG(ERROR) << "LXH: BLOOM_STAT_2_1: " << min_selected->debug_string();
@@ -285,6 +322,7 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         tmp_str_4 << ",";
     }
     LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
+    */
 
     return Status::OK();
 }
