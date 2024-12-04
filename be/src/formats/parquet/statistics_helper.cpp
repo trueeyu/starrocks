@@ -249,6 +249,7 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
                << ":" << max_chunk->debug_row(0);
 
     ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
+    LOG(ERROR) << "LXH: BLOOM_STAT_2_1: " << min_selected->debug_string();
     ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
     auto unpack_min_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, min_selected);
     auto unpack_max_selected = ColumnHelper::unpack_and_duplicate_const_column(page_num, max_selected);
