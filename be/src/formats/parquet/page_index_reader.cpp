@@ -258,9 +258,9 @@ Status PageIndexReader::_deal_with_more_conjunct(const std::vector<ExprContext*>
                         column_index.min_values, column_index.max_values, column_index.null_counts, ctx, field,
                         timezone, page_filter));
             } else if (filter_type == StatisticsHelper::StatSupportedFilter::RUNTIME_FILTER_MIN_MAX) {
-                RETURN_IF_ERROR(StatisticsHelper::bloom_filter_on_min_max_stat(column_index.min_values,
-                                                                               column_index.max_values, column_index.null_counts,
-                                                                               ctx, field, timezone, page_filter));
+                RETURN_IF_ERROR(StatisticsHelper::bloom_filter_on_min_max_stat(
+                        column_index.min_values, column_index.max_values, column_index.null_counts, ctx, field,
+                        timezone, page_filter));
             }
         }
     }

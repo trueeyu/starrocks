@@ -388,9 +388,11 @@ bool FileReader::_filter_group(const GroupReaderPtr& group_reader) {
             return true;
         }
 
+        /*
         if (_filter_group_with_bloom_filter_min_max_conjuncts(group_reader)) {
             return true;
         }
+        */
 
         if (config::parquet_statistics_process_more_filter_enable && _filter_group_with_more_filter(group_reader)) {
             return true;
