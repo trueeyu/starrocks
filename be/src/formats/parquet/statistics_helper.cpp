@@ -253,8 +253,8 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat_t(const std::vector<std::s
 
         auto zonemap_min_v = ColumnHelper::get_data_column_by_type<type>(min_column.get())->get_data()[i];
         auto zonemap_max_v = ColumnHelper::get_data_column_by_type<type>(max_column.get())->get_data()[i];
-        auto r_min_v = ColumnHelper::get_data_column_by_type<type>(r_min_value.get())->get_data()[i];
-        auto r_max_v = ColumnHelper::get_data_column_by_type<type>(r_max_value.get())->get_data()[i];
+        auto r_min_v = ColumnHelper::get_data_column_by_type<type>(r_min_value.get())->get_data()[0];
+        auto r_max_v = ColumnHelper::get_data_column_by_type<type>(r_max_value.get())->get_data()[0];
 
         //translate_to_string_value(min_column, i, min_value);
         //translate_to_string_value(max_column, i, max_value);
