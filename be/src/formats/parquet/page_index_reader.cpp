@@ -330,8 +330,8 @@ StatusOr<bool> PageIndexReader::generate_read_range(SparseRange<uint64_t>& spars
         size_t page_num = column_index.min_values.size();
         Filter page_filter(page_num, 1);
 
-        if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end() ||
-            _runtime_filter_has_this_slot(slotId)) {
+        if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end()) {
+        //if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end() || _runtime_filter_has_this_slot(slotId)) {
             if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end()) {
                 RETURN_IF_ERROR(_deal_with_min_max_conjuncts(slot_id_to_min_max_ctx_map.at(slotId), column_index,
                                                              slotId, column.slot_type(), page_filter));

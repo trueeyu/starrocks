@@ -239,9 +239,13 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
 
     size_t page_num = min_values.size();
 
-    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << min_chunk->debug_row(0);
-    LOG(ERROR) << "LXH: BLOOM_STAT_3: " << max_chunk->debug_row(0);
-    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << (int)selected[0];
+    std::stringstream tmp_str_1;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_1 << (int)selected[i];
+        tmp_str_1 << ",";
+    }
+
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str();
 
     ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
     ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
@@ -250,7 +254,13 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
     Filter min_filter = ColumnHelper::merge_nullable_filter(unpack_min_selected.get());
     Filter max_filter = ColumnHelper::merge_nullable_filter(unpack_max_selected.get());
     ColumnHelper::or_two_filters(&min_filter, max_filter.data());
-    LOG(ERROR) << "LXH: BLOOM_STAT_5: " << (int)min_filter[0];
+
+    std::stringstream tmp_str_2;
+    for (size_t i = 0; i < min_filter.size(); i++) {
+        tmp_str_2 << (int)min_filter[i];
+        tmp_str_2 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_2.str();
 
     if (has_null) {
         for (size_t i = 0; i < min_filter.size(); i++) {
@@ -259,9 +269,21 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
             }
         }
     }
-    LOG(ERROR) << "LXH: BLOOM_STAT_6: " << (int)min_filter[0];
+    std::stringstream tmp_str_3;
+    for (size_t i = 0; i < min_filter.size(); i++) {
+        tmp_str_3 << (int)min_filter[i];
+        tmp_str_3 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_3: " << tmp_str_3.str();
+
     ColumnHelper::merge_two_filters(&selected, min_filter.data());
-    LOG(ERROR) << "LXH: BLOOM_STAT_7: " << (int)selected[0];
+    std::stringstream tmp_str_4;
+    for (size_t i = 0; i < selected.size(); i++) {
+        tmp_str_4 << (int)selected[i];
+        tmp_str_4 << ",";
+    }
+    LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
+
     return Status::OK();
 }
 
