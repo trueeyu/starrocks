@@ -45,6 +45,13 @@ public:
                                             ExprContext* ctx,
                                             const ParquetField* field, const std::string& timezone, Filter& selected);
 
+    template <LogicalType ltype>
+    static Status bloom_filter_on_min_max_stat_t(const std::vector<std::string>& min_values,
+                                               const std::vector<std::string>& max_values,
+                                               const std::vector<int64_t>& null_counts,
+                                               ExprContext* ctx,
+                                               const ParquetField* field, const std::string& timezone, Filter& selected);
+
     // get min/max value from row group stats
     static Status get_min_max_value(const FileMetaData* file_meta_data, const TypeDescriptor& type,
                                     const tparquet::ColumnMetaData* column_meta, const ParquetField* field,

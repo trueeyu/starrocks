@@ -194,14 +194,16 @@ void translate_to_string_value(const ColumnPtr& col, size_t i, std::string& valu
     });
 }
 
-Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::string>& min_values,
-                                                      const std::vector<std::string>& max_values,
-                                                      const std::vector<int64_t>& null_counts, ExprContext* ctx,
-                                                      const ParquetField* field, const std::string& timezone,
-                                                      Filter& selected) {
+template <LogicalType type>
+Status StatisticsHelper::bloom_filter_on_min_max_stat_t(const std::vector<std::string>& min_values,
+                                                        const std::vector<std::string>& max_values,
+                                                        const std::vector<int64_t>& null_counts, ExprContext* ctx,
+                                                        const ParquetField* field, const std::string& timezone,
+                                                        Filter& selected) {
     const Expr* root_expr = ctx->root();
     LOG(ERROR) << "LXH: BLOOM_STAT_1: " << root_expr->debug_string();
     LogicalType ltype = root_expr->type().type;
+    using CppType = RunTimeCppValueType<type>;
     auto min_chunk = std::make_unique<Chunk>();
     auto max_chunk = std::make_unique<Chunk>();
     ColumnPtr min_column = ColumnHelper::create_column(root_expr->type(), true);
@@ -211,23 +213,13 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
     ColumnPtr r_min_value = ColumnHelper::create_column(root_expr->type(), true);
     ColumnPtr r_max_value = ColumnHelper::create_column(root_expr->type(), true);
     bool has_null = false;
-    switch (ltype) {
-#define M(NAME)                                                                                          \
-    case LogicalType::NAME: {                                                                            \
-        const auto* min_max_filter = dynamic_cast<const MinMaxPredicate<LogicalType::NAME>*>(root_expr); \
-        id = min_max_filter->get_slot_id();                                                              \
-        min_chunk->append_column(min_column, id);                                                        \
-        max_chunk->append_column(max_column, id);                                                        \
-        has_null = min_max_filter->has_null();                                                           \
-        r_min_value->append_datum(Datum(min_max_filter->get_min_value()));                               \
-        r_max_value->append_datum(Datum(min_max_filter->get_max_value()));                               \
-        break;                                                                                           \
-    }
-        APPLY_FOR_ALL_SCALAR_TYPE(M);
-#undef M
-    default:
-        return Status::OK();
-    }
+    const auto* min_max_filter = dynamic_cast<const MinMaxPredicate<type>*>(root_expr);
+    id = min_max_filter->get_slot_id();
+    min_chunk->append_column(min_column, id);
+    max_chunk->append_column(max_column, id);
+    has_null = min_max_filter->has_null();
+    r_min_value->append_datum(Datum(min_max_filter->get_min_value()));
+    r_max_value->append_datum(Datum(min_max_filter->get_max_value()));
 
     auto st = StatisticsHelper::decode_value_into_column(min_column, min_values, root_expr->type(), field, timezone);
     if (!st.ok()) {
@@ -258,33 +250,26 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         ObjectPool pool;
         std::string min_value;
         std::string max_value;
-        std::string r_min_v;
-        std::string r_max_v;
 
-        translate_to_string_value(min_column, i, min_value);
-        translate_to_string_value(max_column, i, max_value);
-        translate_to_string_value(r_min_value, i, r_min_v);
-        translate_to_string_value(r_max_value, i, r_max_v);
+        auto zonemap_min_v = ColumnHelper::get_data_column_by_type<type>(min_column.get())->get_data()[i];
+        auto zonemap_max_v = ColumnHelper::get_data_column_by_type<type>(max_column.get())->get_data()[i];
+        auto r_min_v = ColumnHelper::get_data_column_by_type<type>(r_min_value.get())->get_data()[i];
+        auto r_max_v = ColumnHelper::get_data_column_by_type<type>(r_max_value.get())->get_data()[i];
+
+        //translate_to_string_value(min_column, i, min_value);
+        //translate_to_string_value(max_column, i, max_value);
+        //translate_to_string_value(r_min_value, i, r_min_v);
+        //translate_to_string_value(r_max_value, i, r_max_v);
         if (has_null && null_counts[i] > 0) {
             selected[i] = 1;
             continue;
         }
 
-        if (selected[i] == 0) {
+        if (zonemap_min_v > r_max_v || zonemap_max_v < r_min_v) {
+            selected[i] = 0;
             continue;
         }
 
-        Filter min_filter(1, 1);
-        ColumnPredicate* pred_ge = pool.add(new_column_gt_predicate(get_type_info(ltype), 0, r_max_v));
-        RETURN_IF_ERROR(pred_ge->evaluate_and(max_column.get(), min_filter.data()));
-
-        Filter max_filter(1, 1);
-        ColumnPredicate* pred_le = pool.add(new_column_lt_predicate(get_type_info(ltype), 0, r_min_v));
-        RETURN_IF_ERROR(pred_le->evaluate_and(min_column.get(), max_filter.data()));
-
-        if (min_filter[0] == 1 && max_filter[0] == 1) {
-            selected[i] = 0;
-        }
         /*
         if (!SIMD::contain_nonzero(filter)) {
             selected[i] = 0;
@@ -346,6 +331,27 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
     LOG(ERROR) << "LXH: BLOOM_STAT_4: " << tmp_str_4.str();
     */
 
+    return Status::OK();
+}
+
+Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::string>& min_values,
+                                                      const std::vector<std::string>& max_values,
+                                                      const std::vector<int64_t>& null_counts, ExprContext* ctx,
+                                                      const ParquetField* field, const std::string& timezone,
+                                                      Filter& selected) {
+    const Expr* root_expr = ctx->root();
+    LogicalType ltype = root_expr->type().type;
+    switch (ltype) {
+#define M(NAME)                                                                                                   \
+    case LogicalType::NAME: {                                                                                     \
+        return bloom_filter_on_min_max_stat_t<LogicalType::NAME>(min_values, max_values, null_counts, ctx, field, \
+                                                                 timezone, selected);                             \
+    }
+        APPLY_FOR_ALL_SCALAR_TYPE(M);
+#undef M
+    default:
+        return Status::OK();
+    }
     return Status::OK();
 }
 
