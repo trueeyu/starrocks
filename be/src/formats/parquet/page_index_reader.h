@@ -69,7 +69,8 @@ public:
                     const tparquet::RowGroup* meta, const std::vector<ExprContext*>& min_max_conjunct_ctxs,
                     const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot,
                     const RuntimeFilterProbeCollector* runtime_filter_collector,
-                    const std::vector<SlotDescriptor*>& slot_descs)
+                    const std::vector<SlotDescriptor*>& slot_descs,
+                    const PredicateTree* predicateTree)
             : _group_reader(group_reader),
               _file(file),
               _column_readers(column_readers),
@@ -77,7 +78,8 @@ public:
               _min_max_conjunct_ctxs(min_max_conjunct_ctxs),
               _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot),
               _runtime_filter_collector(runtime_filter_collector),
-              _slot_descs(slot_descs) {}
+              _slot_descs(slot_descs),
+              _predicate_tree(predicateTree) {}
 
     StatusOr<bool> generate_read_range(SparseRange<uint64_t>& sparse_range);
 
@@ -109,6 +111,7 @@ private:
 
     const RuntimeFilterProbeCollector* _runtime_filter_collector = nullptr;
     std::vector<SlotDescriptor*> _slot_descs;
+    const PredicateTree* _predicate_tree = nullptr;
 };
 
 } // namespace starrocks::parquet
