@@ -245,7 +245,8 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         tmp_str_1 << ",";
     }
 
-    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str();
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str() << ":" << min_chunk->debug_row(0)
+               << ":" << max_chunk->debug_row(0);
 
     ASSIGN_OR_RETURN(ColumnPtr min_selected, ctx->evaluate(min_chunk.get()));
     ASSIGN_OR_RETURN(ColumnPtr max_selected, ctx->evaluate(max_chunk.get()));
