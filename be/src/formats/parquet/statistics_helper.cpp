@@ -262,6 +262,8 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
     const Expr* root_expr = ctx->root();
+    LOG(ERROR) << "LXH: FILTER_MIN_MAX: " << root_expr->debug_string() << ":" << root_expr->node_type()
+               << ":" << root_expr->op();
     DCHECK(root_expr->node_type() == TExprNodeType::IN_PRED && root_expr->op() == TExprOpcode::FILTER_IN);
     const Expr* c = root_expr->get_child(0);
     LogicalType ltype = c->type().type;
