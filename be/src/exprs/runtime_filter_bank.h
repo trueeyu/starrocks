@@ -178,13 +178,15 @@ public:
 
     std::string debug_string() const {
         std::stringstream out;
-        out << _slot_id;
-        out << ",";
-        out << _min_value;
-        out << ",";
-        out << _max_value;
-        out << ",";
-        out << _has_null;
+        if constexpr (lt_is_sum_bigint<Type>) {
+            out << _slot_id;
+            out << ",";
+            out << _min_value;
+            out << ",";
+            out << _max_value;
+            out << ",";
+            out << _has_null;
+        }
         return out.str();
     }
 
