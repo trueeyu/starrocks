@@ -157,6 +157,7 @@ bool StatisticsHelper::can_be_used_for_statistics_filter(ExprContext* ctx,
             return false;
         }
     } else if (root_expr->node_type() == TExprNodeType::RUNTIME_FILTER_MIN_MAX_EXPR) {
+        filter_type = StatisticsHelper::StatSupportedFilter::RUNTIME_FILTER_MIN_MAX;
         return true;
     } else {
         return false;
