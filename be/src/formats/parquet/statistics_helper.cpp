@@ -208,7 +208,8 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
     ColumnPtr max_column = ColumnHelper::create_column(root_expr->type(), true);
     SlotId id;
 
-    ColumnPtr values;
+    ColumnPtr r_min_value = ColumnHelper::create_column(root_expr->type(), true);
+    ColumnPtr r_max_value = ColumnHelper::create_column(root_expr->type(), true);
     bool has_null = false;
     switch (ltype) {
 #define M(NAME)                                                                                          \
@@ -218,6 +219,8 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         min_chunk->append_column(min_column, id);                                                        \
         max_chunk->append_column(max_column, id);                                                        \
         has_null = min_max_filter->has_null();                                                           \
+        r_min_value->append_datum(Datum(min_max_filter->get_min_value()));                               \
+        r_max_value->append_datum(Datum(min_max_filter->get_max_value()));                               \
         break;                                                                                           \
     }
         APPLY_FOR_ALL_SCALAR_TYPE(M);
@@ -244,8 +247,8 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         tmp_str_1 << (int)selected[i];
         tmp_str_1 << ",";
     }
-    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str() << ":" << min_chunk->debug_row(0)
-               << ":" << max_chunk->debug_row(0);
+    LOG(ERROR) << "LXH: BLOOM_STAT_2: " << tmp_str_1.str() << ":" << min_chunk->debug_row(0) << ":"
+               << max_chunk->debug_row(0);
 
     for (size_t i = 0; i < min_values.size(); i++) {
         if (!selected[i]) {
@@ -255,25 +258,44 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat(const std::vector<std::str
         ObjectPool pool;
         std::string min_value;
         std::string max_value;
+        std::string r_min_v;
+        std::string r_max_v;
 
         translate_to_string_value(min_column, i, min_value);
         translate_to_string_value(max_column, i, max_value);
+        translate_to_string_value(r_min_value, i, r_min_v);
+        translate_to_string_value(r_max_value, i, r_max_v);
         if (has_null && null_counts[i] > 0) {
             selected[i] = 1;
             continue;
         }
 
-        Filter filter(values->size(), 1);
+        if (selected[i] == 0) {
+            continue;
+        }
 
-        ColumnPredicate* pred_ge = pool.add(new_column_ge_predicate(get_type_info(ltype), 0, min_value));
-        RETURN_IF_ERROR(pred_ge->evaluate_and(values.get(), filter.data()));
+        Filter min_filter(1, 1);
+        ColumnPredicate* pred_ge = pool.add(new_column_gt_predicate(get_type_info(ltype), 0, r_max_v));
+        RETURN_IF_ERROR(pred_ge->evaluate_and(max_column.get(), min_filter.data()));
+
+        Filter max_filter(1, 1);
+        ColumnPredicate* pred_le = pool.add(new_column_lt_predicate(get_type_info(ltype), 0, r_min_v));
+        RETURN_IF_ERROR(pred_le->evaluate_and(min_column.get(), max_filter.data()));
+
+        if (min_filter[0] == 1 && max_filter[0] == 1) {
+            selected[i] = 0;
+        }
+        /*
         if (!SIMD::contain_nonzero(filter)) {
             selected[i] = 0;
             continue;
         }
-        ColumnPredicate* pred_le = pool.add(new_column_le_predicate(get_type_info(ltype), 0, max_value));
-        RETURN_IF_ERROR(pred_le->evaluate_and(values.get(), filter.data()));
+        */
+
+        /*
+        RETURN_IF_ERROR(pred_le->evaluate_and(min_column.get(), filter.data()));
         selected[i] = SIMD::contain_nonzero(filter) ? selected[i] : 0;
+        */
     }
 
     std::stringstream tmp_str_4;
@@ -333,8 +355,8 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
     const Expr* root_expr = ctx->root();
-    LOG(ERROR) << "LXH: FILTER_MIN_MAX: " << root_expr->debug_string() << ":" << root_expr->node_type()
-               << ":" << root_expr->op();
+    LOG(ERROR) << "LXH: FILTER_MIN_MAX: " << root_expr->debug_string() << ":" << root_expr->node_type() << ":"
+               << root_expr->op();
     DCHECK(root_expr->node_type() == TExprNodeType::IN_PRED && root_expr->op() == TExprOpcode::FILTER_IN);
     const Expr* c = root_expr->get_child(0);
     LogicalType ltype = c->type().type;

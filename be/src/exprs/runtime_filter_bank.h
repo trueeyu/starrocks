@@ -176,7 +176,7 @@ public:
 
     bool has_null() const { return _has_null; }
 
-    std::string debug_string() const {
+    std::string debug_string() const override {
         std::stringstream out;
         if constexpr (lt_is_sum_bigint<Type>) {
             out << _slot_id;
@@ -189,6 +189,9 @@ public:
         }
         return out.str();
     }
+
+    CppType get_min_value() const { return _min_value; }
+    CppType get_max_value() const { return _max_value; }
 
 private:
     SlotId _slot_id;
