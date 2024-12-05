@@ -29,7 +29,6 @@
 #include "exprs/runtime_filter_layout.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "gen_cpp/Types_types.h"
-#include "src/types/large_int_value.h"
 #include "types/logical_type.h"
 #include "types/util.h"
 

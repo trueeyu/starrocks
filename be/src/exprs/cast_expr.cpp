@@ -47,7 +47,6 @@
 #include "runtime/datetime_value.h"
 #include "runtime/runtime_state.h"
 #include "runtime/types.h"
-#include "src/types/large_int_value.h"
 #include "types/hll.h"
 #include "types/large_int_value.h"
 #include "types/logical_type.h"
