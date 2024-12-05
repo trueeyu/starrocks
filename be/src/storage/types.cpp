@@ -39,6 +39,7 @@
 #include "runtime/decimalv2_value.h"
 #include "runtime/mem_pool.h"
 #include "runtime/time_types.h"
+#include "src/types/large_int_value.h"
 #include "storage/collection.h"
 #include "storage/convert_helper.h"
 #include "storage/decimal12.h"

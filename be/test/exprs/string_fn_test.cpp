@@ -23,6 +23,7 @@
 #include "exprs/mock_vectorized_expr.h"
 #include "exprs/string_functions.h"
 #include "runtime/types.h"
+#include "src/types/large_int_value.h"
 #include "testutil/assert.h"
 #include "testutil/parallel_test.h"
 #include "types/large_int_value.h"

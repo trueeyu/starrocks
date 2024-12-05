@@ -380,3 +380,4 @@ inline std::ostream& operator<<(std::ostream& os, starrocks::LogicalType type) {
     os << starrocks::logical_type_to_string(type);
     return os;
 }
+

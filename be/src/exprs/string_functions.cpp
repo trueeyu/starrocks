@@ -44,6 +44,7 @@
 #include "gutil/strings/strip.h"
 #include "gutil/strings/substitute.h"
 #include "runtime/runtime_state.h"
+#include "src/types/large_int_value.h"
 #include "storage/olap_define.h"
 #include "types/large_int_value.h"
 #include "util/raw_container.h"

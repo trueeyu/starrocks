@@ -28,6 +28,7 @@
 #include "gutil/casts.h"
 #include "runtime/types.h"
 #include "simd/simd.h"
+#include "src/types/large_int_value.h"
 #include "storage/column_predicate.h"
 #include "storage/types.h"
 #include "storage/uint24.h"

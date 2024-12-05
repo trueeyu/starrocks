@@ -17,7 +17,6 @@
 #include "column/type_traits.h"
 #include "exprs/expr.h"
 #include "exprs/runtime_filter.h"
-#include "types/large_int_value.h"
 
 namespace starrocks {
 template <LogicalType Type>
@@ -68,14 +67,22 @@ public:
         //   1. memcpy filter -> res
         //   2. res[i] = res[i] && (null_data[i] || (data[i] >= _min_value && data[i] <= _max_value));
         // but they can not be compiled into SIMD instructions.
+<<<<<<< HEAD
         if (col->is_nullable() && col->has_null()) {
+=======
+        if (col->is_nullable()) {
+>>>>>>> a33c97b945... MinMaxPredicate support handling null
             auto tmp = ColumnHelper::as_raw_column<NullableColumn>(col);
             uint8_t* __restrict__ null_data = tmp->null_column_data().data();
             CppType* __restrict__ data = ColumnHelper::cast_to_raw<Type>(tmp->data_column())->get_data().data();
             for (int i = 0; i < size; i++) {
                 res[i] = (data[i] >= _min_value && data[i] <= _max_value);
             }
+<<<<<<< HEAD
 
+=======
+            // we take null as true value.
+>>>>>>> a33c97b945... MinMaxPredicate support handling null
             if (_has_null) {
                 for (int i = 0; i < size; i++) {
                     res[i] = res[i] | null_data[i];
@@ -86,8 +93,12 @@ public:
                 }
             }
         } else {
+<<<<<<< HEAD
             const CppType* __restrict__ data =
                     ColumnHelper::get_data_column_by_type<Type>(col.get())->get_data().data();
+=======
+            CppType* data = ColumnHelper::cast_to_raw<Type>(col)->get_data().data();
+>>>>>>> a33c97b945... MinMaxPredicate support handling null
             for (int i = 0; i < size; i++) {
                 res[i] = (data[i] >= _min_value && data[i] <= _max_value);
             }
@@ -116,7 +127,12 @@ public:
         std::stringstream out;
         auto expr_debug_string = Expr::debug_string();
         out << "MinMaxPredicate (type=" << Type << ", slot_id=" << _slot_id << ", has_null=" << _has_null
+<<<<<<< HEAD
             << ", min=" << _min_value << ", max=" << _max_value << ", expr(" << expr_debug_string << "))";
+=======
+            << ", min=" << scalar_value_to_string(_min_value) << ", max=" << scalar_value_to_string(_max_value)
+            << ", expr(" << expr_debug_string << "))";
+>>>>>>> a33c97b945... MinMaxPredicate support handling null
         return out.str();
     }
 
@@ -135,8 +151,14 @@ public:
     template <LogicalType ltype>
     Expr* operator()() {
         auto* bloom_filter = (RuntimeBloomFilter<ltype>*)(_filter);
+<<<<<<< HEAD
         return _pool->add(new MinMaxPredicate<ltype>(_slot_id, bloom_filter->min_value(), bloom_filter->max_value(),
                                                      bloom_filter->has_null()));
+=======
+        MinMaxPredicate<ltype>* p = _pool->add(new MinMaxPredicate<ltype>(
+                _slot_id, bloom_filter->min_value(), bloom_filter->max_value(), bloom_filter->has_null()));
+        return p;
+>>>>>>> a33c97b945... MinMaxPredicate support handling null
     }
 
 private:
@@ -145,4 +167,8 @@ private:
     const JoinRuntimeFilter* _filter;
 };
 
+<<<<<<< HEAD
 } // namespace starrocks
+=======
+} // namespace starrocks
+>>>>>>> a33c97b945... MinMaxPredicate support handling null

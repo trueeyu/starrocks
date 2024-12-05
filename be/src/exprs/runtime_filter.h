@@ -29,7 +29,9 @@
 #include "exprs/runtime_filter_layout.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "gen_cpp/Types_types.h"
+#include "src/types/large_int_value.h"
 #include "types/logical_type.h"
+#include "types/util.h"
 
 namespace starrocks {
 // 0x1. initial global runtime filter impl
@@ -588,18 +590,7 @@ public:
         LogicalType ltype = Type;
         std::stringstream ss;
         ss << "RuntimeBF(type = " << ltype << ", bfsize = " << _size << ", has_null = " << _has_null;
-        if constexpr (std::is_integral_v<CppType> || std::is_floating_point_v<CppType>) {
-            if constexpr (!std::is_same_v<CppType, __int128>) {
-                ss << ", _min = " << _min << ", _max = " << _max;
-            } else {
-                ss << ", _min/_max = int128";
-            }
-        } else if constexpr (IsSlice<CppType>) {
-            ss << ", _min/_max = slice";
-        } else if constexpr (IsDate<CppType> || IsTimestamp<CppType> || IsDecimal<CppType>) {
-            ss << ", _min = " << _min.to_string() << ", _max = " << _max.to_string();
-        }
-        ss << ")";
+        ss << ", _min = "  << scalar_value_to_string(_min) << ", _max = " << scalar_value_to_string(_max) << ")";
         return ss.str();
     }
 

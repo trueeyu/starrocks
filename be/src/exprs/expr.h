@@ -378,4 +378,22 @@ private:
                                          RuntimeState* state);
 };
 
+// only used for debug
+template <typename CppType>
+std::string logical_type_to_string(const CppType& v) {
+    if constexpr (std::is_integral_v<CppType>) {
+        if constexpr (std::is_same_v<CppType, __int128>) {
+            return std::to_string(v);
+        } else {
+            return LargeIntValue::to_string(v);
+        }
+    } else if constexpr (std::is_floating_point_v<CppType>) {
+        return std::to_string(v);
+    } else if constexpr (IsSlice<CppType> || IsDate<CppType> || IsTimestamp<CppType> || IsDecimal<CppType>) {
+        return v.to_string();
+    } else {
+        return "";
+    }
+}
+
 } // namespace starrocks
