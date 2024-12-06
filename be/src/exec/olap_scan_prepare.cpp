@@ -1120,7 +1120,6 @@ template <BoxedExprType E, CompoundNodeType Type>
 template <LogicalType SlotType, typename RangeValueType>
 Status ChunkPredicateBuilder<E, Type>::normalize_predicate(const SlotDescriptor& slot,
                                                            ColumnValueRange<RangeValueType>* range) {
-    LOG(ERROR) << "LXH: NORMAL BEFORE: " << (*range).debug_string();
     constexpr bool Negative = Type == CompoundNodeType::OR;
     RETURN_IF_ERROR((normalize_in_or_equal_predicate<SlotType, RangeValueType, Negative>(slot, range)));
     RETURN_IF_ERROR((normalize_binary_predicate<SlotType, RangeValueType, Negative>(slot, range)));
@@ -1131,7 +1130,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_predicate(const SlotDescriptor&
     // Must handle join runtime filter last
     bool has_null = false;
     RETURN_IF_ERROR((normalize_join_runtime_filter<SlotType, RangeValueType, Negative>(slot, range, &has_null)));
-    LOG(ERROR) << "LXH: NORMAL AFTER: " << (*range).debug_string();
 
     return Status::OK();
 }

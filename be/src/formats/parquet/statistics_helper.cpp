@@ -203,7 +203,6 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat_t(const std::vector<std::s
                                                         Filter& selected) {
     const Expr* root_expr = ctx->root();
     LOG(ERROR) << "LXH: BLOOM_STAT_1: " << root_expr->debug_string();
-    LogicalType ltype = root_expr->type().type;
     using CppType = RunTimeCppValueType<type>;
     auto min_chunk = std::make_unique<Chunk>();
     auto max_chunk = std::make_unique<Chunk>();
