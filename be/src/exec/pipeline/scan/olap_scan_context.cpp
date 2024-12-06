@@ -107,19 +107,6 @@ Status OlapScanContext::parse_conjuncts(RuntimeState* state, const std::vector<E
 
     // Get _conjunct_ctxs.
     _conjunct_ctxs = _scan_node->conjunct_ctxs();
-    LOG(ERROR) << "LXH: SCAN conjuncts: " << _conjunct_ctxs.size();
-    for (size_t i=0; i < _conjunct_ctxs.size(); i++) {
-        LOG(ERROR) << "LXH: SCAN conjunct: " << i << ":" << _conjunct_ctxs[i]->root()->debug_string();
-    }
-    LOG(ERROR) << "LXH: runtime in filters: " << runtime_in_filters.size();
-    for (size_t i=0; i < runtime_in_filters.size(); i++) {
-        LOG(ERROR) << "LXH: runtime in filters: " << i << ":" << runtime_in_filters[i]->root()->debug_string();
-    }
-    LOG(ERROR) << "LXH: runtime bloomfilters: " << runtime_bloom_filters->size();
-    for (size_t i=0; i < runtime_bloom_filters->size(); i++) {
-        LOG(ERROR) << "LXH: runtime bloomfilter: " << i << ":" << runtime_bloom_filters[i].debug_string();
-    }
-
     _conjunct_ctxs.insert(_conjunct_ctxs.end(), runtime_in_filters.begin(), runtime_in_filters.end());
 
     // eval_const_conjuncts.
