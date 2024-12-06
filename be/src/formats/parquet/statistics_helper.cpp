@@ -232,8 +232,6 @@ Status StatisticsHelper::bloom_filter_on_min_max_stat_t(const std::vector<std::s
         return Status::OK();
     }
 
-    size_t page_num = min_values.size();
-
     std::stringstream tmp_str_1;
     for (size_t i = 0; i < selected.size(); i++) {
         tmp_str_1 << (int)selected[i];
