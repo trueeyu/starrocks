@@ -34,7 +34,6 @@ StatusOr<ChunkPtr> LocalPartitionTopnSinkOperator::pull_chunk(RuntimeState* stat
 }
 
 Status LocalPartitionTopnSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
-    LOG(ERROR) << "LXH: PUSH CHUNK";
     return _partition_topn_ctx->push_one_chunk_to_partitioner(state, chunk);
 }
 
