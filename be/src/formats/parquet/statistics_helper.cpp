@@ -21,6 +21,7 @@
 #include "column/vectorized_fwd.h"
 #include "common/object_pool.h"
 #include "common/status.h"
+#include "exprs/min_max_predicate.h"
 #include "exprs/predicate.h"
 #include "formats/parquet/column_converter.h"
 #include "formats/parquet/encoding_plain.h"
