@@ -17,6 +17,7 @@
 #include <variant>
 
 #include "column/type_traits.h"
+#include "exprs/compound_predicate.h"
 #include "exprs/dictmapping_expr.h"
 #include "exprs/expr_context.h"
 #include "exprs/in_const_predicate.hpp"
@@ -31,7 +32,6 @@
 #include "types/date_value.hpp"
 #include "types/logical_type.h"
 #include "types/logical_type_infra.h"
-#include "exprs/compound_predicate.h"
 
 namespace starrocks {
 
@@ -258,12 +258,7 @@ ChunkPredicateBuilder<E, Type>::ChunkPredicateBuilder(const OlapScanConjunctsMan
 template <BoxedExprType E, CompoundNodeType Type>
 StatusOr<bool> ChunkPredicateBuilder<E, Type>::parse_conjuncts() {
     RETURN_IF_ERROR(normalize_expressions());
-    LOG(ERROR) << "LXH: COLUMN_VALUE_RANGE: " << column_value_ranges.size();
     RETURN_IF_ERROR(build_olap_filters());
-    LOG(ERROR) << "LXH: BUILD_OLAP_FILTERS: " << _is_root_builder << ":" << olap_filters.size();
-    for (size_t i = 0; i < olap_filters.size(); i++) {
-        LOG(ERROR) << "LXH: BUILD OLAP FILTER: " << i << ":" << olap_filters[i];
-    }
 
     // Only the root builder builds scan keys.
     if (_is_root_builder && _opts.is_olap_scan) {
@@ -278,10 +273,6 @@ StatusOr<bool> ChunkPredicateBuilder<E, Type>::parse_conjuncts() {
     ASSIGN_OR_RETURN(auto normalized, _normalize_compound_predicates());
     if (_is_root_builder) {
         return normalized;
-    }
-    LOG(ERROR) << "LXH: parse_conjuncts: " << normalized << ":" << _normalized_exprs.size();
-    for (size_t i = 0; i < _normalized_exprs.size(); i++) {
-        LOG(ERROR) << "LXH: parse_conjunct: " << i << ":" << (int)_normalized_exprs[i];
     }
     // Non-root builder return true only when all the child predicates are normalized.
     return normalized && !SIMD::contain_zero(_normalized_exprs);
@@ -342,7 +333,6 @@ StatusOr<PredicateCompoundNode<Type>> ChunkPredicateBuilder<E, Type>::get_predic
         compound_node.add_child(PredicateColumnNode{col_preds_owner[i].get()});
     }
 
-    LOG(ERROR) << "LXH: get_predicate_tree_root: " << _is_root_builder << ":" << _child_builders.size();
     for (auto& child_builder : _child_builders) {
         RETURN_IF_ERROR(std::visit(
                 [&](auto& c) {
@@ -372,8 +362,6 @@ requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize
         const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range) {
     // clang-format on
     Status status;
-
-    LOG(ERROR) << "LXH: normalize_in_or_equal_predicate: " << _exprs.size();
 
     for (size_t i = 0; i < _exprs.size(); i++) {
         if (_normalized_exprs[i]) {
@@ -405,7 +393,6 @@ requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize
                 for (const auto& value : pred->hash_set()) {
                     values.insert(value);
                 }
-                LOG(ERROR) << "LXH: in or equal add fixed values: " << values.size();
                 if (range->add_fixed_values(FILTER_IN, values).ok()) {
                     _normalized_exprs[i] = true;
                 }
@@ -439,8 +426,6 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
     // clang-format on
     Status status;
 
-    LOG(ERROR) << "LXH: normalize_in_or_equal_predicate: " << _exprs.size();
-
     for (size_t i = 0; i < _exprs.size(); i++) {
         if (_normalized_exprs[i]) {
             continue;
@@ -449,7 +434,6 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
         const Expr* root_expr = _exprs[i].root();
 
         // 1. Normalize in conjuncts like 'where col in (v1, v2, v3)'
-        LOG(ERROR) << "LXH: in_or_equal: " << i << ":" << maybe_invert_in_and_equal_op<Negative>(root_expr->op());
         if (TExprOpcode::FILTER_IN == maybe_invert_in_and_equal_op<Negative>(root_expr->op())) {
             const Expr* l = root_expr->get_child(0);
             // TODO(zhuming): DATE column may be casted to double.
@@ -503,7 +487,6 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
                     status = Status::EndOfFile("const false predicate result");
                     continue;
                 }
-                LOG(ERROR) << "LXH: in or equal add fixed values: " << values.size();
                 if (range->add_fixed_values(FILTER_IN, values).ok()) {
                     _normalized_exprs[i] = true;
                 }
@@ -518,7 +501,6 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
             ASSIGN_OR_RETURN(auto* expr_context, _exprs[i].expr_context(_opts.obj_pool, _opts.runtime_state));
             bool ok =
                     get_predicate_value<Negative>(_opts.obj_pool, slot, root_expr, expr_context, &value, &op, &status);
-            LOG(ERROR) << "LXH: equal to in add fixed values";
             if (ok && range->add_fixed_values(FILTER_IN, std::set<DateValue>{value}).ok()) {
                 _normalized_exprs[i] = true;
             }
@@ -578,10 +560,11 @@ private:
     const Decoder* decoder;
 };
 
-
 template <BoxedExprType E, CompoundNodeType Type>
 template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
-void ChunkPredicateBuilder<E, Type>::build_minmax_range_null(ObjectPool* pool, Range& range, const JoinRuntimeFilter* rf, Expr* col_ref, Args&&... args) {
+void ChunkPredicateBuilder<E, Type>::build_minmax_range_null(ObjectPool* pool, Range& range,
+                                                             const JoinRuntimeFilter* rf, Expr* col_ref,
+                                                             Args&&... args) {
     const RuntimeBloomFilter<mapping_type>* filter = down_cast<const RuntimeBloomFilter<mapping_type>*>(rf);
     using CppType = typename RunTimeTypeTraits<mapping_type>::CppType;
     using DecoderType = Decoder<typename RunTimeTypeTraits<mapping_type>::CppType>;
@@ -672,19 +655,17 @@ void ChunkPredicateBuilder<E, Type>::build_minmax_range_null(ObjectPool* pool, R
 
     auto normalized = child_builder.parse_conjuncts();
     if (!normalized.ok()) {
-        LOG(ERROR) << "LXH N1";
     } else if (normalized.value()) {
-        LOG(ERROR) << "LXH N2";
         _child_builders.emplace_back(child_builder);
     } else {
-        LOG(ERROR) << "LXH N3";
     }
 }
 
 template <BoxedExprType E, CompoundNodeType Type>
 template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
-void ChunkPredicateBuilder<E, Type>::build_minmax_range_reverse(ObjectPool* pool, Range& range, const JoinRuntimeFilter* rf, Expr* col_ref,
-                                       Args&&... args) {
+void ChunkPredicateBuilder<E, Type>::build_minmax_range_reverse(ObjectPool* pool, Range& range,
+                                                                const JoinRuntimeFilter* rf, Expr* col_ref,
+                                                                Args&&... args) {
     const RuntimeBloomFilter<mapping_type>* filter = down_cast<const RuntimeBloomFilter<mapping_type>*>(rf);
     using CppType = typename RunTimeTypeTraits<mapping_type>::CppType;
     using DecoderType = Decoder<typename RunTimeTypeTraits<mapping_type>::CppType>;
@@ -748,12 +729,9 @@ void ChunkPredicateBuilder<E, Type>::build_minmax_range_reverse(ObjectPool* pool
     ChunkPredicateBuilder<BoxedExpr, CompoundNodeType::OR> child_builder(_opts, containers, false);
     auto normalized = child_builder.parse_conjuncts();
     if (!normalized.ok()) {
-        LOG(ERROR) << "LXH N1";
     } else if (normalized.value()) {
-        LOG(ERROR) << "LXH N2";
         _child_builders.emplace_back(child_builder);
     } else {
-        LOG(ERROR) << "LXH N3";
     }
 }
 
@@ -780,8 +758,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
 
         const Expr* root_expr = _exprs[i].root();
         if (TExprOpcode::FILTER_IN == root_expr->op()) {
-            LOG(ERROR) << "LXH: join runtime filter step 1: " << _is_root_builder << ":" << i << ":"
-                       << root_expr->debug_string();
             const Expr* l = root_expr->get_child(0);
             if (!l->is_slotref() || (l->type().type != slot.type().type && !ignore_cast(slot, *l))) {
                 continue;
@@ -790,13 +766,9 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
             if (1 == l->get_slot_ids(&slot_ids) && slot_ids[0] == slot.id()) {
                 const auto* pred = down_cast<const VectorizedInConstPredicate<SlotType>*>(root_expr);
 
-                LOG(ERROR) << "LXH: join runtime filter step 2: " << _is_root_builder << ":" << i << ":"
-                           << root_expr->debug_string();
                 if (!pred->is_join_runtime_filter()) {
                     continue;
                 }
-                LOG(ERROR) << "LXH: join runtime filter step 3: " << _is_root_builder << ":" << i << ":"
-                           << root_expr->debug_string();
 
                 // Ensure we don't compute this conjuncts again in olap scanner
                 _normalized_exprs[i] = true;
@@ -804,27 +776,19 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                 if (pred->is_not_in() || pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
                     continue;
                 }
-                LOG(ERROR) << "LXH: join runtime filter step 4: " << _is_root_builder << ":" << i << ":"
-                           << root_expr->debug_string();
 
                 if (pred->null_in_set()) {
                     std::vector<BoxedExpr> containers;
 
                     if (Negative) {
-                        LOG(ERROR) << "LXH: join runtime filter step 5: " << _is_root_builder << ":" << i << ":"
-                                   << root_expr->debug_string();
                         auto* new_pred =
                                 down_cast<VectorizedInConstPredicate<SlotType>*>(root_expr->clone(_opts.obj_pool));
                         const auto& childs = root_expr->children();
-                        LOG(ERROR) << "LXH: CLONE_0: " << childs.size();
                         for (const auto& child : childs) {
                             new_pred->add_child(child);
                         }
-                        LOG(ERROR) << "LXH: CLONE_1: " << root_expr->debug_string();
                         new_pred->set_null_in_set(false);
                         new_pred->set_is_not_in(true);
-                        LOG(ERROR) << "LXH: CLONE_2: " << new_pred->debug_string() << ":"
-                                   << new_pred->is_join_runtime_filter();
                         containers.emplace_back(new_pred);
 
                         TExprNode null_pred_node;
@@ -841,37 +805,25 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                         null_pred_node.type.types.emplace_back(type_node);
                         auto* null_pred = VectorizedIsNullPredicateFactory::from_thrift(null_pred_node);
                         null_pred->add_child(childs[0]);
-                        LOG(ERROR) << "LXH: NULL PRED: " << null_pred->fn().name.function_name;
                         _opts.obj_pool->add(null_pred);
                         containers.emplace_back(null_pred);
 
                         ChunkPredicateBuilder<BoxedExpr, CompoundNodeType::OR> child_builder(_opts, containers, false);
-                        LOG(ERROR) << "LXH: START RUNTIME FILTER parse 1";
                         auto normalized = child_builder.parse_conjuncts();
-                        LOG(ERROR) << "LXH: START RUNTIME FILTER parse 2";
                         if (!normalized.ok()) {
-                            LOG(ERROR) << "LXH: RUN: CONTINUE";
                             continue;
                         } else if (normalized.value()) {
-                            LOG(ERROR) << "LXH: RUN: ADD";
                             _child_builders.emplace_back(child_builder);
                         } else {
-                            LOG(ERROR) << "LXH: RUN: NOTHING";
                         }
                     } else {
-                        LOG(ERROR) << "LXH: join runtime filter step 6: " << _is_root_builder << ":" << i << ":"
-                                   << root_expr->debug_string();
                         auto* new_pred =
                                 down_cast<VectorizedInConstPredicate<SlotType>*>(root_expr->clone(_opts.obj_pool));
                         const auto& childs = root_expr->children();
-                        LOG(ERROR) << "LXH: CLONE_0: " << childs.size();
                         for (const auto& child : childs) {
                             new_pred->add_child(child);
                         }
-                        LOG(ERROR) << "LXH: CLONE_1: " << root_expr->debug_string();
                         new_pred->set_null_in_set(false);
-                        LOG(ERROR) << "LXH: CLONE_2: " << new_pred->debug_string() << ":"
-                                   << new_pred->is_join_runtime_filter();
                         containers.emplace_back(new_pred);
 
                         TExprNode null_pred_node;
@@ -888,36 +840,26 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                         null_pred_node.type.types.emplace_back(type_node);
                         auto* null_pred = VectorizedIsNullPredicateFactory::from_thrift(null_pred_node);
                         null_pred->add_child(childs[0]);
-                        LOG(ERROR) << "LXH: NULL PRED: " << null_pred->fn().name.function_name;
                         _opts.obj_pool->add(null_pred);
                         containers.emplace_back(null_pred);
 
                         ChunkPredicateBuilder<BoxedExpr, CompoundNodeType::OR> child_builder(_opts, containers, false);
-                        LOG(ERROR) << "LXH: START RUNTIME FILTER parse 1";
                         auto normalized = child_builder.parse_conjuncts();
-                        LOG(ERROR) << "LXH: START RUNTIME FILTER parse 2";
                         if (!normalized.ok()) {
-                            LOG(ERROR) << "LXH: N1";
                             continue;
                         } else if (normalized.value()) {
-                            LOG(ERROR) << "LXH: N2";
                             _child_builders.emplace_back(child_builder);
                         } else {
-                            LOG(ERROR) << "LXH: N3";
                         }
                     }
                 } else {
                     if (Negative) {
-                        LOG(ERROR) << "LXH: join runtime filter step 7: " << _is_root_builder << ":" << i << ":"
-                                   << root_expr->debug_string();
                         std::set<RangeValueType> values;
                         for (const auto& value : pred->hash_set()) {
                             values.insert(value);
                         }
                         (void)range->add_fixed_values(FILTER_NOT_IN, values);
                     } else {
-                        LOG(ERROR) << "LXH: join runtime filter step 8: " << _is_root_builder << ":" << i << ":"
-                                   << root_expr->debug_string();
                         std::set<RangeValueType> values;
                         for (const auto& value : pred->hash_set()) {
                             values.insert(value);
@@ -932,7 +874,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
     // bloom runtime filter
     int i = 0;
     for (const auto& it : _opts.runtime_filters->descriptors()) {
-        if (runtime_filters_normalized[i])  {
+        if (runtime_filters_normalized[i]) {
             i++;
             continue;
         }
@@ -964,8 +906,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
         // If a scanner has finished building a runtime filter,
         // the rest of the runtime filters will be normalized here
 
-        LOG(ERROR) << "LXH: runtime bloom filter: " << _is_root_builder;
-
         auto& global_dicts = _opts.runtime_state->get_query_global_dict_map();
         if constexpr (SlotType == TYPE_VARCHAR) {
             if (auto iter = global_dicts.find(slot_id); iter != global_dicts.end()) {
@@ -980,27 +920,23 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
         } else if constexpr (is_integer_type_2(SlotType)) {
             if (rf->has_null()) {
                 if (Negative) {
-                    LOG(ERROR) << "LXH: BLOOM 1: " << _is_root_builder;
                     CHECK(false);
                 } else {
-                    LOG(ERROR) << "LXH: BLOOM 2: " << _is_root_builder << ":" << desc->probe_expr_ctx()->root()->debug_string();
-                    build_minmax_range_null<RangeType, ValueType, SlotType, detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
+                    build_minmax_range_null<RangeType, ValueType, SlotType,
+                                            detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
                             _opts.obj_pool, *range, rf, desc->probe_expr_ctx()->root(), nullptr);
                 }
             } else {
                 if (Negative) {
-                    LOG(ERROR) << "LXH: BLOOM 3: " << _is_root_builder;
                     build_minmax_range_reverse<RangeType, ValueType, SlotType,
                                                detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
                             _opts.obj_pool, *range, rf, desc->probe_expr_ctx()->root(), nullptr);
                 } else {
-                    LOG(ERROR) << "LXH: BLOOM 4: " << _is_root_builder;
                     detail::RuntimeColumnPredicateBuilder::build_minmax_range<
                             RangeType, ValueType, SlotType, detail::RuntimeColumnPredicateBuilder::DummyDecoder>(
                             *range, rf, nullptr);
                 }
             }
-            LOG(ERROR) << "LXH: bloomfilter to range: ";
         } else {
             CHECK(false);
         }
@@ -1080,29 +1016,17 @@ Status ChunkPredicateBuilder<E, Type>::normalize_is_null_predicate(const SlotDes
             continue;
         }
         const Expr* root_expr = _exprs[i].root();
-        LOG(ERROR) << "LXH: normal_is_null_predicate_1: " << _is_root_builder << ":" << root_expr->debug_string();
         if (TExprNodeType::FUNCTION_CALL == root_expr->node_type()) {
-            LOG(ERROR) << "LXH: normal_is_null_predicate_2: " << _is_root_builder << ":" << root_expr->debug_string();
             std::string is_null_str;
             if (root_expr->is_null_scalar_function(is_null_str)) {
-                LOG(ERROR) << "LXH: normal_is_null_predicate_3: " << _is_root_builder << ":"
-                           << root_expr->debug_string();
                 Expr* e = root_expr->get_child(0);
-                LOG(ERROR) << "LXH: normal_is_null_predicate_3_1: " << _is_root_builder << ":" << e->debug_string()
-                           << ":" << e->is_slotref();
                 if (!e->is_slotref()) {
-                    LOG(ERROR) << "LXH: normal_is_null_predicate_4: " << _is_root_builder << ":"
-                               << root_expr->debug_string();
                     continue;
                 }
                 std::vector<SlotId> slot_ids;
                 if (1 != e->get_slot_ids(&slot_ids) || slot_ids[0] != slot.id()) {
-                    LOG(ERROR) << "LXH: normal_is_null_predicate_5: " << _is_root_builder << ":"
-                               << root_expr->debug_string();
                     continue;
                 }
-                LOG(ERROR) << "LXH: normal_is_null_predicate_6: " << _is_root_builder << ":" << is_null_str << ":"
-                           << slot.col_name();
                 TCondition is_null;
                 is_null.column_name = slot.col_name();
                 is_null.condition_op = "is";
@@ -1163,7 +1087,6 @@ struct ColumnRangeBuilder {
                 range.set_scale(slot->type().scale);
             }
 
-            LOG(ERROR) << "LXH: ColumnRangeBuilder: " << slot->debug_string();
             return parent->template normalize_predicate<mapping_type, value_type>(*slot, &range);
         }
     }
@@ -1178,10 +1101,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_expressions() {
 
     // TODO(zhuming): if any of the normalized column range is empty, we can know that
     // no row will be selected anymore and can return EOF directly.
-    LOG(ERROR) << "LXH: SLOTs: " << _opts.tuple_desc->decoded_slots().size();
-    for (size_t i = 0; i < _opts.tuple_desc->decoded_slots().size(); i++) {
-        LOG(ERROR) << "LXH: SLOT: " << i << ":" << _opts.tuple_desc->decoded_slots()[i]->debug_string();
-    }
     for (auto& slot : _opts.tuple_desc->decoded_slots()) {
         RETURN_IF_ERROR(type_dispatch_predicate<Status>(slot->type().type, false, ColumnRangeBuilder(), this, slot,
                                                         &column_value_ranges));
@@ -1261,7 +1180,6 @@ Status ChunkPredicateBuilder<E, Type>::build_scan_keys(bool unlimited, int32_t m
         }
         conditional_key_columns++;
     }
-    LOG(ERROR) << "LXH: build scan keys: " << conditional_key_columns;
     if (config::enable_short_key_for_one_column_filter || conditional_key_columns > 1) {
         for (int i = 0; i < conditional_key_columns && !scan_keys.has_range_value(); ++i) {
             ExtendScanKeyVisitor visitor(&scan_keys, max_scan_key_num);
@@ -1270,27 +1188,20 @@ Status ChunkPredicateBuilder<E, Type>::build_scan_keys(bool unlimited, int32_t m
             }
         }
     }
-    LOG(ERROR) << "LXH: build scan keys: " << scan_keys.debug_string();
     return Status::OK();
 }
 
 template <BoxedExprType E, CompoundNodeType Type>
 Status ChunkPredicateBuilder<E, Type>::_get_column_predicates(PredicateParser* parser,
                                                               ColumnPredicatePtrs& col_preds_owner) {
-    LOG(ERROR) << "LXH: get_column_predicates: " << olap_filters.size();
     for (auto& f : olap_filters) {
-        LOG(ERROR) << "LXH: get_column_predicate_1: " << f;
         std::unique_ptr<ColumnPredicate> p(parser->parse_thrift_cond(f));
-        LOG(ERROR) << "LXH: get_column_predicate_2: " << p->debug_string();
         RETURN_IF(!p, Status::RuntimeError("invalid filter"));
         p->set_index_filter_only(f.is_index_filter_only);
         col_preds_owner.emplace_back(std::move(p));
     }
-    LOG(ERROR) << "LXH: get_column_predicates: null_vector: " << is_null_vector.size();
     for (auto& f : is_null_vector) {
-        LOG(ERROR) << "LXH: get_column_predicate_3: " << f;
         std::unique_ptr<ColumnPredicate> p(parser->parse_thrift_cond(f));
-        LOG(ERROR) << "LXH: get_column_predicate_3: " << p->debug_string();
         RETURN_IF(!p, Status::RuntimeError("invalid filter"));
         col_preds_owner.emplace_back(std::move(p));
     }
@@ -1408,9 +1319,7 @@ Status OlapScanConjunctsManager::eval_const_conjuncts(const std::vector<ExprCont
 
 StatusOr<PredicateTree> OlapScanConjunctsManager::get_predicate_tree(PredicateParser* parser,
                                                                      ColumnPredicatePtrs& col_preds_owner) {
-    LOG(ERROR) << "LXH: GET_PRED_TREE_1: " << col_preds_owner.size();
     ASSIGN_OR_RETURN(auto pred_root, _root_builder.get_predicate_tree_root(parser, col_preds_owner));
-    LOG(ERROR) << "LXH: GET_PRED_TREE_2: " << pred_root.debug_string();
     return PredicateTree::create(std::move(pred_root));
 }
 
