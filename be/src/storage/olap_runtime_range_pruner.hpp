@@ -142,6 +142,7 @@ struct RuntimeColumnPredicateBuilder {
 
     template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
     static void build_minmax_range(Range& range, const JoinRuntimeFilter* rf, Args&&... args) {
+        LOG(ERROR) << "LXH: build minmax range: " << rf->debug_string();
         const RuntimeBloomFilter<mapping_type>* filter = down_cast<const RuntimeBloomFilter<mapping_type>*>(rf);
         using DecoderType = Decoder<typename RunTimeTypeTraits<mapping_type>::CppType>;
         DecoderType decoder(std::forward<Args>(args)...);

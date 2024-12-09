@@ -410,6 +410,48 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
     return Status::OK();
 }
 
+Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
+                                   std::vector<bool>* has_nulls) {
+    const HdfsScannerContext& ctx = *_scanner_ctx;
+
+    for (size_t i = 0; i < slots.size(); i++) {
+        const SlotDescriptor* slot = slots[i];
+        const tparquet::ColumnMetaData* column_meta = nullptr;
+        const tparquet::ColumnChunk* column_chunk = group_reader->get_chunk_metadata(slot->id());
+        if (column_chunk && column_chunk->__isset.meta_data) {
+            column_meta = &column_chunk->meta_data;
+        }
+        if (column_meta == nullptr) {
+            int col_idx = _get_partition_column_idx(slot->col_name());
+            if (col_idx < 0) {
+                // column not exist in parquet file
+                (*has_nulls).emplace_back(true);
+            } else {
+                // is partition column
+                auto* const_column = ColumnHelper::as_raw_column<ConstColumn>(ctx.partition_values[col_idx]);
+                ColumnPtr data_column = const_column->data_column();
+                if (data_column->is_nullable()) {
+                    (*has_nulls).emplace_back(true);
+                } else {
+                    (*has_nulls).emplace_back(false);
+                }
+            }
+        } else if (!column_meta->__isset.statistics) {
+            // statistics not exist in parquet file
+            return Status::Aborted("No exist statistics");
+        } else {
+            const ParquetField* field = group_reader->get_column_parquet_field(slot->id());
+            if (field == nullptr) {
+                LOG(WARNING) << "Can't get " + slot->col_name() + "'s ParquetField in _read_has_nulls.";
+                return Status::InternalError(strings::Substitute("Can't get $0 field", slot->col_name()));
+            }
+            RETURN_IF_ERROR(StatisticsHelper::get_has_nulls(column_meta, *has_nulls));
+        }
+    }
+
+    return Status::OK();
+}
+
 Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
                                        ChunkPtr* min_chunk, ChunkPtr* max_chunk) const {
     const HdfsScannerContext& ctx = *_scanner_ctx;

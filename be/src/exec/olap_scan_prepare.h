@@ -89,6 +89,9 @@ public:
 
     const UnarrivedRuntimeFilterList& unarrived_runtime_filters() { return rt_ranger_params; }
 
+    template <LogicalType slot_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
+    void build_minmax_range_null(ObjectPool* pool, const JoinRuntimeFilter* rf, Expr* col_ref, Args&&... args);
+
 private:
     const ScanConjunctsManagerOptions& _opts;
     const std::vector<E> _exprs;
@@ -134,11 +137,11 @@ private:
     Status normalize_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
 
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
-    requires(!lt_is_date<SlotType>) Status
-            normalize_in_or_equal_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
+        requires(!lt_is_date<SlotType>)
+    Status normalize_in_or_equal_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
-    requires lt_is_date<SlotType> Status normalize_in_or_equal_predicate(const SlotDescriptor& slot,
-                                                                         ColumnValueRange<RangeValueType>* range);
+        requires lt_is_date<SlotType>
+    Status normalize_in_or_equal_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
 
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
     Status normalize_binary_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
