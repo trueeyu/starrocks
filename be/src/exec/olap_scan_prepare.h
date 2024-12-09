@@ -153,8 +153,7 @@ private:
                                  Args&&... args);
 
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
-    Status normalize_join_runtime_filter(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range,
-                                         bool* has_null);
+    Status normalize_join_runtime_filter(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);
 
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
     Status normalize_not_in_or_not_equal_predicate(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range);

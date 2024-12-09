@@ -738,8 +738,7 @@ void ChunkPredicateBuilder<E, Type>::build_minmax_range_reverse(ObjectPool* pool
 template <BoxedExprType E, CompoundNodeType Type>
 template <LogicalType SlotType, typename RangeValueType, bool Negative>
 Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotDescriptor& slot,
-                                                                     ColumnValueRange<RangeValueType>* range,
-                                                                     bool* has_null) {
+                                                                     ColumnValueRange<RangeValueType>* range) {
     if (!_is_root_builder) {
         return Status::OK();
     }
@@ -1052,8 +1051,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_predicate(const SlotDescriptor&
     RETURN_IF_ERROR((normalize_not_in_or_not_equal_predicate<SlotType, RangeValueType, Negative>(slot, range)));
     RETURN_IF_ERROR(normalize_is_null_predicate(slot));
     // Must handle join runtime filter last
-    bool has_null = false;
-    RETURN_IF_ERROR((normalize_join_runtime_filter<SlotType, RangeValueType, Negative>(slot, range, &has_null)));
+    RETURN_IF_ERROR((normalize_join_runtime_filter<SlotType, RangeValueType, Negative>(slot, range)));
 
     return Status::OK();
 }
