@@ -149,7 +149,8 @@ private:
                                     Args&&... args);
 
     template <class Range, class value_type, LogicalType mapping_type, template <class> class Decoder, class... Args>
-    void build_minmax_range_null(ObjectPool* pool, Range& range, const JoinRuntimeFilter* rf, Expr* col_ref, Args&&... args);
+    void build_minmax_range_null(ObjectPool* pool, Range& range, const JoinRuntimeFilter* rf, Expr* col_ref,
+                                 Args&&... args);
 
     template <LogicalType SlotType, typename RangeValueType, bool Negative>
     Status normalize_join_runtime_filter(const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range,
