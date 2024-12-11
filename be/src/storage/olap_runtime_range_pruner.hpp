@@ -101,12 +101,12 @@ struct RuntimeColumnPredicateBuilder {
                 std::vector<const ColumnPredicate*> new_preds;
 
                 ColumnAndPredicate* and_pred = new ColumnAndPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
-                object_pool->add(and_pred);
+                pool->add(and_pred);
                 and_pred->add_child(preds.begin(), preds.end());
 
                 ColumnPredicate* null_pred =
                         new_column_null_predicate(preds[0]->type_info_ptr(), preds[0]->column_id(), true);
-                object_pool->add(null_pred);
+                pool->add(null_pred);
 
                 ColumnOrPredicate* or_pred = new ColumnOrPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
                 object_pool->add(or_pred);
