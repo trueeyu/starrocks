@@ -289,7 +289,8 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
         for (auto ctx : kv.second) {
             LOG(ERROR) << "LXH: filter group start ctx: " << kv.first << ":" << ctx->root()->debug_string();
             if (StatisticsHelper::can_be_used_for_statistics_filter(ctx, filter_type)) {
-                LOG(ERROR) << "LXH: filter group start ctx use stats filter: " << kv.first << ":" << ctx->root()->debug_string();
+                LOG(ERROR) << "LXH: filter group start ctx use stats filter: " << kv.first << ":"
+                           << ctx->root()->debug_string();
                 SlotDescriptor* slot = nullptr;
                 for (auto s : _scanner_ctx->slot_descs) {
                     if (s->id() == kv.first) {
@@ -357,7 +358,8 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                     // already process in `_filter_group_with_bloom_filter_min_max_conjuncts`.
                 }
             } else {
-                LOG(ERROR) << "LXH: filter group start ctx not use stats filter: " << kv.first << ":" << ctx->root()->debug_string();
+                LOG(ERROR) << "LXH: filter group start ctx not use stats filter: " << kv.first << ":"
+                           << ctx->root()->debug_string();
             }
         }
     }
@@ -434,7 +436,7 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
 }
 
 Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
-                                       ChunkPtr* min_chunk, ChunkPtr* max_chunk, std::vector<bool>& has_nulls) const {
+                                       ChunkPtr* min_chunk, ChunkPtr* max_chunk) const {
     const HdfsScannerContext& ctx = *_scanner_ctx;
 
     for (size_t i = 0; i < slots.size(); i++) {
@@ -450,7 +452,6 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
                 // column not exist in parquet file
                 (*min_chunk)->columns()[i]->append_nulls(1);
                 (*max_chunk)->columns()[i]->append_nulls(1);
-                has_nulls[i] = true;
             } else {
                 // is partition column
                 auto* const_column = ColumnHelper::as_raw_column<ConstColumn>(ctx.partition_values[col_idx]);
@@ -458,11 +459,9 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
                 if (data_column->is_nullable()) {
                     (*min_chunk)->columns()[i]->append_nulls(1);
                     (*max_chunk)->columns()[i]->append_nulls(1);
-                    has_nulls[i] = true;
                 } else {
                     (*min_chunk)->columns()[i]->append(*data_column, 0, 1);
                     (*max_chunk)->columns()[i]->append(*data_column, 0, 1);
-                    has_nulls[i] = false;
                 }
             }
         } else if (!column_meta->__isset.statistics) {
@@ -486,11 +485,6 @@ Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const
             if (field == nullptr) {
                 LOG(WARNING) << "Can't get " + slot->col_name() + "'s ParquetField in _read_min_max_chunk.";
                 return Status::InternalError(strings::Substitute("Can't get $0 field", slot->col_name()));
-            }
-            if (column_meta->statistics.null_count > 0) {
-                has_nulls[i] = true;
-            } else {
-                has_nulls[i] = false;
             }
 
             RETURN_IF_ERROR(StatisticsHelper::get_min_max_value(_file_metadata.get(), slot->type(), column_meta, field,
@@ -560,7 +554,7 @@ Status FileReader::_init_group_readers() {
     LOG(ERROR) << "LXH: GROUP_COUNT: " << _file_metadata->t_metadata().row_groups.size();
     for (size_t i = 0; i < _file_metadata->t_metadata().row_groups.size(); i++) {
         LOG(ERROR) << "LXH: GROUP_COUNT 1: " << i << ":" << _scanner_ctx->scan_range->offset << ":"
-                << _scanner_ctx->scan_range->length;
+                   << _scanner_ctx->scan_range->length;
         if (i > 0) {
             row_group_first_row += _file_metadata->t_metadata().row_groups[i - 1].num_rows;
         }
