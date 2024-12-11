@@ -109,7 +109,7 @@ struct RuntimeColumnPredicateBuilder {
                 pool->add(null_pred);
 
                 ColumnOrPredicate* or_pred = new ColumnOrPredicate(preds[0]->type_info_ptr(), preds[0]->column_id());
-                object_pool->add(or_pred);
+                pool->add(or_pred);
                 or_pred->add_child(and_pred);
                 or_pred->add_child(null_pred);
                 new_preds.template emplace_back(or_pred);

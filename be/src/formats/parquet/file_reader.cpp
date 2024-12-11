@@ -192,9 +192,8 @@ bool FileReader::_filter_group_with_min_max_conjuncts(const GroupReaderPtr& grou
         const TupleDescriptor& tuple_desc = *(_scanner_ctx->min_max_tuple_desc);
         ChunkPtr min_chunk = ChunkHelper::new_chunk(tuple_desc, 0);
         ChunkPtr max_chunk = ChunkHelper::new_chunk(tuple_desc, 0);
-        std::vector<bool> has_nulls(tuple_desc.slots().size(), 0);
 
-        auto st = _read_min_max_chunk(group_reader, tuple_desc.slots(), &min_chunk, &max_chunk, has_nulls);
+        auto st = _read_min_max_chunk(group_reader, tuple_desc.slots(), &min_chunk, &max_chunk);
         if (!st.ok()) {
             // if there are some error when dealing statistics, shouldn't return the error status,
             // just read data ignore the statistics.
