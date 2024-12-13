@@ -162,6 +162,7 @@ public:
                         continue;
                     } else {
                         if (_is_not_in) {
+                            _null_in_set = true;
                             _hash_set.clear();
                             _string_values.clear();
                             _array_buffer.clear();
