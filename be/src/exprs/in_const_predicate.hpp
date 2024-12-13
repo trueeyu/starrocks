@@ -157,8 +157,20 @@ public:
 
                 ColumnViewer<Type> viewer(value);
                 if (viewer.is_null(0)) {
-                    _null_in_set = true;
-                    continue;
+                    if (_eq_null) {
+                        _null_in_set = true;
+                        continue;
+                    } else {
+                        if (_is_not_in) {
+                            _hash_set.clear();
+                            _string_values.clear();
+                            _array_buffer.clear();
+                            _array_size = 0;
+                            break;
+                        } else {
+                            continue;
+                        }
+                    }
                 }
 
                 // insert into set
