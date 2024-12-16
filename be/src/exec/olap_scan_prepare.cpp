@@ -360,6 +360,7 @@ template <LogicalType SlotType, typename RangeValueType, bool Negative>
 requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize_in_or_equal_predicate(
         const SlotDescriptor& slot, ColumnValueRange<RangeValueType>* range) {
     // clang-format on
+
     Status status;
 
     for (size_t i = 0; i < _exprs.size(); i++) {
@@ -540,24 +541,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_binary_predicate(const SlotDesc
 
     return Status::OK();
 }
-
-template <class RuntimeFilter, class Decoder>
-struct MinMaxParser {
-    MinMaxParser(const RuntimeFilter* runtime_filter_, Decoder* decoder)
-            : runtime_filter(runtime_filter_), decoder(decoder) {}
-    auto min_value() {
-        auto code = runtime_filter->min_value();
-        return decoder->decode(code);
-    }
-    auto max_value() {
-        auto code = runtime_filter->max_value();
-        return decoder->decode(code);
-    }
-
-private:
-    const RuntimeFilter* runtime_filter;
-    const Decoder* decoder;
-};
 
 template <BoxedExprType E, CompoundNodeType Type>
 template <LogicalType SlotType, LogicalType MappingType, template <class> class Decoder, class... Args>
