@@ -113,11 +113,6 @@ inline LogicalType delegate_type(LogicalType type) {
     }
 }
 
-constexpr bool is_integer_type_2(LogicalType type) {
-    return type == TYPE_TINYINT || type == TYPE_SMALLINT || type == TYPE_INT || type == TYPE_BIGINT ||
-           type == TYPE_LARGEINT;
-}
-
 inline bool is_integer_type(LogicalType type) {
     return type == TYPE_TINYINT || type == TYPE_SMALLINT || type == TYPE_INT || type == TYPE_BIGINT ||
            type == TYPE_LARGEINT;
