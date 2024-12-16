@@ -429,7 +429,6 @@ Status HiveDataSource::_decompose_conjunct_ctxs(RuntimeState* state) {
             }
         }
         if (!single_slot || slot_ids.empty()) {
-            LOG(ERROR) << "LXH: MULTI: " << ctx->root()->debug_string();
             _scanner_conjunct_ctxs.emplace_back(ctx);
             for (SlotId slot_id : slot_ids) {
                 _slots_of_mutli_slot_conjunct.insert(slot_id);
