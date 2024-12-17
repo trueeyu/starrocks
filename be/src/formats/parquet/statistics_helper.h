@@ -35,6 +35,7 @@ public:
 
     static Status in_filter_on_min_max_stat(const std::vector<std::string>& min_values,
                                             const std::vector<std::string>& max_values,
+                                            const std::vector<bool>& null_pages,
                                             const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                             const ParquetField* field, const std::string& timezone, Filter& selected);
 
@@ -59,7 +60,8 @@ public:
                                     std::vector<std::string>& min_values, std::vector<std::string>& max_values);
 
     static Status get_has_nulls(const tparquet::ColumnMetaData* column_meta, std::vector<bool>& has_nulls);
-    static Status get_null_counts(const tparquet::ColumnMetaData* column_meta, std::vector<int64_t>& null_counts);
+    static Status get_null_counts(const tparquet::ColumnMetaData* column_meta, int64_t num_rows, std::vector<bool>& null_pages,
+                                  std::vector<int64_t>& null_counts);
 
     static bool has_correct_min_max_stats(const FileMetaData* file_metadata,
                                           const tparquet::ColumnMetaData& column_meta, const SortOrder& sort_order);

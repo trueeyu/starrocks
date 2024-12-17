@@ -263,6 +263,7 @@ Status StatisticsHelper::min_max_filter_on_min_max_stat_t(const std::vector<std:
 
 Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string>& min_values,
                                                    const std::vector<std::string>& max_values,
+                                                   const std::vector<bool>& null_pages,
                                                    const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                                    const ParquetField* field, const std::string& timezone,
                                                    Filter& selected) {
@@ -390,11 +391,16 @@ Status StatisticsHelper::get_has_nulls(const tparquet::ColumnMetaData* column_me
 }
 
 Status StatisticsHelper::get_null_counts(const tparquet::ColumnMetaData* column_meta,
+                                         int64_t num_rows,
+                                         std::vector<bool>& null_pages,
                                          std::vector<int64_t>& null_counts) {
     if (!column_meta->statistics.__isset.null_count) {
         return Status::Aborted("No null_count in column statistics");
     }
     null_counts.emplace_back(column_meta->statistics.null_count);
+    if (num_rows == column_meta->statistics.null_count) {
+        null_pages.emplace_back(true);
+    }
     return Status::OK();
 }
 
