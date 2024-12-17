@@ -209,8 +209,8 @@ Status StatisticsHelper::min_max_filter_on_min_max_stat(const std::vector<std::s
     switch (ltype) {
 #define M(NAME)                                                                                                     \
     case LogicalType::NAME: {                                                                                       \
-        return min_max_filter_on_min_max_stat_t<LogicalType::NAME>(min_values, max_values, null_counts, ctx, field, \
-                                                                   timezone, selected);                             \
+        return min_max_filter_on_min_max_stat_t<LogicalType::NAME>(min_values, max_values, null_pages, null_counts, \
+                                                                   ctx, field, timezone, selected);                 \
     }
         APPLY_FOR_ALL_SCALAR_TYPE(M);
 #undef M
@@ -222,6 +222,7 @@ Status StatisticsHelper::min_max_filter_on_min_max_stat(const std::vector<std::s
 template <LogicalType LType>
 Status StatisticsHelper::min_max_filter_on_min_max_stat_t(const std::vector<std::string>& min_values,
                                                           const std::vector<std::string>& max_values,
+                                                          const std::vector<bool>& null_pages,
                                                           const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                                           const ParquetField* field, const std::string& timezone,
                                                           Filter& selected) {
