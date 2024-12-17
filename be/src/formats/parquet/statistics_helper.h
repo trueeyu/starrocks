@@ -40,6 +40,7 @@ public:
 
     static Status min_max_filter_on_min_max_stat(const std::vector<std::string>& min_values,
                                                  const std::vector<std::string>& max_values,
+                                                 const std::vector<bool>& null_pages,
                                                  const std::vector<int64_t>& null_counts, ExprContext* ctx,
                                                  const ParquetField* field, const std::string& timezone,
                                                  Filter& selected);
