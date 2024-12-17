@@ -41,6 +41,8 @@ namespace starrocks::parquet {
 Status StatisticsHelper::decode_value_into_column(const ColumnPtr& column, const std::vector<std::string>& values,
                                                   const TypeDescriptor& type, const ParquetField* field,
                                                   const std::string& timezone) {
+    LOG(ERROR) << "COLUMN: " << column->debug_string();
+    LOG(ERROR) << "TYPE: " << type;
     std::unique_ptr<ColumnConverter> converter;
     RETURN_IF_ERROR(ColumnConverterFactory::create_converter(*field, type, timezone, &converter));
     bool ret = true;
@@ -94,6 +96,7 @@ Status StatisticsHelper::decode_value_into_column(const ColumnPtr& column, const
                 RETURN_IF_ERROR(PlainDecoder<Slice>::decode(values[i], &decode_value));
                 ret &= src_column->append_strings(std::vector<Slice>{decode_value});
             }
+            LOG(ERROR) << "CONVERT: " << src_column->debug_string();
             RETURN_IF_ERROR(converter->convert(src_column, column.get()));
         }
         break;
