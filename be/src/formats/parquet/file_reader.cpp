@@ -247,11 +247,12 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
             if (!slot) continue;
             min_max_slots[0] = slot;
 
-            if (filter->has_null()) {
-                std::vector<bool> has_nulls;
-                auto st = _read_has_nulls(group_reader, min_max_slots, &has_nulls);
-                if (!st.ok()) continue;
+            std::vector<bool> null_pages;
+            std::vector<bool> has_nulls;
+            auto st = _read_has_nulls(group_reader, min_max_slots, &null_pages, &has_nulls);
+            if (!st.ok()) continue;
 
+            if (filter->has_null()) {
                 if (has_nulls[0]) {
                     continue;
                 }
@@ -261,7 +262,7 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
                 ChunkPtr min_chunk = ChunkHelper::new_chunk(min_max_slots, 0);
                 ChunkPtr max_chunk = ChunkHelper::new_chunk(min_max_slots, 0);
 
-                auto st = _read_min_max_chunk(group_reader, min_max_slots, &min_chunk, &max_chunk);
+                st = _read_min_max_chunk(group_reader, min_max_slots, &min_chunk, &max_chunk);
                 if (!st.ok()) continue;
                 bool discard = RuntimeFilterHelper::filter_zonemap_with_min_max(
                         slot->type().type, filter, min_chunk->columns()[0].get(), max_chunk->columns()[0].get());
@@ -376,6 +377,7 @@ bool FileReader::_filter_group(const GroupReaderPtr& group_reader) {
 }
 
 Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
+                                   std::vector<bool>* null_pages,
                                    std::vector<bool>* has_nulls) {
     const HdfsScannerContext& ctx = *_scanner_ctx;
 
@@ -391,14 +393,17 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
             if (col_idx < 0) {
                 // column not exist in parquet file
                 (*has_nulls).emplace_back(true);
+                (*null_pages).emplace_back(true);
             } else {
                 // is partition column
                 auto* const_column = ColumnHelper::as_raw_column<ConstColumn>(ctx.partition_values[col_idx]);
                 ColumnPtr data_column = const_column->data_column();
                 if (data_column->is_nullable()) {
                     (*has_nulls).emplace_back(true);
+                    (*null_pages).emplace_back(true);
                 } else {
                     (*has_nulls).emplace_back(false);
+                    (*null_pages).emplace_back(false);
                 }
             }
         } else if (!column_meta->__isset.statistics) {
@@ -410,7 +415,8 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
                 LOG(WARNING) << "Can't get " + slot->col_name() + "'s ParquetField in _read_has_nulls.";
                 return Status::InternalError(strings::Substitute("Can't get $0 field", slot->col_name()));
             }
-            RETURN_IF_ERROR(StatisticsHelper::get_has_nulls(column_meta, *has_nulls));
+            int64_t num_rows = group_reader->get_row_group_metadata()->num_rows;
+            RETURN_IF_ERROR(StatisticsHelper::get_has_nulls(column_meta, num_rows, *null_pages, *has_nulls));
         }
     }
 
@@ -418,6 +424,7 @@ Status FileReader::_read_has_nulls(const GroupReaderPtr& group_reader, const std
 }
 
 Status FileReader::_read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
+                                       std::vector<bool>& null_pages,
                                        ChunkPtr* min_chunk, ChunkPtr* max_chunk) const {
     const HdfsScannerContext& ctx = *_scanner_ctx;
 

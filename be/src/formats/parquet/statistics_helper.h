@@ -59,9 +59,10 @@ public:
                                     const tparquet::ColumnMetaData* column_meta, const ParquetField* field,
                                     std::vector<std::string>& min_values, std::vector<std::string>& max_values);
 
-    static Status get_has_nulls(const tparquet::ColumnMetaData* column_meta, std::vector<bool>& has_nulls);
-    static Status get_null_counts(const tparquet::ColumnMetaData* column_meta, int64_t num_rows, std::vector<bool>& null_pages,
-                                  std::vector<int64_t>& null_counts);
+    static Status get_has_nulls(const tparquet::ColumnMetaData* column_meta, int64_t num_rows,
+                                std::vector<bool>& null_pages, std::vector<bool>& has_nulls);
+    static Status get_null_counts(const tparquet::ColumnMetaData* column_meta, int64_t num_rows,
+                                  std::vector<bool>& null_pages, std::vector<int64_t>& null_counts);
 
     static bool has_correct_min_max_stats(const FileMetaData* file_metadata,
                                           const tparquet::ColumnMetaData& column_meta, const SortOrder& sort_order);

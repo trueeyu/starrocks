@@ -111,8 +111,10 @@ private:
     // make min/max chunk from stats of row group meta
     // exist=true: group meta contain statistics info
     Status _read_min_max_chunk(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
+                               const std::vector<bool>& null_pages,
                                ChunkPtr* min_chunk, ChunkPtr* max_chunk) const;
     Status _read_has_nulls(const GroupReaderPtr& group_reader, const std::vector<SlotDescriptor*>& slots,
+                           std::vector<bool>* null_pages,
                            std::vector<bool>* has_nulls);
 
     // only scan partition column + not exist column
