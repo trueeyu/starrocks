@@ -96,9 +96,9 @@ Status GroupReader::_deal_with_pageindex() {
                 }
             }
         } else {
-            auto page_index_reader = std::make_unique<PageIndexReader>(
-                    this, _param.file, _column_readers, _row_group_metadata, _param.min_max_conjunct_ctxs,
-                    _param.conjunct_ctxs_by_slot);
+            auto page_index_reader =
+                    std::make_unique<PageIndexReader>(this, _param.file, _column_readers, _row_group_metadata,
+                                                      _param.min_max_conjunct_ctxs, _param.conjunct_ctxs_by_slot);
             ASSIGN_OR_RETURN(bool flag, page_index_reader->generate_read_range(_range));
             if (flag && !_is_group_filtered) {
                 page_index_reader->select_column_offset_index();
