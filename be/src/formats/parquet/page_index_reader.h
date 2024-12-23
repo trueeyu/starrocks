@@ -74,9 +74,7 @@ public:
               _column_readers(column_readers),
               _row_group_metadata(meta),
               _min_max_conjunct_ctxs(min_max_conjunct_ctxs),
-              _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot),
-              _slot_descs(slot_descs),
-              _predicate_tree(predicateTree) {}
+              _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot) {}
 
     StatusOr<bool> generate_read_range(SparseRange<uint64_t>& sparse_range);
 
@@ -104,9 +102,6 @@ private:
 
     // conjuncts by slot
     const std::unordered_map<SlotId, std::vector<ExprContext*>>& _conjunct_ctxs_by_slot;
-
-    std::vector<SlotDescriptor*> _slot_descs;
-    const PredicateTree* _predicate_tree = nullptr;
 };
 
 } // namespace starrocks::parquet
