@@ -117,15 +117,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
         return Status::OK();
     }
 
-    std::vector<bool> has_nulls(column_index.null_counts.size(), 0);
-    for (size_t i = 0; i < column_index.null_counts.size(); i++) {
-        if (column_index.null_counts[i] > 0) {
-            has_nulls[i] = true;
-        } else {
-            has_nulls[i] = false;
-        }
-    }
-
     size_t page_num = column_index.min_values.size();
     // both min and max value are filtered, the page is filtered.
     // for example pages {100, 200}, {200, 400}, {400, 600}, {500, 800}, {800, 1000}
