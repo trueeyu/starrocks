@@ -161,7 +161,6 @@ Status ChunksSorterHeapSort::get_next(ChunkPtr* chunk, bool* eos) {
 }
 
 std::vector<JoinRuntimeFilter*>* ChunksSorterHeapSort::runtime_filters(ObjectPool* pool) {
-    LOG(ERROR) << "LXH: get filter";
     if (_sort_heap == nullptr || _sort_heap->size() < _number_of_rows_to_sort()) {
         return nullptr;
     }
@@ -180,9 +179,6 @@ std::vector<JoinRuntimeFilter*>* ChunksSorterHeapSort::runtime_filters(ObjectPoo
     if (top_cursor_column->is_null(cursor_rid)) {
         has_null = true;
     }
-
-    LOG(ERROR) << "LXH: order_by_column: " << top_cursor_column->has_null() << ":" <<cursor_rid
-               << ":" << top_cursor_column->is_null(cursor_rid);
 
     if (_runtime_filter.empty()) {
         auto rf = type_dispatch_predicate<JoinRuntimeFilter*>(

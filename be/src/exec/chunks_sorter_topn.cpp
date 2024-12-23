@@ -107,7 +107,6 @@ Status ChunksSorterTopn::do_done(RuntimeState* state) {
 }
 
 std::vector<JoinRuntimeFilter*>* ChunksSorterTopn::runtime_filters(ObjectPool* pool) {
-    LOG(ERROR) << "LXH: get filter";
     if (!_init_merged_segment) {
         return nullptr;
     }
@@ -124,9 +123,6 @@ std::vector<JoinRuntimeFilter*>* ChunksSorterTopn::runtime_filters(ObjectPool* p
     // _topn_type != TTopNType::RANK means we need reserve the max_value
     bool is_close_interval = _topn_type == TTopNType::RANK || _sort_desc.num_columns() != 1;
     bool has_null = false;
-
-    LOG(ERROR) << "LXH: order_by_column: " << order_by_column->has_null() << ":" << current_max_value_row_id
-            << ":" << order_by_column->is_null(current_max_value_row_id);
 
     if (order_by_column->is_null(current_max_value_row_id)) {
         has_null = true;
