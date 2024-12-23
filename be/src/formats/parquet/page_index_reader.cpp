@@ -114,7 +114,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
         LOG(INFO) << "Error when decode min/max statistics, slotid " << id << ", type " << type.debug_string();
         return Status::OK();
     }
-    LOG(ERROR) << "LXH: MIN_COLUMN: " << min_column->debug_string();
 
     // deal with max_values
     st = StatisticsHelper::decode_value_into_column(max_column, column_index.max_values, column_index.null_pages, type,
@@ -125,7 +124,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
         LOG(INFO) << "Error when decode min/max statistics, slotid " << id << ", type " << type.debug_string();
         return Status::OK();
     }
-    LOG(ERROR) << "LXH: MAX_COLUMN: " << max_column->debug_string();
 
     std::vector<bool> has_nulls(column_index.null_counts.size(), 0);
     for (size_t i = 0; i < column_index.null_counts.size(); i++) {
@@ -135,12 +133,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
             has_nulls[i] = false;
         }
     }
-    std::stringstream nulls_str;
-    for (size_t i = 0; i < has_nulls.size(); i++) {
-        nulls_str << has_nulls[i];
-        nulls_str << ",";
-    }
-    LOG(ERROR) << "LXH: HAS_NULLS: " << nulls_str.str();
 
     size_t page_num = column_index.min_values.size();
     // both min and max value are filtered, the page is filtered.
@@ -162,51 +154,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
         ColumnHelper::or_two_filters(&min_filter, max_filter.data());
         ColumnHelper::merge_two_filters(&page_filter, min_filter.data());
     }
-
-    std::stringstream nulls_str_1;
-    for (size_t i = 0; i < page_filter.size(); i++) {
-        nulls_str_1 << (int)page_filter[i];
-        nulls_str_1 << ",";
-    }
-    LOG(ERROR) << "LXH: AFTER CTX: " << nulls_str_1.str();
-
-    if (_runtime_filter_collector != nullptr) {
-        for (auto& it : _runtime_filter_collector->descriptors()) {
-            RuntimeFilterProbeDescriptor* rf_desc = it.second;
-            const JoinRuntimeFilter* filter = rf_desc->runtime_filter(-1);
-            SlotId probe_slot_id;
-            if (filter == nullptr || !rf_desc->is_probe_slot_ref(&probe_slot_id)) {
-                continue;
-            }
-            SlotDescriptor* slot = nullptr;
-            for (SlotDescriptor* s : _slot_descs) {
-                if (s->id() == probe_slot_id) {
-                    slot = s;
-                    break;
-                }
-            }
-            if (!slot) {
-                continue;
-            }
-
-            auto r_filter = RuntimeFilterHelper::filter_zonemap_with_min_max_batch(type.type, filter, min_column,
-                                                                                   max_column, has_nulls);
-            for (size_t i = 0; i < page_filter.size(); i++) {
-                if (page_filter[i]) {
-                    if (r_filter[i]) {
-                        page_filter[i] = 0;
-                    }
-                }
-            }
-        }
-    }
-
-    std::stringstream nulls_str_2;
-    for (size_t i = 0; i < page_filter.size(); i++) {
-        nulls_str_2 << (int)page_filter[i];
-        nulls_str_2 << ",";
-    }
-    LOG(ERROR) << "LXH: AFTER RUNTIME: " << nulls_str_2.str();
 
     return Status::OK();
 }

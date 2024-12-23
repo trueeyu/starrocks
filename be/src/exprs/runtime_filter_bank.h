@@ -71,10 +71,6 @@ public:
     static bool filter_zonemap_with_min_max(LogicalType type, const JoinRuntimeFilter* filter, const Column* min_column,
                                             const Column* max_column);
 
-    static std::vector<bool> filter_zonemap_with_min_max_batch(LogicalType type, const JoinRuntimeFilter* filter,
-                                                               ColumnPtr min_column, ColumnPtr max_column,
-                                                               const std::vector<bool>& has_nulls);
-
     // create min/max predicate from filter.
     static void create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
                                                const JoinRuntimeFilter* filter, Expr** min_max_predicate);

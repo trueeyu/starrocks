@@ -242,13 +242,6 @@ bool RuntimeFilterHelper::filter_zonemap_with_min_max(LogicalType type, const Jo
     return type_dispatch_filter(type, false, FilterZoneMapWithMinMaxOp(), filter, min_column, max_column);
 }
 
-std::vector<bool> RuntimeFilterHelper::filter_zonemap_with_min_max_batch(LogicalType type, const JoinRuntimeFilter* filter,
-                                                            ColumnPtr min_column, ColumnPtr max_column,
-                                                            const std::vector<bool>& has_nulls) {
-    std::vector<bool> default_values(has_nulls.size(), 0);
-    return type_dispatch_filter(type, default_values, FilterZoneMapWithMinMaxOpBatch(), filter, min_column, max_column, has_nulls);
-}
-
 Status RuntimeFilterBuildDescriptor::init(ObjectPool* pool, const TRuntimeFilterDescription& desc,
                                           RuntimeState* state) {
     _filter_id = desc.filter_id;
