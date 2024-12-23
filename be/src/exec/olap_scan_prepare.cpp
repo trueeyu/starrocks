@@ -385,7 +385,8 @@ requires(!lt_is_date<SlotType>) Status ChunkPredicateBuilder<E, Type>::normalize
                     continue;
                 }
 
-                if (is_not_in<Negative>(pred) || pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
+                if (is_not_in<Negative>(pred) || pred->null_in_set() ||
+                    pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
                     continue;
                 }
 
@@ -461,7 +462,7 @@ requires lt_is_date<SlotType> Status ChunkPredicateBuilder<E, Type>::normalize_i
                         continue;
                     }
 
-                    if (is_not_in<Negative>(pred) ||
+                    if (is_not_in<Negative>(pred) || pred->null_in_set() ||
                         pred->hash_set().size() > config::max_pushdown_conditions_per_column) {
                         continue;
                     }
@@ -650,7 +651,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
     }
 
     // bloom runtime filter
-    int i = 0;
     for (const auto& it : _opts.runtime_filters->descriptors()) {
         RuntimeFilterProbeDescriptor* desc = it.second;
         const JoinRuntimeFilter* rf = desc->runtime_filter(_opts.driver_sequence);
@@ -664,7 +664,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
         // runtime filter existed and does not have null.
         if (rf == nullptr) {
             rt_ranger_params.add_unarrived_rf(desc, &slot, _opts.driver_sequence);
-            i++;
             continue;
         }
 
@@ -711,7 +710,6 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
                                                                                                             nullptr);
             }
         }
-        i++;
     }
 
     return Status::OK();
