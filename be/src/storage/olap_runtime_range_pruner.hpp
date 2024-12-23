@@ -223,7 +223,6 @@ inline Status OlapRuntimeScanRangePruner::_update(const ColumnIdToGlobalDictMap*
     if (_arrived_runtime_filters_masks.empty()) {
         return Status::OK();
     }
-    ObjectPool object_pool;
     for (size_t i = 0; i < _arrived_runtime_filters_masks.size(); ++i) {
         // 1. runtime filter arrived
         // 2. runtime filter updated and read rows greater than rf_update_threhold
