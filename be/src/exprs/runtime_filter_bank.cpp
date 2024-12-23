@@ -214,29 +214,6 @@ struct FilterZoneMapWithMinMaxOp {
     }
 };
 
-struct FilterZoneMapWithMinMaxOpBatch {
-    template <LogicalType ltype>
-    std::vector<bool> operator()(const JoinRuntimeFilter* expr, ColumnPtr min_column, const ColumnPtr max_column,
-                                 std::vector<bool> has_nulls) {
-        using CppType = RunTimeCppType<ltype>;
-        auto* filter = (RuntimeBloomFilter<ltype>*)(expr);
-        size_t size = has_nulls.size();
-        std::vector<bool> results(size, 0);
-        ColumnViewer<ltype> min_viewer(min_column);
-        ColumnViewer<ltype> max_viewer(max_column);
-        for(size_t i = 0; i < size; i++) {
-            if (filter->has_null() && has_nulls[i]) {
-                results[i] = false;
-                continue;
-            }
-            CppType min_value = min_viewer.value(i);
-            CppType max_value = max_viewer.value(i);
-            results[i] = filter->filter_zonemap_with_min_max(&min_value, &max_value);
-        }
-        return results;
-    }
-};
-
 bool RuntimeFilterHelper::filter_zonemap_with_min_max(LogicalType type, const JoinRuntimeFilter* filter,
                                                       const Column* min_column, const Column* max_column) {
     return type_dispatch_filter(type, false, FilterZoneMapWithMinMaxOp(), filter, min_column, max_column);
