@@ -574,17 +574,9 @@ Status ColumnReader::zone_map_filter(const std::vector<const ColumnPredicate*>& 
 
     std::vector<uint32_t> page_indexes;
     if (pred_relation == CompoundNodeType::AND) {
-        LOG(ERROR) << "LXH: zone_map_filter and size: " << predicates.size();
-        for (size_t i = 0; i < predicates.size(); i++) {
-            LOG(ERROR) << "LXH: zone_map_filter and: " << i << ":" << predicates[i]->debug_string();
-        }
         RETURN_IF_ERROR(_zone_map_filter<CompoundNodeType::AND>(predicates, del_predicate, del_partial_filtered_pages,
                                                                 &page_indexes));
     } else {
-        LOG(ERROR) << "LXH: zone_map_filter or size: " << predicates.size();
-        for (size_t i = 0; i < predicates.size(); i++) {
-            LOG(ERROR) << "LXH: zone_map_filter or: " << i << ":" << predicates[i]->debug_string();
-        }
         RETURN_IF_ERROR(_zone_map_filter<CompoundNodeType::OR>(predicates, del_predicate, del_partial_filtered_pages,
                                                                &page_indexes));
     }
@@ -630,19 +622,10 @@ Status ColumnReader::_zone_map_filter(const std::vector<const ColumnPredicate*>&
 
     auto page_satisfies_zone_map_filter = [&](const ZoneMapDetail& detail) {
         if constexpr (PredRelation == CompoundNodeType::AND) {
-            return std::ranges::all_of(predicates, [&](const auto* pred) {
-                bool filter = pred->zone_map_filter(detail);
-                LOG(ERROR) << "LXH: REAL FILTER AND: " << pred->debug_string() << ": " << detail.debug_string() << ": "
-                           << (int)filter;
-                return filter;
-            });
+            return std::ranges::all_of(predicates, [&](const auto* pred) { return pred->zone_map_filter(detail); });
         } else {
-            return predicates.empty() || std::ranges::any_of(predicates, [&](const auto* pred) {
-                       bool filter = pred->zone_map_filter(detail);
-                       LOG(ERROR) << "LXH: REAL FILTER OR: " << pred->debug_string() << ": " << detail.debug_string()
-                                  << ": " << (int)filter;
-                       return filter;
-                   });
+            return predicates.empty() ||
+                   std::ranges::any_of(predicates, [&](const auto* pred) { return pred->zone_map_filter(detail); });
         }
     };
 
@@ -653,9 +636,7 @@ Status ColumnReader::_zone_map_filter(const std::vector<const ColumnPredicate*>&
         ZoneMapDetail detail;
         RETURN_IF_ERROR(_parse_zone_map(lt, zm, &detail));
 
-        LOG(ERROR) << "LXH: PAGE_1: " << i << ":" << detail.debug_string();
         if (!page_satisfies_zone_map_filter(detail)) {
-            LOG(ERROR) << "LXH: PAGE_2: " << i << ":" << detail.debug_string();
             continue;
         }
         pages->emplace_back(i);
