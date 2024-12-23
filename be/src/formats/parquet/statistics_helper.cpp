@@ -364,11 +364,6 @@ Status StatisticsHelper::in_filter_on_min_max_stat(const std::vector<std::string
         translate_to_string_value(min_col, i, min_value);
         translate_to_string_value(max_col, i, max_value);
 
-        if (has_null && null_counts[i] > 0) {
-            selected[i] = 1;
-            continue;
-        }
-
         Filter filter(values->size(), 1);
 
         ColumnPredicate* pred_ge = pool.add(new_column_ge_predicate(get_type_info(ltype), 0, min_value));
