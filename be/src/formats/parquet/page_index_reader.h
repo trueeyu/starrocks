@@ -26,7 +26,6 @@
 #include "common/statusor.h"
 #include "exprs/expr_context.h"
 #include "exprs/function_context.h"
-#include "exprs/runtime_filter_bank.h"
 #include "formats/parquet/column_reader.h"
 #include "formats/parquet/group_reader.h"
 #include "formats/parquet/schema.h"

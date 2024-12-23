@@ -85,7 +85,7 @@ Status GroupReader::_deal_with_pageindex() {
                                                         *_param.predicate_tree, this}));
             if (sparse_range.has_value()) {
                 if (sparse_range.value().empty()) {
-                    // the wh/**/ole row group has been filtered
+                    // the whole row group has been filtered
                     _is_group_filtered = true;
                 } else if (sparse_range->span_size() < _row_group_metadata->num_rows) {
                     // some pages have been filtered
