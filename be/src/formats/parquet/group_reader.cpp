@@ -85,7 +85,7 @@ Status GroupReader::_deal_with_pageindex() {
                                                         *_param.predicate_tree, this}));
             if (sparse_range.has_value()) {
                 if (sparse_range.value().empty()) {
-                    // the whole row group has been filtered
+                    // the wh/**/ole row group has been filtered
                     _is_group_filtered = true;
                 } else if (sparse_range->span_size() < _row_group_metadata->num_rows) {
                     // some pages have been filtered
@@ -98,7 +98,7 @@ Status GroupReader::_deal_with_pageindex() {
         } else {
             auto page_index_reader = std::make_unique<PageIndexReader>(
                     this, _param.file, _column_readers, _row_group_metadata, _param.min_max_conjunct_ctxs,
-                    _param.conjunct_ctxs_by_slot, _param.slot_descs, _param.predicate_tree);
+                    _param.conjunct_ctxs_by_slot);
             ASSIGN_OR_RETURN(bool flag, page_index_reader->generate_read_range(_range));
             if (flag && !_is_group_filtered) {
                 page_index_reader->select_column_offset_index();

@@ -67,8 +67,7 @@ public:
     PageIndexReader(GroupReader* group_reader, RandomAccessFile* file,
                     const std::unordered_map<SlotId, std::unique_ptr<ColumnReader>>& column_readers,
                     const tparquet::RowGroup* meta, const std::vector<ExprContext*>& min_max_conjunct_ctxs,
-                    const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot,
-                    const std::vector<SlotDescriptor*>& slot_descs, const PredicateTree* predicateTree)
+                    const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot)
             : _group_reader(group_reader),
               _file(file),
               _column_readers(column_readers),
