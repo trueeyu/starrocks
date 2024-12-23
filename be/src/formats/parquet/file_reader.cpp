@@ -291,6 +291,7 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                 if (UNLIKELY(slot == nullptr)) {
                     // it shouldn't be here, just some defensive code
                     DCHECK(false) << "couldn't find slot id " << kv.first << " in tuple desc";
+                    LOG(WARNING) << "couldn't find slot id " << kv.first << " in tuple desc";
                     continue;
                 }
                 const tparquet::ColumnMetaData* column_meta = nullptr;
