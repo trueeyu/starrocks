@@ -205,23 +205,6 @@ Status PageIndexReader::_deal_with_more_conjunct(const std::vector<ExprContext*>
     return Status::OK();
 }
 
-bool PageIndexReader::_runtime_filter_has_this_slot(SlotId id) {
-    if (_runtime_filter_collector != nullptr) {
-        for (auto& it : _runtime_filter_collector->descriptors()) {
-            RuntimeFilterProbeDescriptor* rf_desc = it.second;
-            const JoinRuntimeFilter* filter = rf_desc->runtime_filter(-1);
-            SlotId probe_slot_id;
-            if (filter == nullptr || !rf_desc->is_probe_slot_ref(&probe_slot_id)) {
-                continue;
-            }
-            if (probe_slot_id == id) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
 StatusOr<bool> PageIndexReader::generate_read_range(SparseRange<uint64_t>& sparse_range) {
     // _min_max_conjunct_ctxs to map<slotId, std::vector<ExprContext*>>
     bool page_filtered_flag = false;

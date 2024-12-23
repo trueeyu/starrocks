@@ -94,7 +94,6 @@ private:
     Status _deal_with_more_conjunct(const std::vector<ExprContext*>& ctxs, const tparquet::ColumnIndex& column_index,
                                     const tparquet::OffsetIndex& offset_index, const ParquetField* field,
                                     const std::string& timezone, Filter& page_filter);
-    bool _runtime_filter_has_this_slot(SlotId id);
 
     GroupReader* _group_reader = nullptr;
     RandomAccessFile* _file = nullptr;
