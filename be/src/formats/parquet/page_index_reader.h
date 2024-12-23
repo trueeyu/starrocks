@@ -68,16 +68,13 @@ public:
                     const std::unordered_map<SlotId, std::unique_ptr<ColumnReader>>& column_readers,
                     const tparquet::RowGroup* meta, const std::vector<ExprContext*>& min_max_conjunct_ctxs,
                     const std::unordered_map<SlotId, std::vector<ExprContext*>>& conjunct_ctxs_by_slot,
-                    const RuntimeFilterProbeCollector* runtime_filter_collector,
-                    const std::vector<SlotDescriptor*>& slot_descs,
-                    const PredicateTree* predicateTree)
+                    const std::vector<SlotDescriptor*>& slot_descs, const PredicateTree* predicateTree)
             : _group_reader(group_reader),
               _file(file),
               _column_readers(column_readers),
               _row_group_metadata(meta),
               _min_max_conjunct_ctxs(min_max_conjunct_ctxs),
               _conjunct_ctxs_by_slot(conjunct_ctxs_by_slot),
-              _runtime_filter_collector(runtime_filter_collector),
               _slot_descs(slot_descs),
               _predicate_tree(predicateTree) {}
 
@@ -108,7 +105,6 @@ private:
     // conjuncts by slot
     const std::unordered_map<SlotId, std::vector<ExprContext*>>& _conjunct_ctxs_by_slot;
 
-    const RuntimeFilterProbeCollector* _runtime_filter_collector = nullptr;
     std::vector<SlotDescriptor*> _slot_descs;
     const PredicateTree* _predicate_tree = nullptr;
 };
