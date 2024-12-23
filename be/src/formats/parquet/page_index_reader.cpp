@@ -91,14 +91,6 @@ bool PageIndexReader::_more_conjunct_for_statistics(SlotId id) {
 Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprContext*>& ctxs,
                                                      const tparquet::ColumnIndex& column_index, SlotId id,
                                                      const TypeDescriptor& type, Filter& page_filter) {
-    LOG(ERROR) << "LXH: DEAL_WITH_MIN_MAX_CONJUNCTS: " << ctxs.size();
-    if (_runtime_filter_collector != nullptr) {
-        LOG(ERROR) << "LXH: DEAL_WITH_MIN_MAX2: " << _runtime_filter_collector->size();
-    }
-    //std::ostringstream out;
-    //column_index.printTo(out);
-    LOG(ERROR) << "LXH: COLUMN_INDEX: " << column_index.min_values.size();
-
     auto min_chunk = std::make_unique<Chunk>();
     ColumnPtr min_column = ColumnHelper::create_column(type, true);
     min_chunk->append_column(min_column, id);
@@ -154,7 +146,6 @@ Status PageIndexReader::_deal_with_min_max_conjuncts(const std::vector<ExprConte
         ColumnHelper::or_two_filters(&min_filter, max_filter.data());
         ColumnHelper::merge_two_filters(&page_filter, min_filter.data());
     }
-
     return Status::OK();
 }
 
@@ -246,11 +237,9 @@ StatusOr<bool> PageIndexReader::generate_read_range(SparseRange<uint64_t>& spars
         SlotId slotId = column.slot_id();
         // no min_max conjunct
         if (slot_id_to_min_max_ctx_map.find(slotId) == slot_id_to_min_max_ctx_map.end() &&
-            !_more_conjunct_for_statistics(slotId) && !_runtime_filter_has_this_slot(slotId)) {
+            !_more_conjunct_for_statistics(slotId)) {
             continue;
         }
-
-        LOG(ERROR) << "LXH: GEN_READ_RANGE: " << sparse_range.to_string();
 
         // no page index
         const tparquet::ColumnChunk* chunk_meta = _column_readers.at(slotId)->get_chunk_metadata();
@@ -278,15 +267,8 @@ StatusOr<bool> PageIndexReader::generate_read_range(SparseRange<uint64_t>& spars
         Filter page_filter(page_num, 1);
 
         if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end()) {
-        //if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end() || _runtime_filter_has_this_slot(slotId)) {
-            if (slot_id_to_min_max_ctx_map.find(slotId) != slot_id_to_min_max_ctx_map.end()) {
-                RETURN_IF_ERROR(_deal_with_min_max_conjuncts(slot_id_to_min_max_ctx_map.at(slotId), column_index,
-                                                             slotId, column.slot_type(), page_filter));
-            } else {
-                std::vector<ExprContext*> empty_ctxs;
-                RETURN_IF_ERROR(_deal_with_min_max_conjuncts(empty_ctxs, column_index, slotId, column.slot_type(),
-                                                             page_filter));
-            }
+            RETURN_IF_ERROR(_deal_with_min_max_conjuncts(slot_id_to_min_max_ctx_map.at(slotId), column_index, slotId,
+                                                         column.slot_type(), page_filter));
         }
         if (SIMD::contain_nonzero(page_filter) && _conjunct_ctxs_by_slot.find(slotId) != _conjunct_ctxs_by_slot.end()) {
             RETURN_IF_ERROR(_deal_with_more_conjunct(_conjunct_ctxs_by_slot.at(slotId), column_index, *offset_index,
