@@ -187,7 +187,6 @@ Status FileReader::_build_split_tasks() {
 
 bool FileReader::_filter_group_with_min_max_conjuncts(const GroupReaderPtr& group_reader) {
     // filter by min/max conjunct ctxs.
-    LOG(ERROR) << "LXH: FILTER_GROUP: " << _scanner_ctx->min_max_conjunct_ctxs.size();
     if (!_scanner_ctx->min_max_conjunct_ctxs.empty()) {
         const TupleDescriptor& tuple_desc = *(_scanner_ctx->min_max_tuple_desc);
         ChunkPtr min_chunk = ChunkHelper::new_chunk(tuple_desc, 0);
@@ -199,8 +198,6 @@ bool FileReader::_filter_group_with_min_max_conjuncts(const GroupReaderPtr& grou
             // just read data ignore the statistics.
             return false;
         }
-        LOG(ERROR) << "LXH: MIN: " << min_chunk->debug_row(0);
-        LOG(ERROR) << "LXH: MAX: " << max_chunk->debug_row(0);
 
         for (auto& min_max_conjunct_ctx : _scanner_ctx->min_max_conjunct_ctxs) {
             auto res_min = min_max_conjunct_ctx->evaluate(min_chunk.get());
@@ -234,8 +231,6 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
         const std::vector<SlotDescriptor*>& slots = _scanner_ctx->slot_descs;
 
         for (auto& it : _scanner_ctx->runtime_filter_collector->descriptors()) {
-            LOG(ERROR) << "LXH: FILTER_GROUP_WITH_BLOOM: " << it.second->debug_string();
-
             RuntimeFilterProbeDescriptor* rf_desc = it.second;
             // external node won't have colocate runtime filter
             const JoinRuntimeFilter* filter = rf_desc->runtime_filter(-1);
@@ -282,15 +277,10 @@ bool FileReader::_filter_group_with_bloom_filter_min_max_conjuncts(const GroupRe
 bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_reader) {
     // runtime_in_filter, the sql-original in_filter and is_null/not_null filter will be in
     // _scanner_ctx->conjunct_ctxs_by_slot
-    LOG(ERROR) << "LXH: FILTER GROUP WITH MORE FILTER: " << _scanner_ctx->conjunct_ctxs_by_slot.size();
     for (const auto& kv : _scanner_ctx->conjunct_ctxs_by_slot) {
         StatisticsHelper::StatSupportedFilter filter_type;
-        LOG(ERROR) << "LXH: filter group start: " << kv.first;
         for (auto ctx : kv.second) {
-            LOG(ERROR) << "LXH: filter group start ctx: " << kv.first << ":" << ctx->root()->debug_string();
             if (StatisticsHelper::can_be_used_for_statistics_filter(ctx, filter_type)) {
-                LOG(ERROR) << "LXH: filter group start ctx use stats filter: " << kv.first << ":"
-                           << ctx->root()->debug_string();
                 SlotDescriptor* slot = nullptr;
                 for (auto s : _scanner_ctx->slot_descs) {
                     if (s->id() == kv.first) {
@@ -301,7 +291,6 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                 if (UNLIKELY(slot == nullptr)) {
                     // it shouldn't be here, just some defensive code
                     DCHECK(false) << "couldn't find slot id " << kv.first << " in tuple desc";
-                    LOG(WARNING) << "couldn't find slot id " << kv.first << " in tuple desc";
                     continue;
                 }
                 const tparquet::ColumnMetaData* column_meta = nullptr;
@@ -357,9 +346,6 @@ bool FileReader::_filter_group_with_more_filter(const GroupReaderPtr& group_read
                 } else if (filter_type == StatisticsHelper::StatSupportedFilter::RF_MIN_MAX) {
                     // already process in `_filter_group_with_bloom_filter_min_max_conjuncts`.
                 }
-            } else {
-                LOG(ERROR) << "LXH: filter group start ctx not use stats filter: " << kv.first << ":"
-                           << ctx->root()->debug_string();
             }
         }
     }
@@ -520,7 +506,6 @@ bool FileReader::_select_row_group(const tparquet::RowGroup& row_group) {
     const auto* scan_range = _scanner_ctx->scan_range;
     size_t scan_start = scan_range->offset;
     size_t scan_end = scan_range->length + scan_start;
-    LOG(ERROR) << "LXH: SELECT_ROW_GROUP_2: " << scan_start << ":" << scan_end << ":" << row_group_start;
     if (row_group_start >= scan_start && row_group_start < scan_end) {
         return true;
     }
@@ -551,16 +536,12 @@ Status FileReader::_init_group_readers() {
 
     int64_t row_group_first_row = 0;
     // select and create row group readers.
-    LOG(ERROR) << "LXH: GROUP_COUNT: " << _file_metadata->t_metadata().row_groups.size();
     for (size_t i = 0; i < _file_metadata->t_metadata().row_groups.size(); i++) {
-        LOG(ERROR) << "LXH: GROUP_COUNT 1: " << i << ":" << _scanner_ctx->scan_range->offset << ":"
-                   << _scanner_ctx->scan_range->length;
         if (i > 0) {
             row_group_first_row += _file_metadata->t_metadata().row_groups[i - 1].num_rows;
         }
 
         if (!_select_row_group(_file_metadata->t_metadata().row_groups[i])) {
-            LOG(ERROR) << "LXH: GROUP_COUNT 2: " << i;
             continue;
         }
 
@@ -572,12 +553,10 @@ Status FileReader::_init_group_readers() {
 
         // You should call row_group_reader->init() before _filter_group()
         if (_filter_group(row_group_reader)) {
-            LOG(ERROR) << "LXH: GROUP_COUNT 3: " << i;
             DLOG(INFO) << "row group " << i << " of file has been filtered by min/max conjunct";
             _group_reader_param.stats->parquet_filtered_row_groups += 1;
             continue;
         }
-        LOG(ERROR) << "LXH: GROUP_COUNT 4: " << i;
 
         _row_group_readers.emplace_back(row_group_reader);
         int64_t num_rows = _file_metadata->t_metadata().row_groups[i].num_rows;
