@@ -16,7 +16,10 @@ package com.starrocks.planner;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
+import com.starrocks.analysis.Expr;
 import com.starrocks.analysis.SlotDescriptor;
+import com.starrocks.analysis.SlotId;
+import com.starrocks.analysis.SlotRef;
 import com.starrocks.analysis.TupleDescriptor;
 import com.starrocks.catalog.IcebergTable;
 import com.starrocks.catalog.Type;
@@ -44,11 +47,14 @@ import com.starrocks.thrift.THdfsScanNode;
 import com.starrocks.thrift.TPlanNode;
 import com.starrocks.thrift.TPlanNodeType;
 import com.starrocks.thrift.TScanRangeLocations;
+import org.apache.iceberg.SortOrder;
+import org.apache.iceberg.types.Types;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -283,12 +289,40 @@ public class IcebergScanNode extends ScanNode {
         return output.toString();
     }
 
+    private void assignOrderByHints(SortOrder sortOrder) {
+        boolean hit = false;
+        for (RuntimeFilterDescription probeRuntimeFilter : probeRuntimeFilters) {
+            if (RuntimeFilterDescription.RuntimeFilterType.TOPN_FILTER.equals(probeRuntimeFilter.runtimeFilterType())) {
+                if (sortOrder.isSorted()) {
+                    Expr expr = probeRuntimeFilter.getNodeIdToProbeExpr().get(getId().asInt());
+                    if (expr instanceof SlotRef) {
+                        SlotId cid = ((SlotRef) expr).getSlotId();
+                        String columnName = desc.getSlot(cid.asInt()).getColumn().getName();
+                        Types.NestedField field = sortOrder.schema().findField(columnName);
+                        if (sortOrder.fields().get(0).sourceId() == field.fieldId()) {
+                            hit = true;
+                        }
+                    }
+                }
+            }
+        }
+        System.out.println("RESULT: " + hit);
+    }
+
     @Override
     protected void toThrift(TPlanNode msg) {
         msg.node_type = TPlanNodeType.HDFS_SCAN_NODE;
         THdfsScanNode tHdfsScanNode = new THdfsScanNode();
         tHdfsScanNode.setTuple_id(desc.getId().asInt());
         msg.hdfs_scan_node = tHdfsScanNode;
+
+        SortOrder sortOrder = this.icebergTable.getNativeTable().sortOrder();
+        Map<Integer, SortOrder> sortOrderMap = this.icebergTable.getNativeTable().sortOrders();
+
+        System.out.println(sortOrder.orderId());;
+        System.out.println(sortOrderMap.size());
+
+        assignOrderByHints(sortOrder);
 
         String sqlPredicates = getExplainString(conjuncts);
         msg.hdfs_scan_node.setSql_predicates(sqlPredicates);
