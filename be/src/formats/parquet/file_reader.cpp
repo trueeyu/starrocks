@@ -175,14 +175,12 @@ Status FileReader::_build_split_tasks() {
         _scanner_ctx->split_tasks.clear();
     }
 
-    if (VLOG_OPERATOR_IS_ON) {
-        std::stringstream ss;
-        for (const HdfsSplitContextPtr& ctx : _scanner_ctx->split_tasks) {
-            ss << "[" << ctx->split_start << "," << ctx->split_end << "]";
-        }
-        VLOG_OPERATOR << "FileReader: do_open. split task for " << _file->filename()
-                      << ", split_tasks.size = " << _scanner_ctx->split_tasks.size() << ", range = " << ss.str();
+    std::stringstream ss;
+    for (const HdfsSplitContextPtr& ctx : _scanner_ctx->split_tasks) {
+        ss << "[" << ctx->split_start << "," << ctx->split_end << "]";
     }
+    LOG(ERROR) << "LXH: FileReader: do_open. split task for " << _file->filename()
+                  << ", split_tasks.size = " << _scanner_ctx->split_tasks.size() << ", range = " << ss.str();
     return Status::OK();
 }
 
