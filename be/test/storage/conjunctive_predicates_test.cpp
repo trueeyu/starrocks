@@ -403,7 +403,7 @@ TEST_P(ConjunctiveTestFixture, test_parse_conjuncts) {
 
 TEST_F(ConjunctiveTestFixture, test_connector_parse_conjuncts) {
     std::vector<SlotDescriptor*> slot_descriptors;
-    SlotDescriptor slot{1, "name", TypeDescriptor::from_logical_type(TYPE_INT)};
+    SlotDescriptor slot{1, "name", TYPE_INT_DESC};
     slot_descriptors.emplace_back(&slot);
 
     ConnectorPredicateParser parser{&slot_descriptors};
