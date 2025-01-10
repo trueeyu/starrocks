@@ -315,6 +315,7 @@ public:
     };
 
     virtual void evaluate(Column* input_column, RunningContext* ctx) const = 0;
+    virtual void intersect(const JoinRuntimeFilter* rf) = 0;
 
     virtual std::string debug_string() const = 0;
     virtual bool is_join_runtime_filter() const = 0;
@@ -374,8 +375,6 @@ public:
     virtual size_t max_serialized_size() const;
     virtual size_t serialize(int serialize_version, uint8_t* data) const;
     virtual size_t deserialize(int serialize_version, const uint8_t* data);
-
-    virtual void intersect(const JoinRuntimeFilter* rf) = 0;
 
     virtual void merge(const JoinRuntimeFilter* rf) {
         _has_null |= rf->_has_null;

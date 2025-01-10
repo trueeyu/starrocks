@@ -112,9 +112,9 @@ public:
         std::lock_guard guard(_mutex);
         if (_runtime_filter == nullptr) {
             _runtime_filter = rf;
-            _runtime_filter->group_colocate_filter().resize(_num_colocate_partition);
+            rf->group_colocate_filter().resize(_num_colocate_partition);
         }
-        _runtime_filter->group_colocate_filter()[driver_sequence] = rf;
+        down_cast<JoinRuntimeFilter*>(_runtime_filter)->group_colocate_filter()[driver_sequence] = rf;
     }
 
     RuntimeFilter* runtime_filter() { return _runtime_filter; }
