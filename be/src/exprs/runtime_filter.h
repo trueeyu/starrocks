@@ -315,7 +315,7 @@ public:
     };
 
     virtual void evaluate(Column* input_column, RunningContext* ctx) const = 0;
-    virtual void intersect(const JoinRuntimeFilter* rf) = 0;
+    virtual void intersect(const RuntimeFilter* rf) = 0;
 
     virtual std::string debug_string() const = 0;
     virtual bool is_join_runtime_filter() const = 0;
@@ -642,7 +642,7 @@ public:
 
     // this->min = std::max(other->min, this->min)
     // this->max = std::min(other->max, this->max)
-    void intersect(const JoinRuntimeFilter* rf) override {
+    void intersect(const RuntimeFilter* rf) override {
         auto other = down_cast<const RuntimeBloomFilter*>(rf);
 
         update_min_max<true>(other->_min);
