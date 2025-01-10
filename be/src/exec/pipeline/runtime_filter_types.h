@@ -454,7 +454,8 @@ public:
                 DCHECK(opt_param.has_value());
                 auto& param = opt_param.value();
                 auto status = RuntimeFilterHelper::fill_runtime_bloom_filter(
-                        param, desc->build_expr_type(), desc->runtime_filter(), kHashJoinKeyColumnOffset);
+                        param, desc->build_expr_type(), reinterpret_cast<JoinRuntimeFilter*>(desc->runtime_filter()),
+                        kHashJoinKeyColumnOffset);
                 if (!status.ok()) {
                     desc->set_runtime_filter(nullptr);
                     break;
