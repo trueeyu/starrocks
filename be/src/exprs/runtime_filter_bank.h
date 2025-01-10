@@ -74,7 +74,7 @@ public:
 
     // create min/max predicate from filter.
     static void create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
-                                               const JoinRuntimeFilter* filter, Expr** min_max_predicate);
+                                               const RuntimeFilter* filter, Expr** min_max_predicate);
 };
 
 // how to generate & publish this runtime filter
@@ -96,9 +96,9 @@ public:
     bool has_remote_targets() const { return _has_remote_targets; }
     bool has_consumer() const { return _has_consumer; }
     const std::vector<TNetworkAddress>& merge_nodes() const { return _merge_nodes; }
-    void set_runtime_filter(JoinRuntimeFilter* rf) { _runtime_filter = rf; }
+    void set_runtime_filter(RuntimeFilter* rf) { _runtime_filter = rf; }
     // used in TopN filter to intersect with other runtime filters.
-    void set_or_intersect_filter(JoinRuntimeFilter* rf) {
+    void set_or_intersect_filter(RuntimeFilter* rf) {
         std::lock_guard guard(_mutex);
         if (_runtime_filter) {
             _runtime_filter->intersect(rf);
@@ -117,7 +117,7 @@ public:
         _runtime_filter->group_colocate_filter()[driver_sequence] = rf;
     }
 
-    JoinRuntimeFilter* runtime_filter() { return _runtime_filter; }
+    RuntimeFilter* runtime_filter() { return _runtime_filter; }
     void set_is_pipeline(bool flag) { _is_pipeline = flag; }
     bool is_pipeline() const { return _is_pipeline; }
     // TRuntimeFilterBuildJoinMode
@@ -140,7 +140,7 @@ private:
     std::unordered_set<TUniqueId> _broadcast_grf_senders;
     std::vector<TRuntimeFilterDestination> _broadcast_grf_destinations;
     std::vector<TNetworkAddress> _merge_nodes;
-    JoinRuntimeFilter* _runtime_filter = nullptr;
+    RuntimeFilter* _runtime_filter = nullptr;
     bool _is_pipeline = false;
     size_t _num_colocate_partition = 0;
 
@@ -185,18 +185,21 @@ public:
     int8_t join_mode() const { return _join_mode; };
     const std::vector<ExprContext*>* partition_by_expr_contexts() const { return &_partition_by_exprs_contexts; }
 
-    const JoinRuntimeFilter* runtime_filter(int32_t driver_sequence) const {
-        auto runtime_filter = _runtime_filter.load();
-        if (runtime_filter != nullptr && runtime_filter->is_group_colocate_filter()) {
-            DCHECK(_is_group_colocate_rf);
-            DCHECK_GE(driver_sequence, 0);
-            DCHECK_LT(driver_sequence, runtime_filter->group_colocate_filter().size());
-            return runtime_filter->group_colocate_filter()[driver_sequence];
+    const RuntimeFilter* runtime_filter(int32_t driver_sequence) const {
+        const auto* runtime_filter = _runtime_filter.load();
+        if (runtime_filter != nullptr && runtime_filter->is_join_runtime_filter()) {
+            const auto* join_runtime_filter = down_cast<const JoinRuntimeFilter*>(runtime_filter);
+            if (join_runtime_filter->is_group_colocate_filter()) {
+                DCHECK(_is_group_colocate_rf);
+                DCHECK_GE(driver_sequence, 0);
+                DCHECK_LT(driver_sequence, join_runtime_filter->group_colocate_filter().size());
+                return join_runtime_filter->group_colocate_filter()[driver_sequence];
+            }
         }
         return runtime_filter;
     }
-    void set_runtime_filter(const JoinRuntimeFilter* rf);
-    void set_shared_runtime_filter(const std::shared_ptr<const JoinRuntimeFilter>& rf);
+    void set_runtime_filter(const RuntimeFilter* rf);
+    void set_shared_runtime_filter(const std::shared_ptr<const RuntimeFilter>& rf);
     void add_observer(RuntimeState* state, pipeline::PipelineObserver* observer) {
         _observable.add_observer(state, observer);
     }
@@ -221,8 +224,8 @@ private:
     bool _is_group_colocate_rf = false;
     std::vector<ExprContext*> _partition_by_exprs_contexts;
 
-    std::atomic<const JoinRuntimeFilter*> _runtime_filter = nullptr;
-    std::shared_ptr<const JoinRuntimeFilter> _shared_runtime_filter = nullptr;
+    std::atomic<const RuntimeFilter*> _runtime_filter = nullptr;
+    std::shared_ptr<const RuntimeFilter> _shared_runtime_filter = nullptr;
     pipeline::Observable _observable;
 };
 

@@ -299,6 +299,12 @@ using MutableJoinRuntimeFilterPtr = std::shared_ptr<JoinRuntimeFilter>;
 
 class RuntimeFilter {
 public:
+    enum RuntimeFilterType {
+        JoinBloomRuntimeFilter,
+        JoinInRuntimeFilter,
+        TopnRuntimeFilter
+    };
+
     class RunningContext {
     public:
         Filter selection;
@@ -311,6 +317,8 @@ public:
     virtual void evaluate(Column* input_column, RunningContext* ctx) const = 0;
 
     virtual std::string debug_string() const = 0;
+    virtual bool is_join_runtime_filter() const = 0;
+    virtual RuntimeFilterType type() const = 0;
 
     // RuntimeFilter version
     // if the RuntimeFilter is updated, the version will be updated as well,
@@ -342,6 +350,8 @@ public:
     bool has_null() const { return _has_null; }
 
     void set_join_mode(int8_t join_mode) { _join_mode = join_mode; }
+
+    bool is_join_runtime_filter() const override { return true; }
 
     void clear_bf();
 
@@ -483,6 +493,10 @@ public:
     RuntimeBloomFilter* create_empty(ObjectPool* pool) override {
         auto* p = pool->add(new RuntimeBloomFilter());
         return p;
+    }
+
+    RuntimeFilterType type() const override {
+        return RuntimeFilterType::JoinBloomRuntimeFilter;
     }
 
     static RuntimeBloomFilter* create_with_empty_range_without_null(ObjectPool* pool) {

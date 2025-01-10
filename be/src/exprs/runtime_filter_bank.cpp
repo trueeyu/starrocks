@@ -345,7 +345,7 @@ std::string RuntimeFilterProbeDescriptor::debug_string() const {
         ss << "nullptr";
     }
     ss << ", rf=";
-    const JoinRuntimeFilter* rf = _runtime_filter.load();
+    const RuntimeFilter* rf = _runtime_filter.load();
     if (rf != nullptr) {
         ss << rf->debug_string();
     } else {
@@ -763,9 +763,9 @@ void RuntimeFilterProbeCollector::wait(bool on_scan_node) {
     }
 }
 
-void RuntimeFilterProbeDescriptor::set_runtime_filter(const JoinRuntimeFilter* rf) {
+void RuntimeFilterProbeDescriptor::set_runtime_filter(const RuntimeFilter* rf) {
     auto notify = DeferOp([this]() { _observable.notify_source_observers(); });
-    const JoinRuntimeFilter* expected = nullptr;
+    const RuntimeFilter* expected = nullptr;
     _runtime_filter.compare_exchange_strong(expected, rf, std::memory_order_seq_cst, std::memory_order_seq_cst);
     if (_ready_timestamp == 0 && rf != nullptr && _latency_timer != nullptr) {
         _ready_timestamp = UnixMillis();
@@ -773,15 +773,15 @@ void RuntimeFilterProbeDescriptor::set_runtime_filter(const JoinRuntimeFilter* r
     }
 }
 
-void RuntimeFilterProbeDescriptor::set_shared_runtime_filter(const std::shared_ptr<const JoinRuntimeFilter>& rf) {
-    std::shared_ptr<const JoinRuntimeFilter> old_value = nullptr;
+void RuntimeFilterProbeDescriptor::set_shared_runtime_filter(const std::shared_ptr<const RuntimeFilter>& rf) {
+    std::shared_ptr<const RuntimeFilter> old_value = nullptr;
     if (std::atomic_compare_exchange_strong(&_shared_runtime_filter, &old_value, rf)) {
         set_runtime_filter(_shared_runtime_filter.get());
     }
 }
 
 void RuntimeFilterHelper::create_min_max_value_predicate(ObjectPool* pool, SlotId slot_id, LogicalType slot_type,
-                                                         const JoinRuntimeFilter* filter, Expr** min_max_predicate) {
+                                                         const RuntimeFilter* filter, Expr** min_max_predicate) {
     *min_max_predicate = nullptr;
     if (filter == nullptr) return;
     if (slot_type == TYPE_CHAR || slot_type == TYPE_VARCHAR) return;
