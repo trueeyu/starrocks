@@ -296,12 +296,9 @@ private:
 class JoinRuntimeFilter;
 using JoinRuntimeFilterPtr = std::shared_ptr<const JoinRuntimeFilter>;
 using MutableJoinRuntimeFilterPtr = std::shared_ptr<JoinRuntimeFilter>;
-class JoinRuntimeFilter {
+
+class RuntimeFilter {
 public:
-    virtual ~JoinRuntimeFilter() = default;
-
-    virtual void init(size_t hash_table_size) = 0;
-
     class RunningContext {
     public:
         Filter selection;
@@ -311,17 +308,38 @@ public:
         bool compatibility = true;
     };
 
-    virtual void compute_partition_index(const RuntimeFilterLayout& layout, const std::vector<Column*>& columns,
-                                         RunningContext* ctx) const = 0;
     virtual void evaluate(Column* input_column, RunningContext* ctx) const = 0;
 
+    virtual std::string debug_string() const = 0;
+
+    // RuntimeFilter version
+    // if the RuntimeFilter is updated, the version will be updated as well,
+    // (usually used for TopN Filter)
+    size_t rf_version() const { return _rf_version; }
+
+    void set_global() { this->_global = true; }
+
+protected:
+    void _update_version() { _rf_version++; }
+    bool _global = false;
+
+private:
+    size_t _rf_version = 0;
+};
+
+class JoinRuntimeFilter : public RuntimeFilter {
+public:
+    virtual ~JoinRuntimeFilter() = default;
+
+    virtual void init(size_t hash_table_size) = 0;
+
+    virtual void compute_partition_index(const RuntimeFilterLayout& layout, const std::vector<Column*>& columns,
+                                         RunningContext* ctx) const = 0;
     size_t size() const { return _size; }
     bool always_true() const { return _always_true; }
     size_t num_hash_partitions() const { return _hash_partition_bf.size(); }
 
     bool has_null() const { return _has_null; }
-
-    virtual std::string debug_string() const = 0;
 
     void set_join_mode(int8_t join_mode) { _join_mode = join_mode; }
 
@@ -342,11 +360,6 @@ public:
                 _hash_partition_bf.begin(), _hash_partition_bf.end(), 0ull,
                 [](size_t total, const SimdBlockFilter& bf) -> size_t { return total + bf.get_alloc_size(); });
     }
-
-    // RuntimeFilter version
-    // if the RuntimeFilter is updated, the version will be updated as well,
-    // (usually used for TopN Filter)
-    size_t rf_version() const { return _rf_version; }
 
     virtual size_t max_serialized_size() const;
     virtual size_t serialize(int serialize_version, uint8_t* data) const;
@@ -373,7 +386,6 @@ public:
     }
     virtual bool check_equal(const JoinRuntimeFilter& rf) const;
     virtual JoinRuntimeFilter* create_empty(ObjectPool* pool) = 0;
-    void set_global() { this->_global = true; }
 
     // only used in local colocate filter
     bool is_group_colocate_filter() const { return !_group_colocate_filters.empty(); }
@@ -381,16 +393,12 @@ public:
     const std::vector<JoinRuntimeFilter*>& group_colocate_filter() const { return _group_colocate_filters; }
 
 protected:
-    void _update_version() { _rf_version++; }
-
     bool _has_null = false;
-    bool _global = false;
     size_t _size = 0;
     int8_t _join_mode = 0;
     SimdBlockFilter _bf;
     std::vector<SimdBlockFilter> _hash_partition_bf;
     bool _always_true = false;
-    size_t _rf_version = 0;
     // local colocate filters is local filter we don't have to serialize them
     std::vector<JoinRuntimeFilter*> _group_colocate_filters;
 };
