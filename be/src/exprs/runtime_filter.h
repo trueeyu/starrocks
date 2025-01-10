@@ -174,7 +174,9 @@ public:
     size_t deserialize(const uint8_t* data);
     void merge(const SimdBlockFilter& bf);
     bool check_equal(const SimdBlockFilter& bf) const;
-    uint32_t directory_mask() const { return _directory_mask; }
+    uint32_t directory_mask() const {
+        return _directory_mask;
+    }
 
     void clear();
     // whether this bloom filter can be used
@@ -182,7 +184,9 @@ public:
     // we still send this rf but ignore bloom filter and only keep min/max filter,
     // in this case, we will use clear() to release the memory of bloom filter,
     // we can use can_use() to check if this bloom filter can be used
-    bool can_use() const { return _directory != nullptr; }
+    bool can_use() const {
+        return _directory != nullptr;
+    }
 
     size_t get_alloc_size() const {
         return _log_num_buckets == 0 ? 0 : (1ull << (_log_num_buckets + LOG_BUCKET_BYTE_SIZE));
@@ -299,11 +303,7 @@ using MutableJoinRuntimeFilterPtr = std::shared_ptr<JoinRuntimeFilter>;
 
 class RuntimeFilter {
 public:
-    enum RuntimeFilterType {
-        JoinBloomRuntimeFilter,
-        JoinInRuntimeFilter,
-        TopnRuntimeFilter
-    };
+    enum RuntimeFilterType { JoinBloomRuntimeFilter, JoinInRuntimeFilter, TopnRuntimeFilter };
 
     class RunningContext {
     public:
@@ -316,6 +316,7 @@ public:
 
     virtual void evaluate(Column* input_column, RunningContext* ctx) const = 0;
     virtual void intersect(const RuntimeFilter* rf) = 0;
+    virtual void concat(RuntimeFilter* rf);
 
     virtual std::string debug_string() const = 0;
     virtual bool is_join_runtime_filter() const = 0;
@@ -381,17 +382,18 @@ public:
         _bf.merge(rf->_bf);
     }
 
-    virtual void concat(JoinRuntimeFilter* rf) {
-        _has_null |= rf->_has_null;
-        if (rf->_hash_partition_bf.empty()) {
-            _hash_partition_bf.emplace_back(std::move(rf->_bf));
+    void concat(RuntimeFilter* rf) override {
+        auto* join_rf = reinterpret_cast<JoinRuntimeFilter*>(rf);
+        _has_null |= join_rf->_has_null;
+        if (join_rf->_hash_partition_bf.empty()) {
+            _hash_partition_bf.emplace_back(std::move(join_rf->_bf));
         } else {
-            for (auto&& bf : rf->_hash_partition_bf) {
+            for (auto&& bf : join_rf->_hash_partition_bf) {
                 _hash_partition_bf.emplace_back(std::move(bf));
             }
         }
-        _join_mode = rf->_join_mode;
-        _size += rf->_size;
+        _join_mode = join_rf->_join_mode;
+        _size += join_rf->_size;
     }
     virtual bool check_equal(const JoinRuntimeFilter& rf) const;
     virtual JoinRuntimeFilter* create_empty(ObjectPool* pool) = 0;
@@ -494,9 +496,7 @@ public:
         return p;
     }
 
-    RuntimeFilterType type() const override {
-        return RuntimeFilterType::JoinBloomRuntimeFilter;
-    }
+    RuntimeFilterType type() const override { return RuntimeFilterType::JoinBloomRuntimeFilter; }
 
     static RuntimeBloomFilter* create_with_empty_range_without_null(ObjectPool* pool) {
         auto* rf = pool->add(new RuntimeBloomFilter());
@@ -649,7 +649,7 @@ public:
         update_min_max<false>(other->_max);
     }
 
-    void concat(JoinRuntimeFilter* rf) override {
+    void concat(RuntimeFilter* rf) override {
         JoinRuntimeFilter::concat(rf);
         _merge_min_max(down_cast<const RuntimeBloomFilter*>(rf));
     }
