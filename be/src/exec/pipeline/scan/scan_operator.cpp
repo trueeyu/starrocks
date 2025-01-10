@@ -269,8 +269,6 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
     _peak_buffer_size_counter->set(buffer_size());
     _peak_buffer_memory_usage->set(buffer_memory_usage());
 
-    LOG(ERROR) << "LXH: QUERY: " << state->query_id();
-
     RETURN_IF_ERROR(_try_to_trigger_next_scan(state));
     ChunkPtr res = get_chunk_from_buffer();
     if (res != nullptr) {
@@ -520,6 +518,8 @@ Status ScanOperator::_pickup_morsel(RuntimeState* state, int chunk_source_index)
     ASSIGN_OR_RETURN(auto ready, _morsel_queue->ready_for_next());
     RETURN_IF(!ready, Status::OK());
 
+    LOG(ERROR) << "MORSEL_TYPE: " << _morsel_queue->type();
+
     ASSIGN_OR_RETURN(auto morsel, _morsel_queue->try_get());
 
     if (_lane_arbiter != nullptr) {
@@ -574,6 +574,7 @@ Status ScanOperator::_pickup_morsel(RuntimeState* state, int chunk_source_index)
         COUNTER_UPDATE(_morsels_counter, 1);
 
         {
+            LOG(ERROR) << "SCAN CREATE MORSEL: " << morsel->get_scan_range()->hdfs_scan_range;
             SCOPED_TIMER(_prepare_chunk_source_timer);
             _chunk_sources[chunk_source_index] = create_chunk_source(std::move(morsel), chunk_source_index);
             auto status = _chunk_sources[chunk_source_index]->prepare(state);

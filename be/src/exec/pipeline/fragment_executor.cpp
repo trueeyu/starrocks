@@ -999,6 +999,10 @@ Status FragmentExecutor::append_incremental_scan_ranges(ExecEnv* exec_env, const
         RETURN_IF_ERROR(add_scan_ranges_partition_values(runtime_state, scan_ranges));
         pipeline::Morsels morsels;
         bool has_more_morsel = false;
+        LOG(ERROR) << "LXH: INCREMENT: " << scan_ranges.size();
+        for (size_t i = 0; i < scan_ranges.size(); i++) {
+            LOG(ERROR) << "LXH: INCREMENT_IDX: " << i << ":" << scan_ranges[i].scan_range.hdfs_scan_range;
+        }
         pipeline::ScanMorsel::build_scan_morsels(node_id, scan_ranges, true, &morsels, &has_more_morsel);
         RETURN_IF_ERROR(morsel_queue_factory->append_morsels(0, std::move(morsels)));
         morsel_queue_factory->set_has_more(has_more_morsel);
@@ -1022,6 +1026,10 @@ Status FragmentExecutor::append_incremental_scan_ranges(ExecEnv* exec_env, const
                 RETURN_IF_ERROR(add_scan_ranges_partition_values(runtime_state, scan_ranges));
                 pipeline::Morsels morsels;
                 [[maybe_unused]] bool local_has_more;
+                LOG(ERROR) << "LXH: INCREMENT: " << scan_ranges.size();
+                for (size_t i = 0; i < scan_ranges.size(); i++) {
+                    LOG(ERROR) << "LXH: INCREMENT_IDX: " << i << ":" << scan_ranges[i].scan_range.hdfs_scan_range;
+                }
                 pipeline::ScanMorsel::build_scan_morsels(node_id, scan_ranges, true, &morsels, &local_has_more);
                 RETURN_IF_ERROR(morsel_queue_factory->append_morsels(driver_seq, std::move(morsels)));
             }

@@ -303,6 +303,7 @@ void ConnectorScanOperator::do_close(RuntimeState* state) {
 ChunkSourcePtr ConnectorScanOperator::create_chunk_source(MorselPtr morsel, int32_t chunk_source_index) {
     auto* scan_node = down_cast<ConnectorScanNode*>(_scan_node);
     auto* factory = down_cast<ConnectorScanOperatorFactory*>(_factory);
+    LOG(ERROR) << "CREATE CHUNK SOURCE 1";
 
     return std::make_shared<ConnectorChunkSource>(this, _chunk_source_profiles[chunk_source_index].get(),
                                                   std::move(morsel), scan_node, factory->get_chunk_buffer(),
@@ -591,6 +592,8 @@ ConnectorChunkSource::ConnectorChunkSource(ScanOperator* op, RuntimeProfile* run
     TScanRange* scan_range = scan_morsel->get_scan_range();
     ScanSplitContext* split_context = scan_morsel->get_split_context();
 
+    LOG(ERROR) << "LXH: PIPE: create scan range: " << scan_range->hdfs_scan_range;
+
     _data_source = scan_node->data_source_provider()->create_data_source(*scan_range);
     _data_source->set_driver_sequence(op->get_driver_sequence());
     _data_source->set_split_context(split_context);
@@ -834,6 +837,7 @@ Status ConnectorChunkSource::_read_chunk(RuntimeState* state, ChunkPtr* chunk) {
                 split_morsels.emplace_back(std::move(m));
             }
 
+            LOG(ERROR) << "LXH: SPLIT_MORSELS: " << split_morsels.size();
             RETURN_IF_ERROR(scan_op->append_morsels(std::move(split_morsels)));
         }
     }

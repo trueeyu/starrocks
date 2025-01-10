@@ -129,6 +129,7 @@ StatusOr<pipeline::MorselQueueFactoryPtr> ScanNode::convert_scan_range_to_morsel
         const std::map<int32_t, std::vector<TScanRangeParams>>& scan_ranges_per_driver_seq, int node_id,
         int pipeline_dop, bool in_colocate_exec_group, bool enable_tablet_internal_parallel,
         TTabletInternalParallelMode::type tablet_internal_parallel_mode, bool enable_shared_scan) {
+    LOG(ERROR) << "CONVERT_3: " << global_scan_ranges.size(); // 201
     if (scan_ranges_per_driver_seq.empty() && !in_colocate_exec_group) {
         ASSIGN_OR_RETURN(auto morsel_queue,
                          convert_scan_range_to_morsel_queue(global_scan_ranges, node_id, pipeline_dop,
@@ -191,6 +192,7 @@ StatusOr<pipeline::MorselQueuePtr> ScanNode::convert_scan_range_to_morsel_queue(
     pipeline::ScanMorsel::build_scan_morsels(node_id, scan_ranges, accept_empty_scan_ranges(), &morsels,
                                              &has_more_morsel);
     DCHECK(has_more_morsel == false);
+    LOG(ERROR) << "CONVERT 1: " << morsels.size();
     return std::make_unique<pipeline::FixedMorselQueue>(std::move(morsels));
 }
 

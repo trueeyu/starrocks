@@ -85,6 +85,7 @@ bool HdfsScannerParams::is_lazy_materialization_slot(SlotId slot_id) const {
 }
 
 Status HdfsScanner::init(RuntimeState* runtime_state, const HdfsScannerParams& scanner_params) {
+    LOG(ERROR) << "LXH_SCAN_PARAM: " << *scanner_params.scan_range;
     SCOPED_RAW_TIMER(&_total_running_time);
     _runtime_state = runtime_state;
     _scanner_params = scanner_params;

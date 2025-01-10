@@ -276,7 +276,7 @@ void Thread::set_thread_name(std::thread& t, std::string name) {
     }
     int ret = pthread_setname_np(t.native_handle(), name.data());
     if (ret) {
-        LOG(WARNING) << "failed to set thread name: " << name;
+        LOG(WARNING) << "failed to set thread name: " << name << ":" << ret;
     }
 }
 

@@ -146,7 +146,10 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request) {
         const std::vector<TScanRangeParams>& scan_ranges =
                 FindWithDefault(params.per_node_scan_ranges, scan_node->id(), no_scan_ranges);
         (void)scan_node->set_scan_ranges(scan_ranges);
-        VLOG(2) << "scan_node_Id=" << scan_node->id() << " size=" << scan_ranges.size();
+        LOG(ERROR) << "LXH: scan_node_Id=" << scan_node->id() << " size=" << scan_ranges.size();
+        for (size_t i = 0; i < scan_ranges.size(); i++) {
+            LOG(ERROR) << "LXH: RANGE: " << i << ":" << scan_ranges[i].scan_range;
+        }
     }
 
     _runtime_state->set_per_fragment_instance_idx(params.sender_id);

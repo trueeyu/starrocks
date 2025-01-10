@@ -88,6 +88,7 @@ Status StreamScanOperator::_pickup_morsel(RuntimeState* state, int chunk_source_
     if (morsel != nullptr) {
         COUNTER_UPDATE(_morsels_counter, 1);
 
+        LOG(ERROR) << "LXH: CREATE_CHUNK_SOURCE: " << morsel->get_scan_range()->hdfs_scan_range;
         _chunk_sources[chunk_source_index] = create_chunk_source(std::move(morsel), chunk_source_index);
         auto status = _chunk_sources[chunk_source_index]->prepare(state);
         if (!status.ok()) {
