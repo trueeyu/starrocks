@@ -69,6 +69,8 @@ Status JDBCScanner::get_next(RuntimeState* state, ChunkPtr* chunk, bool* eos) {
     size_t jchunk_rows = 0;
     LOCAL_REF_GUARD(jchunk);
     RETURN_IF_ERROR(_get_next_chunk(&jchunk, &jchunk_rows));
+    sleep(config::query_cache_capacity);
+    config::query_cache_capacity = 1;
     RETURN_IF_ERROR(_fill_chunk(jchunk, jchunk_rows, chunk));
     return Status::OK();
 }
@@ -139,6 +141,8 @@ Status JDBCScanner::_init_jdbc_scan_context(RuntimeState* state) {
     // use query timeout or default value of HikariConfig
     int connection_timeout_ms =
             state->query_options().__isset.query_timeout ? state->query_options().query_timeout * 1000 : 30 * 1000;
+
+    LOG(ERROR) << "POOL: " << connection_timeout_ms << ":" << idle_timeout_ms;
 
     auto scan_ctx = env->NewObject(scan_context_cls, constructor, driver_class_name, jdbc_url, user, passwd, sql,
                                    statement_fetch_size, connection_pool_size, minimum_idle_connections,
