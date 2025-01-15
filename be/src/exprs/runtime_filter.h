@@ -461,9 +461,16 @@ struct WithModuloArg {
     };
 };
 
+template <LogicalType Type>
+class ScalarRuntimeFilter : public JoinRuntimeFilter {
+public:
+    using CppType = RunTimeCppType<Type>;
+
+};
+
 // The join runtime filter implement by bloom filter
 template <LogicalType Type>
-class RuntimeBloomFilter final : public JoinRuntimeFilter {
+class RuntimeBloomFilter final : public ScalarRuntimeFilter<Type> {
 public:
     using CppType = RunTimeCppType<Type>;
     using ColumnType = RunTimeColumnType<Type>;
@@ -594,7 +601,7 @@ public:
 
     void insert_null() { _has_null = true; }
 
-    CppType min_value() const { return _min; }
+    CppType min_value() const override { return _min; }
 
     CppType max_value() const { return _max; }
 
