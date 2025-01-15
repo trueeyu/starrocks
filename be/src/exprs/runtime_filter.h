@@ -550,7 +550,7 @@ public:
 
     void insert_null() { JoinRuntimeFilter::_has_null = true; }
 
-    CppType min_value() const override { return _min; }
+    CppType min_value() const { return _min; }
 
     CppType max_value() const { return _max; }
 
