@@ -302,7 +302,7 @@ using RuntimeFilterPtr = std::shared_ptr<const RuntimeFilter>;
 using MutableRuntimeFilterPtr = std::shared_ptr<RuntimeFilter>;
 class RuntimeFilter {
 public:
-    virtual ~JoinRuntimeFilter() = default;
+    virtual ~RuntimeFilter() = default;
 
     virtual void init(size_t hash_table_size) = 0;
 
@@ -398,7 +398,7 @@ protected:
     bool _always_true = false;
     size_t _rf_version = 0;
     // local colocate filters is local filter we don't have to serialize them
-    std::vector<JoinRuntimeFilter*> _group_colocate_filters;
+    std::vector<RuntimeFilter*> _group_colocate_filters;
 };
 
 template <typename ModuloFunc>
