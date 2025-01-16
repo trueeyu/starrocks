@@ -380,6 +380,8 @@ public:
     std::vector<JoinRuntimeFilter*>& group_colocate_filter() { return _group_colocate_filters; }
     const std::vector<JoinRuntimeFilter*>& group_colocate_filter() const { return _group_colocate_filters; }
 
+    void insert_null() { _has_null = true; }
+
 protected:
     void _update_version() { _rf_version++; }
 
@@ -591,8 +593,6 @@ public:
         _min = std::min(value, _min);
         _max = std::max(value, _max);
     }
-
-    void insert_null() { _has_null = true; }
 
     CppType min_value() const { return _min; }
 
