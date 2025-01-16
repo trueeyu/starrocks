@@ -577,8 +577,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_binary_predicate(const SlotDesc
 
 template <BoxedExprType E, CompoundNodeType Type>
 template <LogicalType SlotType, LogicalType MappingType, template <class> class Decoder, class... Args>
-void ChunkPredicateBuilder<E, Type>::normalized_rf_with_null(const JoinRuntimeFilter* rf, Expr* col_ref,
-                                                             Args&&... args) {
+void ChunkPredicateBuilder<E, Type>::normalized_rf_with_null(const RuntimeFilter* rf, Expr* col_ref, Args&&... args) {
     DCHECK(Type == CompoundNodeType::AND);
 
     ObjectPool* pool = _opts.obj_pool;
@@ -685,7 +684,7 @@ Status ChunkPredicateBuilder<E, Type>::normalize_join_runtime_filter(const SlotD
     // bloom runtime filter
     for (const auto& it : _opts.runtime_filters->descriptors()) {
         RuntimeFilterProbeDescriptor* desc = it.second;
-        const JoinRuntimeFilter* rf = desc->runtime_filter(_opts.driver_sequence);
+        const RuntimeFilter* rf = desc->runtime_filter(_opts.driver_sequence);
         using RangeType = ColumnValueRange<RangeValueType>;
         using ValueType = typename RunTimeTypeTraits<SlotType>::CppType;
         SlotId slot_id;
