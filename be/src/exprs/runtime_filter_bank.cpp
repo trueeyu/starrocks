@@ -729,8 +729,8 @@ void RuntimeFilterProbeCollector::wait(bool on_scan_node) {
             auto* rf = (*it)->runtime_filter(-1);
             // find runtime filter in cache.
             if (rf == nullptr) {
-                JoinRuntimeFilterPtr t = _runtime_state->exec_env()->runtime_filter_cache()->get(
-                        _runtime_state->query_id(), (*it)->filter_id());
+                RuntimeFilterPtr t = _runtime_state->exec_env()->runtime_filter_cache()->get(_runtime_state->query_id(),
+                                                                                             (*it)->filter_id());
                 if (t != nullptr) {
                     VLOG_FILE << "RuntimeFilterCollector::wait: rf found in cache. filter_id = " << (*it)->filter_id()
                               << ", plan_node_id = " << _plan_node_id
