@@ -14,8 +14,6 @@
 
 #pragma once
 
-#ifdef USE_STAROS
-
 #include "common/statusor.h"
 #include "fs/fs.h"
 
@@ -40,5 +38,3 @@ StatusOr<std::pair<std::string, int64_t>> parse_starlet_uri(std::string_view uri
 std::unique_ptr<FileSystem> new_fs_starlet();
 
 } // namespace starrocks
-
-#endif // USE_STAROS

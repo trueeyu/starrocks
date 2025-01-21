@@ -14,8 +14,6 @@
 
 #pragma once
 
-#ifdef USE_STAROS
-
 #include <starlet.h>
 
 #include <memory>
@@ -127,4 +125,3 @@ void shutdown_staros_worker();
 void update_staros_starcache();
 
 } // namespace starrocks
-#endif // USE_STAROS

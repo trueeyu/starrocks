@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef USE_STAROS
 #include "service/staros_worker.h"
 
 #include <fslib/fslib_all_initializer.h>
@@ -445,4 +444,3 @@ void update_staros_starcache() {
 }
 
 } // namespace starrocks
-#endif // USE_STAROS

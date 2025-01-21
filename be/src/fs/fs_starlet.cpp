@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifdef USE_STAROS
 #include "fs/fs_starlet.h"
 
 #include <bvar/bvar.h>
@@ -587,5 +586,3 @@ std::unique_ptr<FileSystem> new_fs_starlet() {
     return std::make_unique<StarletFileSystem>();
 }
 } // namespace starrocks
-
-#endif // USE_STAROS
