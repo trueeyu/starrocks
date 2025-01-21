@@ -292,6 +292,7 @@ public:
             return to_status(fs_st.status());
         }
         auto opt = ReadOptions();
+        LOG(ERROR) << "LXH: STAR: " << info.path << ":" << opts.skip_fill_local_cache << ":" << opts.skip_disk_cache;
         opt.skip_fill_local_cache = opts.skip_fill_local_cache;
         opt.buffer_size = opts.buffer_size;
         opt.skip_read_local_cache = opts.skip_disk_cache;
