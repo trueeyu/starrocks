@@ -291,7 +291,7 @@ public:
         if (!fs_st.ok()) {
             return to_status(fs_st.status());
         }
-        LOG(ERROR) << "LXH: SCHEME: " << fs_st->scheme();
+        LOG(ERROR) << "LXH: SCHEME: " << fs_st.value()->scheme();
         auto opt = ReadOptions();
         LOG(ERROR) << "LXH: STAR: " << info.path << ":" << opts.skip_fill_local_cache << ":" << opts.skip_disk_cache;
         opt.skip_fill_local_cache = opts.skip_fill_local_cache;
