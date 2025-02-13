@@ -28,7 +28,7 @@ Status StarCacheWrapper::init(const CacheOptions& options) {
     starcache::CacheOptions opt;
     opt.mem_quota_bytes = options.mem_space_size;
     for (auto& dir : options.disk_spaces) {
-        LOG(ERROR) << "LXH_INIT: " << dir.size;
+        LOG(ERROR) << "LXH_INIT: " << dir.path << ":" << dir.size;
         opt.disk_dir_spaces.push_back({.path = dir.path, .quota_bytes = dir.size});
     }
     opt.block_size = options.block_size;
