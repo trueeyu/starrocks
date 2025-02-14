@@ -316,7 +316,7 @@ private:
 static const int kNumShardBits = 5;
 static const int kNumShards = 1 << kNumShardBits;
 
-class ShardedLRUCache : public Cache {
+class ShardedLRUCache final : public Cache {
 public:
     explicit ShardedLRUCache(size_t capacity, ChargeMode charge_mode = ChargeMode::VALUESIZE);
     ~ShardedLRUCache() override = default;
