@@ -144,7 +144,7 @@ void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheH
     }
     // Use mem size managed by memory allocator as this record charge size. At the same time, we should record this record size
     // for data fetching when lookup.
-    auto* lru_handle = _cache->insert(key.encode(), data.data, mem_size, deleter, priority, data.size);
+    auto* lru_handle = _cache->insert(key.encode(), data, mem_size, deleter, priority);
     *handle = PageCacheHandle(_cache.get(), lru_handle);
 }
 

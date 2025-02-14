@@ -139,9 +139,9 @@ public:
     //
     // When the inserted entry is no longer needed, the key and
     // value will be passed to "deleter".
-    virtual Handle* insert(const CacheKey& key, void* value, size_t charge,
+    virtual Handle* insert(const CacheKey& key, const Slice& value, size_t charge,
                            void (*deleter)(const CacheKey& key, void* value),
-                           CachePriority priority = CachePriority::NORMAL, size_t value_size = 0) = 0;
+                           CachePriority priority = CachePriority::NORMAL) = 0;
 
     // If the cache has no mapping for "key", returns NULL.
     //
@@ -275,9 +275,9 @@ public:
     void set_capacity(size_t capacity);
 
     // Like Cache methods, but with an extra "hash" parameter.
-    Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
+    Cache::Handle* insert(const CacheKey& key, uint32_t hash, const Slice& value, size_t charge,
                           void (*deleter)(const CacheKey& key, void* value),
-                          CachePriority priority = CachePriority::NORMAL, size_t value_size = 0);
+                          CachePriority priority = CachePriority::NORMAL);
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);
     void release(Cache::Handle* handle);
     void erase(const CacheKey& key, uint32_t hash);

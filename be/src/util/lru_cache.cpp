@@ -294,11 +294,10 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
     _usage -= e->charge;
 }
 
-Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t charge,
-                                void (*deleter)(const CacheKey& key, void* value), CachePriority priority,
-                                size_t value_size) {
+Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, const Slice& value, size_t charge,
+                                void (*deleter)(const CacheKey& key, void* value), CachePriority priority) {
     auto* e = reinterpret_cast<LRUHandle*>(malloc(sizeof(LRUHandle) - 1 + key.size()));
-    e->value = value;
+    e->value = value.data;
     e->deleter = deleter;
     e->charge = charge;
     e->key_length = key.size();
@@ -307,7 +306,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
     e->next = e->prev = nullptr;
     e->in_cache = true;
     e->priority = priority;
-    e->value_size = value_size;
+    e->value_size = value.size;
     memcpy(e->key_data, key.data(), key.size());
     std::vector<LRUHandle*> last_ref_list;
     {
@@ -473,6 +472,7 @@ size_t ShardedLRUCache::_get_stat(size_t (LRUCache::*mem_fun)() const) const {
     }
     return n;
 }
+
 size_t ShardedLRUCache::get_capacity() const {
     return _get_stat(&LRUCache::get_capacity);
 }
