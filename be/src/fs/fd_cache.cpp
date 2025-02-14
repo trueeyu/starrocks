@@ -33,7 +33,9 @@ FdCache::~FdCache() {
 
 FdCache::Handle* FdCache::insert(std::string_view path, int fd) {
     void* value = reinterpret_cast<void*>(static_cast<uintptr_t>(fd)); // NOLINT
-    Cache::Handle* h = _cache->insert(CacheKey(path.data(), path.size()), value, 1, fd_deleter);
+    size_t value_size = sizeof(void*);
+    Cache::Handle* h =
+            _cache->insert(CacheKey(path.data(), path.size()), Slice((char*)value, value_size), value_size, fd_deleter);
     return reinterpret_cast<FdCache::Handle*>(h);
 }
 
