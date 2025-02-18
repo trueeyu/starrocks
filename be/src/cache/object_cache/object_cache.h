@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <butil/macros.h>
+
 #include <atomic>
 
 #include "cache/object_cache/cache_module.h"
