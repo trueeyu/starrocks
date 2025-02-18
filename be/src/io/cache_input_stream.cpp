@@ -225,46 +225,6 @@ Status CacheInputStream::_read_blocks_from_remote(const int64_t offset, const in
     return Status::OK();
 }
 
-Status CacheInputStream::_populate_to_cache(const int64_t offset, const int64_t size, char* src,
-                                            const SharedBufferPtr& sb) {
-    SCOPED_RAW_TIMER(&_stats.write_cache_ns);
-    const int64_t write_end_offset = offset + size;
-    char* src_cursor = src;
-
-    for (int64_t write_offset_cursor = offset; write_offset_cursor < write_end_offset;) {
-        DCHECK(write_offset_cursor % _block_size == 0);
-        WriteCacheOptions options{};
-        options.async = _enable_async_populate_mode;
-        options.evict_probability = _datacache_evict_probability;
-        options.priority = _priority;
-        options.ttl_seconds = _ttl_seconds;
-        const int64_t write_size = std::min(_block_size, write_end_offset - write_offset_cursor);
-
-        if (options.async && sb) {
-            auto cb = [sb](int code, const std::string& msg) {
-                // We only need to keep the shared buffer pointer
-                LOG_IF(WARNING, code != 0 && code != EEXIST) << "write block cache failed, errmsg: " << msg;
-            };
-            options.callback = cb;
-            options.allow_zero_copy = true;
-        }
-        Status r = _cache->write(_cache_key, write_offset_cursor, write_size, src_cursor, &options);
-        if (r.ok()) {
-            _stats.write_cache_count += 1;
-            _stats.write_cache_bytes += write_size;
-            _stats.write_mem_cache_bytes += options.stats.write_mem_bytes;
-            _stats.write_disk_cache_bytes += options.stats.write_disk_bytes;
-        } else if (!_can_ignore_populate_error(r)) {
-            _stats.write_cache_fail_count += 1;
-            _stats.write_cache_fail_bytes += write_size;
-            LOG(WARNING) << "write block cache failed, errmsg: " << r.message();
-        }
-        src_cursor += write_size;
-        write_offset_cursor += write_size;
-    }
-    return Status::OK();
-}
-
 void CacheInputStream::_deduplicate_shared_buffer(const SharedBufferPtr& sb) {
     if (sb->size == 0 || _block_map.empty()) {
         return;

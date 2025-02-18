@@ -24,7 +24,7 @@ namespace starrocks {
 
 Status LRUCacheModule::init() {
     if (!_cache) {
-        auto sharded_lru_cache = dynamic_cast<ShardedLRUCache*>(new_lru_cache(_options.capacity, ChargeMode::MEMSIZE));
+        auto sharded_lru_cache = dynamic_cast<ShardedLRUCache*>(new_lru_cache(_options.capacity));
         _cache.reset(sharded_lru_cache);
     }
     return Status::OK();
@@ -36,8 +36,7 @@ Status LRUCacheModule::insert(const std::string& key, void* value, size_t size, 
     if (!_check_write(charge, options)) {
         return Status::InternalError("cache insertion is rejected");
     }
-    auto* lru_handle = _cache->insert(key, value, charge, deleter, static_cast<CachePriority>(options->priority),
-                                      size); 
+    auto* lru_handle = _cache->insert(key, value, charge, size, deleter, static_cast<CachePriority>(options->priority));
     if (handle) {
         *handle = reinterpret_cast<ObjectCacheHandlePtr>(lru_handle);
     }

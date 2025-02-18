@@ -44,7 +44,7 @@ Status StarCacheModule::insert(const std::string& key, void* value, size_t size,
     };
     Status st;
     if (!options) {
-        st = to_status(_cache->set_object(key, value, size, charge, obj_deleter, obj_hdl, nullptr));
+        st = to_status(_cache->set_object(key, value, charge, obj_deleter, obj_hdl, nullptr));
     } else {
         starcache::WriteOptions opts;
         opts.priority = options->priority;
@@ -57,7 +57,7 @@ Status StarCacheModule::insert(const std::string& key, void* value, size_t size,
             // It is safe because we limit the flying memory in starcache, also, this behavior
             // doesn't affect the process memory tracker.
             SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(nullptr);
-            st = to_status(_cache->set_object(key, value, size, charge, obj_deleter, obj_hdl, &opts));
+            st = to_status(_cache->set_object(key, value, charge, obj_deleter, obj_hdl, &opts));
         }
     }
     if (!st.ok()) {
@@ -119,19 +119,23 @@ Status StarCacheModule::set_capacity(size_t capacity) {
 }
 
 size_t StarCacheModule::capacity() const {
-    return _cache->numeric_metric(starcache::CacheNumericMetricClass::MEM_QUOTA);
+    return 0;
+    //return _cache->numeric_metric(starcache::CacheNumericMetricClass::MEM_QUOTA);
 }
 
 size_t StarCacheModule::usage() const {
-    return _cache->numeric_metric(starcache::CacheNumericMetricClass::MEM_USAGE);
+    return 0;
+    //return _cache->numeric_metric(starcache::CacheNumericMetricClass::MEM_USAGE);
 }
 
 size_t StarCacheModule::lookup_count() const {
-    return _cache->numeric_metric(starcache::CacheNumericMetricClass::READ_COUNT);
+    return 0;
+    //return _cache->numeric_metric(starcache::CacheNumericMetricClass::READ_COUNT);
 }
 
 size_t StarCacheModule::hit_count() const {
-    return _cache->numeric_metric(starcache::CacheNumericMetricClass::HIT_COUNT);
+    return 0;
+    //return _cache->numeric_metric(starcache::CacheNumericMetricClass::HIT_COUNT);
 }
 
 const ObjectCacheMetrics StarCacheModule::metrics() const {

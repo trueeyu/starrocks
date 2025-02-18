@@ -161,8 +161,4 @@ Status StarCacheWrapper::shutdown() {
     return Status::OK();
 }
 
-std::shared_ptr<starcache::StarCache> StarCacheWrapper::starcache_instance() {
-    return _cache;
-}
-
 } // namespace starrocks
