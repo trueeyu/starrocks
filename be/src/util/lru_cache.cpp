@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 
+#include "runtime/mem_tracker.h"
 #include "storage/olap_common.h"
 
 using std::string;
@@ -241,6 +242,7 @@ void LRUCache::release(Cache::Handle* handle) {
         last_ref = _unref(e);
         if (last_ref) {
             _usage -= e->charge;
+            _mem_tracker->release(e->charge);
         } else if (e->in_cache && e->refs == 1) {
             // only exists in cache
             if (_usage > _capacity) {
@@ -249,6 +251,7 @@ void LRUCache::release(Cache::Handle* handle) {
                 e->in_cache = false;
                 _unref(e);
                 _usage -= e->charge;
+                _mem_tracker->release(e->charge);
                 last_ref = true;
             } else {
                 // put it to LRU free list
@@ -292,6 +295,7 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
     e->in_cache = false;
     _unref(e);
     _usage -= e->charge;
+    _mem_tracker->release(e->charge);
 }
 
 Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t value_size, size_t charge,
@@ -299,7 +303,7 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
     auto* e = reinterpret_cast<LRUHandle*>(malloc(sizeof(LRUHandle) - 1 + key.size()));
     e->value = value;
     e->deleter = deleter;
-    e->charge = charge;
+    e->charge = charge + key.size();
     e->key_length = key.size();
     e->hash = hash;
     e->refs = 2; // one for the returned handle, one for LRUCache.
@@ -321,10 +325,12 @@ Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value,
         // space was freed
         auto old = _table.insert(e);
         _usage += charge;
+        _mem_tracker->consume(_usage);
         if (old != nullptr) {
             old->in_cache = false;
             if (_unref(old)) {
                 _usage -= old->charge;
+                _mem_tracker->release(_usage);
                 // old is on LRU because it's in cache and its reference count
                 // was just 1 (Unref returned 0)
                 _lru_remove(old);
@@ -352,6 +358,7 @@ void LRUCache::erase(const CacheKey& key, uint32_t hash) {
             last_ref = _unref(e);
             if (last_ref) {
                 _usage -= e->charge;
+                _mem_tracker->release(e->charge);
                 if (e->in_cache) {
                     // locate in free list
                     _lru_remove(e);
@@ -379,6 +386,7 @@ int LRUCache::prune() {
             old->in_cache = false;
             _unref(old);
             _usage -= old->charge;
+            _mem_tracker->release(old->charge);
             last_ref_list.push_back(old);
         }
     }
