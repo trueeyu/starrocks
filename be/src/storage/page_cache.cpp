@@ -70,7 +70,7 @@ static void init_metrics() {
 
 void StoragePageCache::create_global_cache(MemTracker* mem_tracker, size_t capacity) {
     if (_s_instance == nullptr) {
-        _s_instance = new StoragePageCache(mem_tracker, capacity);
+        _s_instance = new StoragePageCache(mem_tracker, capacity, ObjectCache::instance());
         init_metrics();
     }
 }
@@ -86,8 +86,12 @@ void StoragePageCache::prune() {
     _cache->prune();
 }
 
-StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity)
-        : _mem_tracker(mem_tracker), _cache(new_lru_cache(capacity)) {}
+StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity, ObjectCache* obj_cache)
+        : _mem_tracker(mem_tracker), _cache(obj_cache) {
+    if (_cache->capacity() < capacity) {
+        (void)_cache->set_capacity(capacity);
+    }
+}
 
 StoragePageCache::~StoragePageCache() = default;
 
@@ -97,32 +101,38 @@ void StoragePageCache::set_capacity(size_t capacity) {
 }
 
 size_t StoragePageCache::get_capacity() {
-    return _cache->get_capacity();
+    return _cache->capacity();
 }
 
 uint64_t StoragePageCache::get_lookup_count() {
-    return _cache->get_lookup_count();
+    return _cache->lookup_count();
 }
 
 uint64_t StoragePageCache::get_hit_count() {
-    return _cache->get_hit_count();
+    return _cache->hit_count();
 }
 
 bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
-    return _cache->adjust_capacity(delta, min_capacity);
-}
-
-bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
-    auto* lru_handle = _cache->lookup(key.encode());
-    if (lru_handle == nullptr) {
+    Status st = _cache->adjust_capacity(delta, min_capacity);
+    if (!st.ok()) {
+        LOG(INFO) << "fail to adjust cache capacity, delta: " << delta << ", reason: " << st.message();
         return false;
     }
-    *handle = PageCacheHandle(_cache.get(), lru_handle);
     return true;
 }
 
-void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory) {
+bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
+    ObjectCacheHandle* obj_handle = nullptr;
+    Status st = _cache->lookup(key.encode(), &obj_handle);
+    if (!st.ok()) {
+        return false;
+    }
+    *handle = PageCacheHandle(_cache, obj_handle);
+    return true;
+}
+
+Status StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory) {
 #ifndef BE_TEST
     int64_t mem_size = malloc_usable_size(data.data);
     tls_thread_status.mem_release(mem_size);
