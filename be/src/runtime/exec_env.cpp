@@ -237,7 +237,7 @@ Status GlobalEnv::_init_mem_tracker() {
     int64_t compaction_mem_limit = calc_max_compaction_memory(_process_mem_tracker->limit());
     _compaction_mem_tracker = regist_tracker(compaction_mem_limit, "compaction", _process_mem_tracker.get());
     _schema_change_mem_tracker = regist_tracker(-1, "schema_change", _process_mem_tracker.get());
-    _page_cache_mem_tracker = regist_tracker(-1, "page_cache", _process_mem_tracker.get());
+    _page_cache_mem_tracker = regist_tracker(-1, "page_cache", nullptr);
     _jit_cache_mem_tracker = regist_tracker(-1, "jit_cache", _process_mem_tracker.get());
     int32_t update_mem_percent = std::max(std::min(100, config::update_memory_limit_percent), 0);
     _update_mem_tracker = regist_tracker(bytes_limit * update_mem_percent / 100, "update", nullptr);
@@ -259,6 +259,12 @@ Status GlobalEnv::_init_mem_tracker() {
 void GlobalEnv::_reset_tracker() {
     for (auto iter = _mem_trackers.rbegin(); iter != _mem_trackers.rend(); ++iter) {
         iter->reset();
+    }
+}
+
+void GlobalEnv::update_memory_stats() {
+    if (_is_init) {
+        _page_cache_mem_tracker->set(StoragePageCache::instance()->memory_usage());
     }
 }
 
