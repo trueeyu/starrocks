@@ -265,6 +265,7 @@ public:
     ~LRUCache() noexcept;
 
     // Separate from constructor so caller can easily make an array of LRUCache
+    void set_mem_tracker(MemTracker* mem_tracker) { _mem_tracker = mem_tracker; }
     void set_capacity(size_t capacity);
 
     // Like Cache methods, but with an extra "hash" parameter.
@@ -289,6 +290,7 @@ private:
     void _evict_one_entry(LRUHandle* e);
 
     // Initialized before use.
+    MemTracker* _mem_tracker = nullptr;
     size_t _capacity{0};
 
     // _mutex protects the following state.
