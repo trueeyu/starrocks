@@ -19,6 +19,7 @@ namespace starrocks {
 
 class Cache;
 class CacheKey;
+class MemTracker;
 
 // Create a new cache with a fixed size capacity.  This implementation
 // of Cache uses a least-recently-used eviction policy.
