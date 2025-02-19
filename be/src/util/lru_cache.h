@@ -23,7 +23,7 @@ class MemTracker;
 
 // Create a new cache with a fixed size capacity.  This implementation
 // of Cache uses a least-recently-used eviction policy.
-extern Cache* new_lru_cache(size_t capacity);
+extern Cache* new_lru_cache(MemTracker* mem_tracker, size_t capacity);
 
 class CacheKey {
 public:
@@ -314,7 +314,7 @@ static const int kNumShards = 1 << kNumShardBits;
 
 class ShardedLRUCache : public Cache {
 public:
-    explicit ShardedLRUCache(size_t capacity);
+    explicit ShardedLRUCache(MemTracker* mem_tracker, size_t capacity);
     ~ShardedLRUCache() override = default;
     Handle* insert(const CacheKey& key, void* value, size_t value_size, size_t charge,
                    void (*deleter)(const CacheKey& key, void* value),

@@ -87,12 +87,11 @@ void StoragePageCache::prune() {
 }
 
 StoragePageCache::StoragePageCache(MemTracker* mem_tracker, size_t capacity)
-        : _mem_tracker(mem_tracker), _cache(new_lru_cache(capacity)) {}
+        : _mem_tracker(mem_tracker), _cache(new_lru_cache(mem_tracker, capacity)) {}
 
 StoragePageCache::~StoragePageCache() = default;
 
 void StoragePageCache::set_capacity(size_t capacity) {
-    SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
     _cache->set_capacity(capacity);
 }
 
@@ -109,7 +108,6 @@ uint64_t StoragePageCache::get_hit_count() {
 }
 
 bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
-    SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
     return _cache->adjust_capacity(delta, min_capacity);
 }
 

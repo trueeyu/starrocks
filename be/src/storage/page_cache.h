@@ -104,7 +104,7 @@ public:
     // The in_memory page will have higher priority.
     void insert(const CacheKey& key, const Slice& data, PageCacheHandle* handle, bool in_memory = false);
 
-    size_t memory_usage() const { return _cache->get_memory_usage(); }
+    size_t memory_usage() const { return _mem_tracker->consumption(); }
 
     void set_capacity(size_t capacity);
 

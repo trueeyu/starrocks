@@ -404,9 +404,10 @@ uint32_t ShardedLRUCache::_shard(uint32_t hash) {
     return hash >> (32 - kNumShardBits);
 }
 
-ShardedLRUCache::ShardedLRUCache(size_t capacity) : _last_id(0), _capacity(capacity) {
+ShardedLRUCache::ShardedLRUCache(MemTracker* mem_tracker, size_t capacity) : _last_id(0), _capacity(capacity) {
     const size_t per_shard = (_capacity + (kNumShards - 1)) / kNumShards;
     for (auto& _shard : _shards) {
+        _shard.set_mem_tracker(mem_tracker);
         _shard.set_capacity(per_shard);
     }
 }
@@ -535,8 +536,8 @@ void ShardedLRUCache::get_cache_status(rapidjson::Document* document) {
     }
 }
 
-Cache* new_lru_cache(size_t capacity) {
-    return new ShardedLRUCache(capacity);
+Cache* new_lru_cache(MemTracker* mem_tracker, size_t capacity) {
+    return new ShardedLRUCache(mem_tracker, capacity);
 }
 
 } // namespace starrocks
