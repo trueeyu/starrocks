@@ -91,7 +91,17 @@ void config_handler(const WebPageHandler::ArgumentMap& args, std::stringstream* 
     (*output) << "</pre>";
 }
 
+void update_mem_metrics() {
+    MemTracker* page_cache_mem_tracker = GlobalEnv::GetInstance()->page_cache_mem_tracker();
+    auto* page_cache = StoragePageCache::instance();
+    if (page_cache_mem_tracker != nullptr && page_cache != nullptr) {
+        page_cache_mem_tracker->set(page_cache->memory_usage());
+    }
+}
+
 void mem_tracker_handler(MemTracker* mem_tracker, const WebPageHandler::ArgumentMap& args, std::stringstream* output) {
+    update_mem_metrics();
+
     (*output) << "<h1>Memory Usage Detail</h1>\n";
     (*output) << "<table data-toggle='table' "
                  "       data-pagination='true' "
@@ -189,11 +199,20 @@ void mem_tracker_handler(MemTracker* mem_tracker, const WebPageHandler::Argument
                                        update_mem_tracker->consumption(),
                                        update_mem_tracker->peak_consumption()};
 
+    MemTracker* page_cache_mem_tracker = GlobalEnv::GetInstance()->page_cache_mem_tracker();
+    MemTracker::SimpleItem page_cache_item{"page_cache",
+                                           "process",
+                                           2,
+                                           page_cache_mem_tracker->limit(),
+                                           page_cache_mem_tracker->consumption(),
+                                           page_cache_mem_tracker->peak_consumption()};
+
     if (start_mem_tracker != nullptr) {
         start_mem_tracker->list_mem_usage(&items, cur_level, upper_level);
         if (start_mem_tracker == GlobalEnv::GetInstance()->process_mem_tracker()) {
             items.emplace_back(meta_item);
             items.emplace_back(update_item);
+            items.emplace_back(page_cache_item);
         }
 
         for (const auto& item : items) {
