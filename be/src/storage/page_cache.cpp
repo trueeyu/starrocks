@@ -126,7 +126,7 @@ void StoragePageCache::insert(const CacheKey& key, const Slice& data, PageCacheH
 #ifndef BE_TEST
     int64_t mem_size = malloc_usable_size(data.data);
     tls_thread_status.mem_release(mem_size);
-    SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(_mem_tracker);
+    SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(nullptr);
     tls_thread_status.mem_consume(mem_size);
 #else
     int64_t mem_size = data.size;
