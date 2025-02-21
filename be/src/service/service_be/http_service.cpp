@@ -100,10 +100,10 @@ Status HttpServiceBE::start() {
     // In the future, when we support multi-table transactions across DBs,
     // we can keep the interface compatible, and users do not need to modify the URL.
     //
-    // BeginTrasaction:     POST /api/transaction/begin
+    // BeginTransaction:     POST /api/transaction/begin
     // CommitTransaction:   POST /api/transaction/commit
     // RollbackTransaction: POST /api/transaction/rollback
-    // PrepreTransaction:   POST /api/transaction/prepare
+    // PrepareTransaction:   POST /api/transaction/prepare
     //
     // ListTransactions:    POST /api/transaction/list
     auto* transaction_manager_action = new TransactionManagerAction(_env);

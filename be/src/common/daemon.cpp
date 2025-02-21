@@ -93,6 +93,7 @@ void calculate_metrics(void* arg_this) {
     auto* daemon = static_cast<Daemon*>(arg_this);
     while (!daemon->stopped()) {
         StarRocksMetrics::instance()->metrics()->trigger_hook();
+        GlobalEnv::GetInstance()->update_mem_stats();
 
         if (last_ts == -1L) {
             last_ts = MonotonicSeconds();
@@ -151,6 +152,14 @@ void calculate_metrics(void* arg_this) {
             }
 #endif
             datacache_mem_tracker->set(datacache_mem_bytes);
+        }
+
+        auto* page_cache_mem_tracker = GlobalEnv::GetInstance()->page_cache_mem_tracker();
+        if (page_cache_mem_tracker) {
+            auto* page_cache = StoragePageCache::instance();
+            if (page_cache) {
+                page_cache_mem_tracker->set(page_cache->memory_usage());
+            }
         }
 
         auto* mem_metrics = StarRocksMetrics::instance()->system_metrics()->memory_metrics();
