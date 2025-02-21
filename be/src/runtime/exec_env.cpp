@@ -227,7 +227,7 @@ Status GlobalEnv::_init_mem_tracker() {
     int64_t compaction_mem_limit = calc_max_compaction_memory(_process_mem_tracker->limit());
     _compaction_mem_tracker = regist_tracker(MemTrackerType::COMPACTION, compaction_mem_limit, process_mem_tracker());
     _schema_change_mem_tracker = regist_tracker(MemTrackerType::SCHEMA_CHANGE, -1, process_mem_tracker());
-    _page_cache_mem_tracker = regist_tracker(MemTrackerType::PAGE_CACHE, -1, process_mem_tracker());
+    _page_cache_mem_tracker = regist_tracker(MemTrackerType::PAGE_CACHE, -1, nullptr);
     _jit_cache_mem_tracker = regist_tracker(MemTrackerType::JIT_CACHE, -1, process_mem_tracker());
     int32_t update_mem_percent = std::max(std::min(100, config::update_memory_limit_percent), 0);
     _update_mem_tracker = regist_tracker(MemTrackerType::UPDATE, bytes_limit * update_mem_percent / 100, nullptr);
@@ -247,6 +247,12 @@ Status GlobalEnv::_init_mem_tracker() {
 
     _init_storage_page_cache(); // TODO: move to StorageEngine
     return Status::OK();
+}
+
+void GlobalEnv::update_mem_stats() {
+    if (_is_init) {
+        _page_cache_mem_tracker->set(StoragePageCache::instance()->memory_usage());
+    }
 }
 
 std::vector<std::shared_ptr<MemTracker>> GlobalEnv::mem_trackers() const {
