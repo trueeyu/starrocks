@@ -151,8 +151,6 @@ public:
 
     void reset_cancel_major_compaction();
 
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb);
-
     Status get_load_status() { return _status; }
 
     // only for ut
@@ -207,8 +205,6 @@ private:
     size_t _key_size = 0;
     int64_t _table_id = 0;
     Schema _pk_schema;
-    LogicalType _enc_pk_type = TYPE_UNKNOWN;
-    std::unique_ptr<HashIndex> _pkey_to_rssid_rowid;
     std::atomic<size_t> _memory_usage{0};
 };
 

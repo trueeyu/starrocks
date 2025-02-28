@@ -28,56 +28,10 @@
 #include "storage/tablet.h"
 #include "storage/tablet_reader.h"
 #include "storage/tablet_updates.h"
-#include "types/large_int_value.h"
 #include "util/stack_util.h"
-#include "util/starrocks_metrics.h"
 #include "util/xxh3.h"
 
 namespace starrocks {
-
-using tablet_rowid_t = PrimaryIndex::tablet_rowid_t;
-
-class HashIndex {
-public:
-    using DeletesMap = PrimaryIndex::DeletesMap;
-
-    HashIndex() = default;
-    virtual ~HashIndex() = default;
-
-    virtual size_t size() const = 0;
-
-    virtual size_t capacity() const = 0;
-
-    virtual void reserve(size_t size) = 0;
-
-    // batch insert a range [idx_begin, idx_end) of keys
-    virtual Status insert(uint32_t rssid, const vector<uint32_t>& rowids, const Column& pks, uint32_t idx_begin,
-                          uint32_t idx_end) = 0;
-    // batch upsert a range [idx_begin, idx_end) of keys
-    virtual Status upsert(uint32_t rssid, uint32_t rowid_start, const Column& pks, uint32_t idx_begin, uint32_t idx_end,
-                          DeletesMap* deletes) = 0;
-
-    // replace values, return error if not exist. replace a range [indexes[idx_begin], indexes[idx_end-1]]
-    virtual Status replace(uint32_t rssid, uint32_t rowid_start, const std::vector<uint32_t>& indexes,
-                           uint32_t idx_begin, uint32_t idx_end, const Column& pks) = 0;
-    // TODO(qzc): maybe unused, remove it or refactor it with the methods in use by template after a period of time
-    // batch try_replace a range [idx_begin, idx_end) of keys
-    [[maybe_unused]] virtual Status try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks,
-                                                const vector<uint32_t>& src_rssid, uint32_t idx_begin, uint32_t idx_end,
-                                                vector<uint32_t>* failed) = 0;
-
-    virtual Status try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks, const uint32_t max_src_rssid,
-                               uint32_t idx_begin, uint32_t idx_end, vector<uint32_t>* failed) = 0;
-    // batch erase a range [idx_begin, idx_end) of keys
-    virtual Status erase(const Column& pks, uint32_t idx_begin, uint32_t idx_end, DeletesMap* deletes) = 0;
-
-    virtual Status get(const Column& pks, uint32_t idx_begin, uint32_t idx_end, std::vector<uint64_t>* rowids) = 0;
-
-    // just an estimate value for now
-    virtual std::size_t memory_usage() const = 0;
-
-    virtual Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) = 0;
-};
 
 #pragma pack(push)
 #pragma pack(4)
@@ -104,233 +58,6 @@ public:
 
 const uint32_t PREFETCHN = 8;
 
-template <typename Key>
-class HashIndexImpl : public HashIndex {
-private:
-    phmap::parallel_flat_hash_map<Key, RowIdPack4, StdHashWithSeed<Key, PhmapSeed1>, phmap::priv::hash_default_eq<Key>,
-                                  TraceAlloc<phmap::priv::Pair<const Key, RowIdPack4>>, 4, phmap::NullMutex, true>
-            _map;
-
-public:
-    HashIndexImpl() = default;
-    ~HashIndexImpl() override = default;
-
-    size_t size() const override { return _map.size(); }
-
-    size_t capacity() const override { return _map.capacity(); }
-
-    void reserve(size_t size) override { _map.reserve(size); };
-
-    Status insert(uint32_t rssid, const vector<uint32_t>& rowids, const Column& pks, uint32_t idx_begin,
-                  uint32_t idx_end) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::insert");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        DCHECK(idx_end <= rowids.size());
-        uint64_t base = (((uint64_t)rssid) << 32);
-        for (auto i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            RowIdPack4 v(base + rowids[i]);
-            auto p = _map.insert({keys[i], v});
-            if (!p.second) {
-                uint64_t old = p.first->second.value;
-                std::string msg = strings::Substitute(
-                        "insert found duplicate key new(rssid=$0 rowid=$1) old(rssid=$2 rowid=$3) "
-                        "key=$4",
-                        rssid, rowids[i], (uint32_t)(old >> 32), (uint32_t)(old & ROWID_MASK), keys[i]);
-                LOG(ERROR) << msg;
-                return Status::AlreadyExist(msg);
-            }
-        }
-        return Status::OK();
-    }
-
-    Status replace(uint32_t rssid, uint32_t rowid_start, const std::vector<uint32_t>& indexes, uint32_t idx_begin,
-                   uint32_t idx_end, const Column& pks) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::insert");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        uint64_t base = (((uint64_t)rssid) << 32) + rowid_start;
-        for (uint32_t idx = idx_begin; idx < idx_end; idx++) {
-            const uint32_t i = indexes[idx];
-            RowIdPack4 v(base + i);
-            auto p = _map.insert({keys[i], v});
-            if (!p.second) {
-                p.first->second = v;
-            }
-        }
-        return Status::OK();
-    }
-
-    Status upsert(uint32_t rssid, uint32_t rowid_start, const Column& pks, uint32_t idx_begin, uint32_t idx_end,
-                  DeletesMap* deletes) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::upsert");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        uint64_t base = (((uint64_t)rssid) << 32) + rowid_start;
-        for (uint32_t i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            RowIdPack4 v(base + i);
-            auto p = _map.insert({keys[i], v});
-            if (!p.second) {
-                uint64_t old = p.first->second.value;
-                (*deletes)[(uint32_t)(old >> 32)].push_back((uint32_t)(old & ROWID_MASK));
-                p.first->second = v;
-            }
-        }
-        return Status::OK();
-    }
-
-    [[maybe_unused]] Status try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks,
-                                        const vector<uint32_t>& src_rssid, uint32_t idx_begin, uint32_t idx_end,
-                                        vector<uint32_t>* failed) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::try_replace");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        uint64_t base = (((uint64_t)rssid) << 32) + rowid_start;
-        for (uint32_t i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            auto p = _map.find(keys[i]);
-            if (p != _map.end() && (uint32_t)(p->second.value >> 32) == src_rssid[i]) {
-                // matched, can replace
-                p->second = RowIdPack4(base + i);
-            } else {
-                // not match, mark failed
-                failed->push_back(rowid_start + i);
-            }
-        }
-        return Status::OK();
-    }
-
-    Status try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks, const uint32_t max_src_rssid,
-                       uint32_t idx_begin, uint32_t idx_end, vector<uint32_t>* failed) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::try_replace");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        uint64_t base = (((uint64_t)rssid) << 32) + rowid_start;
-        for (uint32_t i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            auto p = _map.find(keys[i]);
-            if (p != _map.end() && (uint32_t)(p->second.value >> 32) <= max_src_rssid) {
-                p->second = RowIdPack4(base + i);
-            } else {
-                failed->push_back(rowid_start + i);
-            }
-        }
-        return Status::OK();
-    }
-
-    Status erase(const Column& pks, uint32_t idx_begin, uint32_t idx_end, DeletesMap* deletes) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::erase");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        for (auto i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            auto iter = _map.find(keys[i]);
-            if (iter != _map.end()) {
-                uint64_t old = iter->second.value;
-                (*deletes)[(uint32_t)(old >> 32)].push_back((uint32_t)(old & ROWID_MASK));
-                _map.erase(iter);
-            }
-        }
-        return Status::OK();
-    }
-
-    Status get(const Column& pks, uint32_t idx_begin, uint32_t idx_end, std::vector<uint64_t>* rowids) override {
-        CHECK_MEM_LIMIT("HashIndexImpl::get");
-        auto* keys = reinterpret_cast<const Key*>(pks.raw_data());
-        for (auto i = idx_begin; i < idx_end; i++) {
-            uint32_t prefetch_i = i + PREFETCHN;
-            if (LIKELY(prefetch_i < idx_end)) _map.prefetch(keys[prefetch_i]);
-            auto iter = _map.find(keys[i]);
-            if (iter != _map.end()) {
-                (*rowids)[i] = iter->second.value;
-            } else {
-                (*rowids)[i] = -1;
-            }
-        }
-        return Status::OK();
-    }
-
-    std::size_t memory_usage() const final {
-        return _map.capacity() * (1 + (sizeof(Key) + 3) / 4 * 4 + sizeof(RowIdPack4));
-    }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& kv : _map) {
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(reinterpret_cast<const char*>(&kv.first), sizeof(Key)), kv.second.value, dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
-    }
-};
-
-template <size_t S>
-struct FixSlice {
-    uint32_t v[S];
-    FixSlice() = default;
-    explicit FixSlice(const Slice& s) { assign(s); }
-    void clear() { memset(v, 0, sizeof(FixSlice)); }
-    void assign(const Slice& s) {
-        clear();
-        DCHECK(s.size <= S * 4) << "slice size > FixSlice size";
-        memcpy(v, s.data, s.size);
-    }
-    bool operator==(const FixSlice<S>& rhs) const { return memcmp(v, rhs.v, S * 4) == 0; }
-};
-
-template <size_t S>
-struct FixSliceHash {
-    size_t operator()(const FixSlice<S>& v) const { return XXH3_64bits(v.v, 4 * S); }
-};
-
-static std::unique_ptr<HashIndex> create_hash_index(LogicalType key_type, size_t fix_size) {
-    if (key_type == TYPE_VARCHAR && fix_size > 0) {
-        if (fix_size <= 8) {
-            return std::make_unique<FixSliceHashIndex<2>>();
-        } else if (fix_size <= 12) {
-            return std::make_unique<FixSliceHashIndex<3>>();
-        } else if (fix_size <= 16) {
-            return std::make_unique<FixSliceHashIndex<4>>();
-        } else if (fix_size <= 20) {
-            return std::make_unique<FixSliceHashIndex<5>>();
-        } else if (fix_size <= 24) {
-            return std::make_unique<FixSliceHashIndex<6>>();
-        } else if (fix_size <= 28) {
-            return std::make_unique<FixSliceHashIndex<7>>();
-        } else if (fix_size <= 32) {
-            return std::make_unique<FixSliceHashIndex<8>>();
-        } else if (fix_size <= 36) {
-            return std::make_unique<FixSliceHashIndex<9>>();
-        } else if (fix_size <= 40) {
-            return std::make_unique<FixSliceHashIndex<10>>();
-        }
-    }
-
-#define CASE_TYPE(type) \
-    case (type):        \
-        return std::make_unique<HashIndexImpl<typename CppTypeTraits<type>::CppType>>()
-
-    switch (key_type) {
-        CASE_TYPE(TYPE_BOOLEAN);
-        CASE_TYPE(TYPE_TINYINT);
-        CASE_TYPE(TYPE_SMALLINT);
-        CASE_TYPE(TYPE_INT);
-        CASE_TYPE(TYPE_BIGINT);
-        CASE_TYPE(TYPE_LARGEINT);
-    case TYPE_CHAR:
-        return std::make_unique<ShardByLengthSliceHashIndex>();
-    case TYPE_VARCHAR:
-        return std::make_unique<ShardByLengthSliceHashIndex>();
-    case TYPE_DATE:
-        return std::make_unique<HashIndexImpl<int32_t>>();
-    case TYPE_DATETIME:
-        return std::make_unique<HashIndexImpl<int64_t>>();
-    default:
-        return nullptr;
-    }
-#undef CASE_TYPE
-}
-
 PrimaryIndex::PrimaryIndex() = default;
 
 PrimaryIndex::~PrimaryIndex() {
@@ -355,9 +82,7 @@ void PrimaryIndex::_set_schema(const Schema& pk_schema) {
     for (ColumnId i = 0; i < pk_schema.num_fields(); ++i) {
         sort_key_idxes[i] = i;
     }
-    _enc_pk_type = PrimaryKeyEncoder::encoded_primary_key_type(_pk_schema, sort_key_idxes);
     _key_size = PrimaryKeyEncoder::get_encoded_fixed_size(_pk_schema);
-    _pkey_to_rssid_rowid = create_hash_index(_enc_pk_type, _key_size);
 }
 
 Status PrimaryIndex::load(Tablet* tablet) {
@@ -385,9 +110,6 @@ void PrimaryIndex::unload() {
         return;
     }
     LOG(INFO) << "unload primary index tablet:" << _tablet_id << " size:" << size() << " memory: " << memory_usage();
-    if (_pkey_to_rssid_rowid) {
-        _pkey_to_rssid_rowid.reset();
-    }
     if (_persistent_index) {
         _persistent_index.reset();
     }
@@ -467,103 +189,6 @@ Status PrimaryIndex::_do_load(Tablet* tablet) {
         _persistent_index = std::make_shared<PersistentIndex>(tablet->schema_hash_path());
         return _persistent_index->load_from_tablet(tablet);
     }
-
-    int64_t apply_version = 0;
-    std::vector<RowsetSharedPtr> rowsets;
-    std::vector<uint32_t> rowset_ids;
-    RETURN_IF_ERROR(tablet->updates()->get_apply_version_and_rowsets(&apply_version, &rowsets, &rowset_ids));
-
-    size_t total_data_size = 0;
-    size_t total_segments = 0;
-    size_t total_rows = 0;
-    for (auto& rowset : rowsets) {
-        total_data_size += rowset->data_disk_size();
-        total_segments += rowset->num_segments();
-        total_rows += rowset->num_rows();
-    }
-    size_t total_rows2 = 0;
-    size_t total_dels = 0;
-    auto st = tablet->updates()->get_rowsets_total_stats(rowset_ids, &total_rows2, &total_dels);
-    if (!st.ok() || total_rows2 != total_rows) {
-        LOG(WARNING) << "load primary index get_rowsets_total_stats error: " << st;
-    }
-    DCHECK(total_rows2 == total_rows);
-    if (total_data_size > 4000000000 || total_rows > 10000000 || total_segments > 400) {
-        LOG(INFO) << "load large primary index start tablet:" << tablet->tablet_id() << " version:" << apply_version
-                  << " #rowset:" << rowsets.size() << " #segment:" << total_segments << " #row:" << total_rows << " -"
-                  << total_dels << "=" << total_rows - total_dels << " bytes:" << total_data_size;
-    }
-    if (total_rows > total_dels) {
-        _pkey_to_rssid_rowid->reserve(total_rows - total_dels);
-    }
-
-    OlapReaderStatistics stats;
-    std::unique_ptr<Column> pk_column;
-    if (pk_columns.size() > 1) {
-        RETURN_IF_ERROR(PrimaryKeyEncoder::create_column(pkey_schema, &pk_column));
-    }
-    // only hold pkey, so can use larger chunk size
-    vector<uint32_t> rowids;
-    rowids.reserve(4096);
-    auto chunk_shared_ptr = ChunkHelper::new_chunk(pkey_schema, 4096);
-    auto chunk = chunk_shared_ptr.get();
-    for (auto& rowset : rowsets) {
-        RowsetReleaseGuard guard(rowset);
-        auto res = rowset->get_segment_iterators2(pkey_schema, tablet->tablet_schema(), tablet->data_dir()->get_meta(),
-                                                  apply_version, &stats);
-        if (!res.ok()) {
-            return res.status();
-        }
-        auto& itrs = res.value();
-        // TODO(cbl): auto close iterators on failure
-        RETURN_ERROR_IF_FALSE(itrs.size() == rowset->num_segments(), "itrs.size != num_segments");
-        for (size_t i = 0; i < itrs.size(); i++) {
-            auto itr = itrs[i].get();
-            if (itr == nullptr) {
-                continue;
-            }
-            while (true) {
-                chunk->reset();
-                rowids.clear();
-                auto st = itr->get_next(chunk, &rowids);
-                if (st.is_end_of_file()) {
-                    break;
-                } else if (!st.ok()) {
-                    return st;
-                } else {
-                    Column* pkc = nullptr;
-                    if (pk_column) {
-                        pk_column->reset_column();
-                        TRY_CATCH_BAD_ALLOC(
-                                PrimaryKeyEncoder::encode(pkey_schema, *chunk, 0, chunk->num_rows(), pk_column.get()));
-                        pkc = pk_column.get();
-                    } else {
-                        pkc = chunk->columns()[0].get();
-                    }
-                    st = insert(rowset->rowset_meta()->get_rowset_seg_id() + i, rowids, *pkc);
-                    if (!st.ok()) {
-                        LOG(ERROR) << "load index failed: tablet=" << tablet->tablet_id()
-                                   << " rowsets:" << int_list_to_string(rowset_ids)
-                                   << " rowset:" << rowset->rowset_meta()->get_rowset_seg_id() << " segment:" << i
-                                   << " reason: " << st.to_string() << " current_size:" << size()
-                                   << " updates: " << tablet->updates()->debug_string();
-                        return st;
-                    }
-                }
-            }
-            itr->close();
-        }
-    }
-    if (size() != total_rows - total_dels) {
-        LOG(WARNING) << strings::Substitute("load primary index row count not match tablet:$0 index:$1 != stats:$2",
-                                            _tablet_id, size(), total_rows - total_dels);
-    }
-    LOG(INFO) << "load primary index finish table:" << tablet->belonged_table_id() << " tablet:" << tablet->tablet_id()
-              << " version:" << apply_version << " #rowset:" << rowsets.size() << " #segment:" << total_segments
-              << " data_size:" << total_data_size << " rowsets:" << int_list_to_string(rowset_ids) << " size:" << size()
-              << " memory:" << memory_usage() << " duration: " << timer.elapsed_time() / 1000000 << "ms";
-    span->SetAttribute("memory", memory_usage());
-    span->SetAttribute("size", size());
     return Status::OK();
 }
 
@@ -692,15 +317,9 @@ Status PrimaryIndex::_replace_persistent_index(uint32_t rssid, uint32_t rowid_st
 }
 
 Status PrimaryIndex::insert(uint32_t rssid, const vector<uint32_t>& rowids, const Column& pks) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         auto scope = IOProfiler::scope(IOProfiler::TAG_PKINDEX, _tablet_id);
         return _insert_into_persistent_index(rssid, rowids, pks);
-    } else {
-        auto st = _pkey_to_rssid_rowid->insert(rssid, rowids, pks, 0, pks.size());
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::insert(uint32_t rssid, uint32_t rowid_start, const Column& pks) {
@@ -713,26 +332,14 @@ Status PrimaryIndex::insert(uint32_t rssid, uint32_t rowid_start, const Column& 
 
 Status PrimaryIndex::upsert(uint32_t rssid, uint32_t rowid_start, const Column& pks, DeletesMap* deletes,
                             IOStat* stat) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         return _upsert_into_persistent_index(rssid, rowid_start, pks, 0, pks.size(), deletes, stat);
-    } else {
-        auto st = _pkey_to_rssid_rowid->upsert(rssid, rowid_start, pks, 0, pks.size(), deletes);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::upsert(uint32_t rssid, uint32_t rowid_start, const Column& pks, uint32_t idx_begin,
                             uint32_t idx_end, DeletesMap* deletes) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         return _upsert_into_persistent_index(rssid, rowid_start, pks, idx_begin, idx_end, deletes, nullptr);
-    } else {
-        auto st = _pkey_to_rssid_rowid->upsert(rssid, rowid_start, pks, idx_begin, idx_end, deletes);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::_replace_persistent_index_by_indexes(uint32_t rssid, uint32_t rowid_start,
@@ -753,60 +360,32 @@ Status PrimaryIndex::_replace_persistent_index_by_indexes(uint32_t rssid, uint32
 
 Status PrimaryIndex::replace(uint32_t rssid, uint32_t rowid_start, const std::vector<uint32_t>& replace_indexes,
                              const Column& pks) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         return _replace_persistent_index_by_indexes(rssid, rowid_start, replace_indexes, pks);
-    } else {
-        auto st = _pkey_to_rssid_rowid->replace(rssid, rowid_start, replace_indexes, 0, replace_indexes.size(), pks);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 [[maybe_unused]] Status PrimaryIndex::try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks,
                                                   const vector<uint32_t>& src_rssid, vector<uint32_t>* deletes) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         return _replace_persistent_index(rssid, rowid_start, pks, src_rssid, deletes);
-    } else {
-        auto st = _pkey_to_rssid_rowid->try_replace(rssid, rowid_start, pks, src_rssid, 0, pks.size(), deletes);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::try_replace(uint32_t rssid, uint32_t rowid_start, const Column& pks, const uint32_t max_src_rssid,
                                  vector<uint32_t>* deletes) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         return _replace_persistent_index(rssid, rowid_start, pks, max_src_rssid, deletes);
-    } else {
-        auto st = _pkey_to_rssid_rowid->try_replace(rssid, rowid_start, pks, max_src_rssid, 0, pks.size(), deletes);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::erase(const Column& key_col, DeletesMap* deletes) {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         auto scope = IOProfiler::scope(IOProfiler::TAG_PKINDEX, _tablet_id);
         return _erase_persistent_index(key_col, deletes);
-    } else {
-        auto st = _pkey_to_rssid_rowid->erase(key_col, 0, key_col.size(), deletes);
-        _calc_memory_usage();
-        return st;
-    }
 }
 
 Status PrimaryIndex::get(const Column& key_col, std::vector<uint64_t>* rowids) const {
-    DCHECK(_status.ok() && (_pkey_to_rssid_rowid || _persistent_index));
-    if (_persistent_index != nullptr) {
+    DCHECK(_status.ok() && (_persistent_index));
         auto scope = IOProfiler::scope(IOProfiler::TAG_PKINDEX, _tablet_id);
         return _get_from_persistent_index(key_col, rowids);
-    } else {
-        return _pkey_to_rssid_rowid->get(key_col, 0, key_col.size(), rowids);
-    }
 }
 
 std::size_t PrimaryIndex::memory_usage() const {
@@ -817,16 +396,10 @@ std::size_t PrimaryIndex::memory_usage() const {
 }
 
 std::size_t PrimaryIndex::size() const {
-    if (_persistent_index) {
         return _persistent_index->size();
-    }
-    return _pkey_to_rssid_rowid ? _pkey_to_rssid_rowid->size() : 0;
 }
 
 void PrimaryIndex::reserve(size_t s) {
-    if (_pkey_to_rssid_rowid) {
-        _pkey_to_rssid_rowid->reserve(s);
-    }
 }
 
 std::string PrimaryIndex::to_string() const {
@@ -863,18 +436,11 @@ Status PrimaryIndex::reset(Tablet* tablet, EditVersion version, PersistentIndexM
     auto pkey_schema = ChunkHelper::convert_schema(tablet_schema_ptr, pk_columns);
     _set_schema(pkey_schema);
 
-    if (tablet->get_enable_persistent_index()) {
         if (_persistent_index != nullptr) {
             _persistent_index.reset();
         }
         _persistent_index = std::make_shared<PersistentIndex>(tablet->schema_hash_path());
         RETURN_IF_ERROR(_persistent_index->reset(tablet, version, index_meta));
-    } else {
-        if (_pkey_to_rssid_rowid != nullptr) {
-            _pkey_to_rssid_rowid.reset();
-        }
-        _pkey_to_rssid_rowid = create_hash_index(_enc_pk_type, _key_size);
-    }
     _loaded = true;
     _calc_memory_usage();
 
@@ -887,19 +453,7 @@ void PrimaryIndex::reset_cancel_major_compaction() {
     }
 }
 
-Status PrimaryIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb) {
-    if (_persistent_index != nullptr) {
-        RETURN_IF_ERROR(_persistent_index->pk_dump(dump, dump_pb));
-    } else if (_pkey_to_rssid_rowid != nullptr) {
-        PrimaryIndexDumpPB* level = dump_pb->add_primary_index_levels();
-        level->set_filename("memory primary index");
-        RETURN_IF_ERROR(_pkey_to_rssid_rowid->pk_dump(dump, level));
-    }
-    return Status::OK();
-}
-
 void PrimaryIndex::_calc_memory_usage() {
-    _memory_usage.store(_pkey_to_rssid_rowid ? _pkey_to_rssid_rowid->memory_usage() : 0);
 }
 
 } // namespace starrocks
