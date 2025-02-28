@@ -56,8 +56,6 @@ public:
     void deallocate(value_type* p, std::size_t) noexcept { ::operator delete(p); }
 };
 
-const uint32_t PREFETCHN = 8;
-
 PrimaryIndex::PrimaryIndex() = default;
 
 PrimaryIndex::~PrimaryIndex() {
@@ -86,7 +84,6 @@ void PrimaryIndex::_set_schema(const Schema& pk_schema) {
 }
 
 Status PrimaryIndex::load(Tablet* tablet) {
-    auto scope = IOProfiler::scope(IOProfiler::TAG_PKINDEX, tablet->tablet_id());
     std::lock_guard<std::mutex> lg(_lock);
     if (_loaded) {
         return _status;
@@ -96,11 +93,7 @@ Status PrimaryIndex::load(Tablet* tablet) {
     if (!_status.ok()) {
         LOG(WARNING) << "load PrimaryIndex error: " << _status << " tablet:" << _tablet_id << " stack:\n"
                      << get_stack_trace();
-        if (_status.is_mem_limit_exceeded()) {
-            LOG(WARNING) << CurrentThread::mem_tracker()->debug_string();
-        }
     }
-    _calc_memory_usage();
     return _status;
 }
 

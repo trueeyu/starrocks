@@ -2755,7 +2755,6 @@ Status PersistentIndex::load(const PersistentIndexMetaPB& index_meta) {
     RETURN_IF_ERROR(_delete_expired_index_file(
             l0_version, _l1_version,
             _l2_versions.size() > 0 ? _l2_versions[0] : EditVersionWithMerge(INT64_MAX, INT64_MAX, true)));
-    _calc_memory_usage();
     return Status::OK();
 }
 
