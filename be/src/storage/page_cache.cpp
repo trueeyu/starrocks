@@ -94,7 +94,7 @@ bool StoragePageCache::adjust_capacity(int64_t delta, size_t min_capacity) {
 }
 
 bool StoragePageCache::lookup(const CacheKey& key, PageCacheHandle* handle) {
-    ObjectCacheHandle* obj_handle = nullptr;
+    ObjectCacheHandlePtr obj_handle = nullptr;
     Status st = _cache->lookup(key.encode(), &obj_handle);
     if (!st.ok()) {
         return false;

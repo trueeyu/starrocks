@@ -125,7 +125,7 @@ private:
 class PageCacheHandle {
 public:
     PageCacheHandle() = default;
-    PageCacheHandle(ObjectCache* cache, ObjectCacheHandle* handle) : _cache(cache), _handle(handle) {}
+    PageCacheHandle(ObjectCache* cache, ObjectCacheHandlePtr handle) : _cache(cache), _handle(handle) {}
     ~PageCacheHandle() {
         if (_handle != nullptr) {
             _cache->release(_handle);
