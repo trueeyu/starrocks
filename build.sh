@@ -204,7 +204,7 @@ if [[ -z ${USE_BMI_2} ]]; then
     USE_BMI_2=ON
 fi
 if [[ -z ${JEMALLOC_DEBUG} ]]; then
-    JEMALLOC_DEBUG=OFF
+    JEMALLOC_DEBUG=ON
 fi
 if [[ -z ${ENABLE_JIT} ]]; then
     ENABLE_JIT=ON
