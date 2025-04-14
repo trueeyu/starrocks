@@ -16,6 +16,8 @@
 
 #include <cstdlib>
 #include <random>
+#include <stdio.h>
+#include <jemalloc/jemalloc.h>
 
 #include "cache/block_cache/block_cache.h"
 #include "cache/block_cache/cache_options.h"
@@ -256,7 +258,9 @@ void ObjectCacheBench::insert_to_cache(benchmark::State& state, CacheType cache_
     ObjectCache* cache = get_object_cache(cache_type);
 
     state.ResumeTiming();
+    je_mallctl("prof.dump", NULL, NULL, NULL, 0);
     prepare_data(cache, count);
+    je_mallctl("prof.dump", NULL, NULL, NULL, 0);
     state.PauseTiming();
 
     int64_t new_mem_usage = CurrentThread::mem_tracker()->consumption();
