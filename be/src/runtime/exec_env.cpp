@@ -386,8 +386,13 @@ Status CacheEnv::_init_lru_base_object_cache() {
 }
 
 Status CacheEnv::_init_page_cache() {
-    _page_cache = std::make_shared<StoragePageCache>(_lru_based_object_cache.get());
-    _page_cache->init_metrics();
+    if (config::use_lru) {
+        _page_cache = std::make_shared<StoragePageCache>(_lru_based_object_cache.get());
+        _page_cache->init_metrics();
+    } else {
+        _page_cache = std::make_shared<StoragePageCache>(_starcache_based_object_cache.get());
+        _page_cache->init_metrics();
+    }
     LOG(INFO) << "storage page cache init successfully";
     return Status::OK();
 }
