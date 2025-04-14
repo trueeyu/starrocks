@@ -353,23 +353,7 @@ static void bench_func(benchmark::State& state) {
 static void process_args(benchmark::internal::Benchmark* b) {
     // one thread insert
     b->Args({0, 0, 10000000, 10000000})->Iterations(1);
-    b->Args({1, 0, 10000000, 10000000})->Iterations(1);
-
-    // one thread query, all hit
-    b->Args({0, 1, 10000000, 10000000})->Iterations(1);
-    b->Args({1, 1, 10000000, 10000000})->Iterations(1);
-
-    // one thread query, 50% hit
-    b->Args({0, 2, 10000000, 10000000})->Iterations(1);
-    b->Args({1, 2, 10000000, 10000000})->Iterations(1);
-
-    // multi thread query
-    b->Args({0, 3, 10000000, 10000000})->Iterations(1);
-    b->Args({1, 3, 10000000, 10000000})->Iterations(1);
-
-    // multi thread insert
-    b->Args({0, 4, 1000000, 5000000})->Iterations(1);
-    b->Args({1, 4, 1000000, 5000000})->Iterations(1);
+    //b->Args({1, 0, 10000000, 10000000})->Iterations(1);
 }
 
 BENCHMARK(bench_func)->Apply(process_args);
