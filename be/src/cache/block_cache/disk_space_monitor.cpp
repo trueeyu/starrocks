@@ -105,7 +105,7 @@ Status DiskSpace::_update_disk_stats() {
     auto& space_info = ret.value();
     _disk_stats.capacity_bytes = space_info.capacity;
     _disk_stats.available_bytes = space_info.available;
-    VLOG(2) << "Get disk statistics, capaticy: " << _disk_stats.capacity_bytes
+    VLOG(2) << "Get disk statistics, capacity: " << _disk_stats.capacity_bytes
             << ", available: " << _disk_stats.available_bytes << ", used_rate: " << _disk_stats.used_rate();
 
     return Status::OK();
