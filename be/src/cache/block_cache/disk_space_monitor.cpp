@@ -43,8 +43,8 @@ Status DiskSpace::init_spaces(const std::vector<DirSpace>& dir_spaces) {
     // be reused by datacache .
     _revise_disk_stats_by_cache_dir();
 
-    // We check this switch after some infomation are initialized, because even if it is off now,
-    // we still need these infomation once the switch is turn on online.
+    // We check this switch after some information are initialized, because even if it is off now,
+    // we still need this information once the switch is turn on online.
     if (!config::datacache_auto_adjust_enable) {
         return st;
     }
