@@ -1254,7 +1254,7 @@ CONF_mInt32(report_datacache_metrics_interval_ms, "60000");
 CONF_mBool(datacache_auto_adjust_enable, "true");
 // The high disk usage level, which trigger the cache eviction and quota decreased.
 CONF_mInt64(datacache_disk_high_level, "90");
-// The safe disk usage level, the cache quota will be decreased to this level once it reach the high level.
+// The safe disk usage level, the cache quota will be decreased to this level once it reaches the high level.
 CONF_mInt64(datacache_disk_safe_level, "80");
 // The low disk usage level, which trigger the cache expansion and quota increased.
 CONF_mInt64(datacache_disk_low_level, "60");
