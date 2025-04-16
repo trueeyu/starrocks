@@ -230,9 +230,8 @@ Status DiskSpaceMonitor::init(std::vector<DirSpace>* dir_spaces) {
 
     _disk_spaces.clear();
     for (auto& disk2spaces : disk_to_dir_spaces) {
-        auto& device_id = disk2spaces.first;
         auto& dirs = disk2spaces.second;
-        _disk_spaces.emplace_back(device_id, dirs[0].path, _fs);
+        _disk_spaces.emplace_back(dirs[0].path, _fs);
         auto& disk_space = _disk_spaces.back();
         RETURN_IF_ERROR(disk_space.init_spaces(dirs));
     }

@@ -55,8 +55,7 @@ public:
         size_t total_cache_usage = 0;
     };
 
-    DiskSpace(dev_t device_id, const std::string& path, std::shared_ptr<FileSystemWrapper> fs)
-            : _device_id(device_id), _path(path), _fs(fs) {}
+    DiskSpace(const std::string& path, std::shared_ptr<FileSystemWrapper> fs) : _path(path), _fs(fs) {}
 
     Status init_spaces(const std::vector<DirSpace>& dir_spaces);
 
@@ -92,7 +91,6 @@ private:
 
     size_t _check_cache_high_limit(int64_t cache_quota);
 
-    dev_t _device_id = 0;
     std::string _path;
     DiskStats _disk_stats;
 
