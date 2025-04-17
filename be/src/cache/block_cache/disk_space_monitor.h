@@ -35,7 +35,7 @@ public:
     public:
         virtual StatusOr<SpaceInfo> space(const std::string& path) { return FileSystem::Default()->space(path); }
 
-        virtual StatusOr<size_t> directory_size(const std::string& dir);
+        virtual StatusOr<int64_t> directory_size(const std::string& dir);
 
         virtual dev_t device_id(const std::string& path);
 
@@ -85,12 +85,13 @@ private:
     bool _allow_expansion(const AdjustContext& ctx);
 
     size_t _cache_usage(const AdjustContext& ctx);
+    int64_t _get_cache_directory_size();
 
-    size_t _check_cache_limit(int64_t cache_quota);
+    int64_t _check_cache_limit(int64_t cache_quota);
 
-    size_t _check_cache_low_limit(int64_t cache_quota);
+    int64_t _check_cache_low_limit(int64_t cache_quota);
 
-    size_t _check_cache_high_limit(int64_t cache_quota);
+    int64_t _check_cache_high_limit(int64_t cache_quota);
 
     std::string _path;
     DiskStats _disk_stats;

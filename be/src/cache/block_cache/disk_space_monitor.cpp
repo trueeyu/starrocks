@@ -38,25 +38,20 @@ Status DiskSpace::init_spaces(const std::vector<DirSpace>& dir_spaces) {
     }
     _dir_spaces = dir_spaces;
 
-    // Revise the original disk space state.
-    // The disk space occupied by old datacache files should be excluded because these space can
-    // be reused by datacache .
-    _revise_disk_stats_by_cache_dir();
-
     // We check this switch after some information are initialized, because even if it is off now,
     // we still need this information once the switch is turn on online.
     if (!config::datacache_auto_adjust_enable) {
         return st;
     }
 
-    int64_t other_usage = _disk_stats.used_bytes();
-    int64_t cache_quota = _disk_stats.capacity_bytes * 0.01 * config::datacache_disk_safe_level - other_usage;
-    if (cache_quota > 0) {
-        cache_quota = _check_cache_limit(cache_quota);
+    int64_t other_usage = _disk_stats.used_bytes() - _get_cache_directory_size();
+    int64_t new_cache_quota = _disk_stats.capacity_bytes * 0.01 * config::datacache_disk_safe_level - other_usage;
+    if (new_cache_quota > 0) {
+        new_cache_quota = _check_cache_limit(new_cache_quota);
     } else {
-        cache_quota = 0;
+        new_cache_quota = 0;
     }
-    _update_spaces_by_cache_quota(cache_quota);
+    _update_spaces_by_cache_quota(new_cache_quota);
     return st;
 }
 
@@ -133,15 +128,29 @@ void DiskSpace::_update_spaces_by_cache_quota(size_t cache_avail_bytes) {
     }
 }
 
-size_t DiskSpace::_cache_usage(const AdjustContext& ctx) {
+int64_t DiskSpace::_cache_usage(const AdjustContext& ctx) {
     if (ctx.total_cache_quota == 0) {
         return 0;
     }
 
     // TODO: Support obtaining the cache usage of each directory in starcache, to make it more accurate.
     double cache_used_rate = static_cast<double>(ctx.total_cache_usage) / ctx.total_cache_quota;
-    size_t usage = cache_quota() * cache_used_rate;
-    return usage;
+    return cache_quota() * cache_used_rate;
+}
+
+int64_t DiskSpace::_get_cache_directory_size() {
+    int64_t size = 0;
+    for (auto& dir : _dir_spaces) {
+        auto ret = _fs->directory_size(dir.path);
+        if (ret.ok() && ret.value() > 0) {
+            size += ret.value();
+        }
+    }
+
+    if (size > _disk_stats.capacity_bytes) {
+        size = _disk_stats.capacity_bytes;
+    }
+    return size;
 }
 
 bool DiskSpace::_allow_expansion(const AdjustContext& ctx) {
@@ -157,15 +166,15 @@ bool DiskSpace::_allow_expansion(const AdjustContext& ctx) {
     return true;
 }
 
-size_t DiskSpace::_check_cache_limit(int64_t cache_quota) {
-    size_t result = _check_cache_low_limit(cache_quota);
+int64_t DiskSpace::_check_cache_limit(int64_t cache_quota) {
+    int64_t result = _check_cache_low_limit(cache_quota);
     if (result > 0) {
         result = _check_cache_high_limit(result);
     }
     return result;
 }
 
-size_t DiskSpace::_check_cache_low_limit(int64_t cache_quota) {
+int64_t DiskSpace::_check_cache_low_limit(int64_t cache_quota) {
     if (cache_quota < config::datacache_min_disk_quota_for_adjustment) {
         if (_disabled) {
             // If the cache quata is already disabled, skip adjusting it repeatedly.
@@ -184,8 +193,8 @@ size_t DiskSpace::_check_cache_low_limit(int64_t cache_quota) {
     return cache_quota;
 }
 
-size_t DiskSpace::_check_cache_high_limit(int64_t cache_quota) {
-    size_t high_limit = _disk_stats.capacity_bytes * config::datacache_disk_safe_level * 0.01;
+int64_t DiskSpace::_check_cache_high_limit(int64_t cache_quota) {
+    int64_t high_limit = _disk_stats.capacity_bytes * config::datacache_disk_safe_level * 0.01;
     if (cache_quota > high_limit) {
         LOG(INFO) << "Correct the cache quota because it reaches the high limit. quota: " << cache_quota;
         cache_quota = high_limit;
@@ -199,8 +208,8 @@ size_t DiskSpace::_check_cache_high_limit(int64_t cache_quota) {
     return cache_quota;
 }
 
-StatusOr<size_t> DiskSpace::FileSystemWrapper::directory_size(const std::string& dir) {
-    size_t capacity = 0;
+StatusOr<int64_t> DiskSpace::FileSystemWrapper::directory_size(const std::string& dir) {
+    int64_t capacity = 0;
     auto st = FileSystem::Default()->iterate_dir2(dir, [&](DirEntry entry) {
         capacity += entry.size.value();
         return true;
