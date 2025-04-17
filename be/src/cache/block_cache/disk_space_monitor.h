@@ -45,6 +45,7 @@ public:
     struct DiskStats {
         int64_t capacity_bytes = 0;
         int64_t available_bytes = 0;
+        int64_t upper_limit = 0;
 
         int64_t used_bytes() { return capacity_bytes - available_bytes; }
         double used_rate() { return static_cast<double>(capacity_bytes - available_bytes) / capacity_bytes; }

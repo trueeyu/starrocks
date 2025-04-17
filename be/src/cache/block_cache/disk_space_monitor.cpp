@@ -105,8 +105,10 @@ Status DiskSpace::_update_disk_stats() {
     auto& space_info = ret.value();
     _disk_stats.capacity_bytes = space_info.capacity;
     _disk_stats.available_bytes = space_info.available;
+    _disk_stats.upper_limit = DataCacheUtils::parse_conf_datacache_disk_size(_path, config::datacache_disk_size, -1);
     VLOG(2) << "Get disk statistics, capacity: " << _disk_stats.capacity_bytes
-            << ", available: " << _disk_stats.available_bytes << ", used_rate: " << _disk_stats.used_rate();
+            << ", available: " << _disk_stats.available_bytes << ", used_rate: " << _disk_stats.used_rate()
+            << ", datacache_disk_upper_limit: " << _disk_stats.upper_limit;
 
     return Status::OK();
 }
@@ -187,6 +189,8 @@ size_t DiskSpace::_check_cache_high_limit(int64_t cache_quota) {
     if (cache_quota > high_limit) {
         LOG(INFO) << "Correct the cache quota because it reaches the high limit. quota: " << cache_quota;
         return high_limit;
+    } else if (cache_quota > _disk_stats.upper_limit) {
+        LOG(INFO) << "Correct the cache quota because it reaches the limit. quota: " << cache_quota;
     }
     return cache_quota;
 }
