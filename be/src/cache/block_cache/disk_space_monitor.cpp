@@ -188,10 +188,14 @@ size_t DiskSpace::_check_cache_high_limit(int64_t cache_quota) {
     size_t high_limit = _disk_stats.capacity_bytes * config::datacache_disk_safe_level * 0.01;
     if (cache_quota > high_limit) {
         LOG(INFO) << "Correct the cache quota because it reaches the high limit. quota: " << cache_quota;
-        return high_limit;
-    } else if (cache_quota > _disk_stats.upper_limit) {
-        LOG(INFO) << "Correct the cache quota because it reaches the limit. quota: " << cache_quota;
+        cache_quota = high_limit;
     }
+
+    if (cache_quota > _disk_stats.upper_limit) {
+        LOG(INFO) << "Correct the cache quota because it reaches the upper limit of single disk. quota: " << high_limit;
+        cache_quota = _disk_stats.upper_limit;
+    }
+
     return cache_quota;
 }
 
