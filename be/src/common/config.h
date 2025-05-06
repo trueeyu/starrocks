@@ -1282,12 +1282,9 @@ CONF_Bool(datacache_unified_instance_enable, "true");
 // * slru: segment lru eviction policies, which can better reduce cache pollution problem.
 CONF_String(datacache_eviction_policy, "slru");
 
-// The following configurations will be deprecated, and we use the `datacache` prefix instead.
-// But it is temporarily necessary to keep them for a period of time to be compatible with
-// the old configuration files.
-CONF_Bool(block_cache_enable, "false");
-CONF_Int64(block_cache_disk_size, "0");
-CONF_Int64(block_cache_mem_size, "2147483648"); // 2GB
+CONF_Bool(block_cache_enable, "true");
+CONF_mString(block_cache_disk_size, "-1");
+CONF_mString(block_cache_mem_size, "-1");
 CONF_Alias(datacache_block_size, block_cache_block_size);
 CONF_Alias(datacache_max_concurrent_inserts, block_cache_max_concurrent_inserts);
 CONF_Alias(datacache_checksum_enable, block_cache_checksum_enable);
