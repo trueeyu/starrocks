@@ -1243,7 +1243,7 @@ CONF_Bool(datacache_persistence_enable, "true");
 // `cachelib` is not support now.
 // Set the default value empty to indicate whether it is manully configured by users.
 // If not, we need to adjust the default engine based on build switches like "WITH_STARCACHE".
-CONF_String_enum(datacache_engine, "", "STAR,LRU,HYBIRD")
+CONF_String_enum(datacache_engine, "", "STARCACHE,LRUCACHE,HYBIRDCACHE")
 CONF_String(datacache_engine, "");
 // The interval time (millisecond) for agent report datacache metrics to FE.
 CONF_mInt32(report_datacache_metrics_interval_ms, "60000");
