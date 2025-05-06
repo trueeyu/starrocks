@@ -51,7 +51,8 @@ public:
 
     DataCacheEngineType engine_type() override { return DataCacheEngineType::STARCACHE; }
 
-    std::shared_ptr<starcache::StarCache> starcache_instance() override { return _cache; }
+    std::shared_ptr<starcache::StarCache> starcache_instance() { return _cache; }
+
     bool has_mem_cache() const { return _mem_quota.load(std::memory_order_relaxed) > 0; }
     bool has_disk_cache() const { return _disk_quota.load(std::memory_order_relaxed) > 0; }
     bool available() const override { return is_initialized() && (has_mem_cache() || has_disk_cache()); }
@@ -67,7 +68,6 @@ private:
     bool _enable_tiered_cache = false;
     bool _enable_datacache_persistence = false;
     std::atomic<bool> _initialized = false;
-
     std::atomic<size_t> _mem_quota = 0;
     std::atomic<size_t> _disk_quota = 0;
 };

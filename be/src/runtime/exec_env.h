@@ -81,9 +81,12 @@ class RuntimeFilterCache;
 class ProfileReportWorker;
 class QuerySpillManager;
 class BlockCache;
+class LocalCache;
 class ObjectCache;
 class LocalCache;
+class RemoteCache;
 class StoragePageCache;
+class DiskSpaceMonitor;
 struct RfTracePoint;
 
 class BackendServiceClient;
@@ -252,13 +255,14 @@ public:
 
     void try_release_resource_before_core_dump();
 
-    void set_local_cache(std::shared_ptr<LocalCache> local_cache) { _local_cache = std::move(local_cache); }
-
-    LocalCache* local_cache() { return _local_cache.get(); }
+    LocalCache* local_cache() const { return _local_cache.get(); }
+    std::shared_ptr<LocalCache> local_cache_ptr() { return _local_cache; }
     BlockCache* block_cache() const { return _block_cache.get(); }
     ObjectCache* external_table_meta_cache() const { return _starcache_based_object_cache.get(); }
     ObjectCache* external_table_page_cache() const { return _starcache_based_object_cache.get(); }
     StoragePageCache* page_cache() const { return _page_cache.get(); }
+    void set_local_cache(std::shared_ptr<LocalCache> local_cache) { _local_cache = std::move(local_cache); }
+    void set_block_cache(std::shared_ptr<BlockCache> block_cache) { _block_cache = std::move(block_cache); }
 
     StatusOr<int64_t> get_storage_page_cache_limit();
     int64_t check_storage_page_cache_limit(int64_t storage_cache_limit);
@@ -273,6 +277,8 @@ private:
     std::vector<StorePath> _store_paths;
 
     std::shared_ptr<LocalCache> _local_cache;
+    std::shared_ptr<RemoteCache> _remote_cache;
+    std::shared_ptr<DiskSpaceMonitor> _disk_space_monitor;
 
     std::shared_ptr<BlockCache> _block_cache;
     std::shared_ptr<ObjectCache> _starcache_based_object_cache;

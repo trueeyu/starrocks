@@ -34,7 +34,8 @@ public:
     ~BlockCache();
 
     // Init the block cache instance
-    Status init(const CacheOptions& options);
+    Status init(const CacheOptions& options, std::shared_ptr<LocalCache> local_cache,
+                std::shared_ptr<RemoteCache> remote_cache);
 
     // Write data buffer to cache, the `offset` must be aligned by block size
     Status write(const CacheKey& cache_key, off_t offset, const IOBuffer& buffer, WriteCacheOptions* options = nullptr);
@@ -74,8 +75,8 @@ public:
 
     bool available() const { return is_initialized() && _local_cache->available(); }
     bool mem_cache_available() const { return is_initialized() && _local_cache->mem_cache_available(); }
-
-    std::shared_ptr<LocalCache> local_cache() { return _local_cache; }
+    LocalCache* local_cache() const { return _local_cache.get(); }
+    std::shared_ptr<LocalCache> local_cache_ptr() { return _local_cache; }
 
     static const size_t MAX_BLOCK_SIZE;
 
@@ -83,7 +84,6 @@ private:
     size_t _block_size = 0;
     std::shared_ptr<LocalCache> _local_cache;
     std::shared_ptr<RemoteCache> _remote_cache;
-    std::unique_ptr<DiskSpaceMonitor> _disk_space_monitor;
     std::atomic<bool> _initialized = false;
 };
 

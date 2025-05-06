@@ -125,7 +125,6 @@ Status UpdateConfigAction::update_config(const std::string& name, const std::str
             if (cache == nullptr || !cache->is_initialized()) {
                 return Status::InternalError("Local cache is not initialized");
             }
-
             std::vector<DirSpace> spaces;
             cache->disk_spaces(&spaces);
             for (auto& space : spaces) {

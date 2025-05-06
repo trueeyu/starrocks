@@ -66,7 +66,11 @@ Status SchemaBeDataCacheMetricsScanner::get_next(ChunkPtr* chunk, bool* eos) {
 
     const LocalCache* cache = CacheEnv::GetInstance()->local_cache();
     if (cache != nullptr && cache->is_initialized()) {
+<<<<<<< HEAD
         // retrieve different priority's used bytes from level = 2 metrics
+=======
+        // retrive different priority's used bytes from level = 2 metrics
+>>>>>>> a6293341a2... fix
         metrics = cache->cache_metrics(2);
 
         switch (metrics.status) {
