@@ -57,6 +57,7 @@ Status StarCacheWrapper::init(const CacheOptions& options) {
     _enable_datacache_persistence = options.enable_datacache_persistence;
     _cache = std::make_shared<starcache::StarCache>();
     RETURN_IF_ERROR(to_status(_cache->init(opt)));
+
     _refresh_quota();
     _initialized.store(true, std::memory_order_relaxed);
     return Status::OK();
@@ -122,14 +123,6 @@ Status StarCacheWrapper::remove(const std::string& key) {
     return Status::OK();
 }
 
-void StarCacheWrapper::disk_spaces(std::vector<DirSpace>* spaces) {
-    spaces->clear();
-    auto metrics = cache_metrics(0);
-    for (auto& dir : metrics.disk_dir_spaces) {
-        spaces->push_back({.path = dir.path, .size = dir.quota_bytes});
-    }
-}
-
 Status StarCacheWrapper::update_mem_quota(size_t quota_bytes, bool flush_to_disk) {
     Status st = to_status(_cache->update_mem_quota(quota_bytes, flush_to_disk));
     _refresh_quota();
@@ -181,6 +174,14 @@ void StarCacheWrapper::_refresh_quota() {
     auto metrics = cache_metrics(0);
     _mem_quota.store(metrics.mem_quota_bytes, std::memory_order_relaxed);
     _disk_quota.store(metrics.disk_quota_bytes, std::memory_order_relaxed);
+}
+
+void StarCacheWrapper::disk_spaces(std::vector<DirSpace>* spaces) const {
+    spaces->clear();
+    auto metrics = cache_metrics(0);
+    for (auto& dir : metrics.disk_dir_spaces) {
+        spaces->push_back({.path = dir.path, .size = dir.quota_bytes});
+    }
 }
 
 } // namespace starrocks
