@@ -42,6 +42,7 @@
 #include "agent/master_info.h"
 #include "cache/block_cache/block_cache.h"
 #include "cache/block_cache/peer_cache_wrapper.h"
+#include "cache/block_cache/starcache_wrapper.h"
 #include "cache/object_cache/lrucache_module.h"
 #include "common/config.h"
 #include "common/configbase.h"
