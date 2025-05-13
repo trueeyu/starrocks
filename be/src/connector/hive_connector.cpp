@@ -20,6 +20,7 @@
 #include "connector/hive_chunk_sink.h"
 #include "exec/cache_select_scanner.h"
 #include "exec/exec_node.h"
+#include "exec/exec_env.h"
 #include "exec/hdfs_scanner_orc.h"
 #include "exec/hdfs_scanner_parquet.h"
 #include "exec/hdfs_scanner_partition.h"
@@ -98,7 +99,7 @@ Status HiveDataSource::open(RuntimeState* state) {
     RETURN_IF_ERROR(_check_all_slots_nullable());
 
     // Check that the system meets the requirements for enabling DataCache
-    if (BlockCache::instance()->available()) {
+    if (config::block_cache_enable && BlockCache::instance()->available()) {
         // setup priority & ttl seconds
         int8_t datacache_priority = 0;
         int64_t datacache_ttl_seconds = 0;
@@ -173,7 +174,7 @@ Status HiveDataSource::open(RuntimeState* state) {
     if (state->query_options().__isset.enable_file_pagecache) {
         _use_file_pagecache = state->query_options().enable_file_pagecache;
     }
-    _use_file_pagecache &= BlockCache::instance()->mem_cache_available();
+    _use_file_pagecache &= CacheEnv::GetInstance()->page_cache() != nullptr;
 #endif
 
     if (state->query_options().__isset.enable_dynamic_prune_scan_range) {

@@ -358,7 +358,7 @@ Status CacheEnv::init(const std::vector<StorePath>& store_paths) {
         config::datacache_engine = "starcache";
     }
 #else
-    config::datacache_engine = "lrucache";
+    config::datacache_engine = "lru_cache";
 #endif
 
     if (config::datacache_engine == "starcache") {

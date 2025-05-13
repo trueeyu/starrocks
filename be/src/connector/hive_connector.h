@@ -114,8 +114,8 @@ private:
     RuntimeState* _runtime_state = nullptr;
     HdfsScanner* _scanner = nullptr;
     DataCacheOptions _datacache_options{};
-    bool _use_file_metacache = false;
-    bool _use_file_pagecache = false;
+    bool _use_file_metacache = !config::disable_storage_page_cache;
+    bool _use_file_pagecache = !config::disable_storage_page_cache;
     bool _enable_dynamic_prune_scan_range = true;
     bool _enable_split_tasks = false;
 
