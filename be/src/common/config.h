@@ -1280,8 +1280,8 @@ CONF_mInt64(datacache_disk_idle_seconds_for_expansion, "7200");
 // cache quota will be reset to zero to avoid overly frequent population and eviction.
 // Default: 100G
 CONF_mInt64(datacache_min_disk_quota_for_adjustment, "107374182400");
-// The maxmum inline cache item count in datacache.
-// When a cache item has a really small data size, we will try to cache it inline with its metadata
+// The maximum inline cache item count in datacache.
+// When a cache item has a tiny data size, we will try to cache it inline with its metadata
 // to optimize the io performance and reduce disk waste.
 // Set the parameter to `0` will turn off this optimization.
 CONF_Int32(datacache_inline_item_count_limit, "130172");
@@ -1292,12 +1292,9 @@ CONF_Bool(datacache_unified_instance_enable, "true");
 // * slru: segment lru eviction policies, which can better reduce cache pollution problem.
 CONF_String(datacache_eviction_policy, "slru");
 
-// The following configurations will be deprecated, and we use the `datacache` prefix instead.
-// But it is temporarily necessary to keep them for a period of time to be compatible with
-// the old configuration files.
-CONF_Bool(block_cache_enable, "false");
-CONF_Int64(block_cache_disk_size, "0");
-CONF_Int64(block_cache_mem_size, "2147483648"); // 2GB
+CONF_mBool(block_cache_enable, "true");
+CONF_mString(block_cache_disk_size, "-1");
+CONF_mString(block_cache_mem_size, "0");
 CONF_Alias(datacache_block_size, block_cache_block_size);
 CONF_Alias(datacache_max_concurrent_inserts, block_cache_max_concurrent_inserts);
 CONF_Alias(datacache_checksum_enable, block_cache_checksum_enable);
