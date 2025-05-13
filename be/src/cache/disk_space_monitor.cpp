@@ -184,11 +184,11 @@ size_t DiskSpace::_check_cache_limit(int64_t cache_quota) {
 size_t DiskSpace::_check_cache_low_limit(int64_t cache_quota) {
     if (cache_quota < _disk_opts.cache_lower_limit) {
         if (_disabled) {
-            // If the cache quata is already disabled, skip adjusting it repeatedly.
+            // If the cache quota is already disabled, skip adjusting it repeatedly.
             VLOG(1) << "Skip updating the disk cache quota because the target quota is less than"
                     << " `datacache_min_disk_quota_for_adjustment`, path: " << _path;
         } else {
-            // This warning log only be printed when the cache disk quota is adjust from a non-zero integer to zero.
+            // This warning log only be printed when the cache disk quota is adjusted from a non-zero integer to zero.
             LOG(WARNING) << "The current available disk space is too small, so disable the disk cache directly."
                          << " If you still need it, you could reduce the value of"
                          << " `datacache_min_disk_quota_for_adjustment`, path: " << _path;
