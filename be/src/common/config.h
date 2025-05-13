@@ -433,7 +433,7 @@ CONF_Int32(be_exit_after_disk_write_hang_second, "60");
 
 // Automatically detect whether a char/varchar column to use dictionary encoding
 // If the number of keys in a dictionary is greater than this fraction of the total number of rows
-// turn off dictionary dictionary encoding. This only will detect first chunk
+// turn off dictionary encoding. This only will detect first chunk
 // set to 1 means always use dictionary encoding
 CONF_Double(dictionary_encoding_ratio, "0.7");
 
