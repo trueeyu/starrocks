@@ -339,15 +339,50 @@ CacheEnv* CacheEnv::GetInstance() {
     static CacheEnv s_cache_env;
     return &s_cache_env;
 }
+CacheEnv::CacheEnv() {
+    _global_env = GlobalEnv::GetInstance();
+    _block_cache = std::make_shared<BlockCache>();
+}
 
 Status CacheEnv::init(const std::vector<StorePath>& store_paths) {
-    _global_env = GlobalEnv::GetInstance();
     _store_paths = store_paths;
 
-    RETURN_IF_ERROR(_init_datacache());
-    RETURN_IF_ERROR(_init_starcache_based_object_cache());
-    RETURN_IF_ERROR(_init_lru_base_object_cache());
-    RETURN_IF_ERROR(_init_page_cache());
+    if (!config::datacache_enable) {
+        config::disable_storage_page_cache = true;
+        config::block_cache_enable = false;
+        return Status::OK();
+    }
+
+#if defined(WITH_STARCACHE)
+    if (config::datacache_engine == "") {
+        config::datacache_engine = "starcache";
+    }
+#else
+    config::datacache_engine = "lrucache";
+#endif
+
+    if (config::datacache_engine == "starcache") {
+#if defined(WITH_STARCACHE)
+        RETURN_IF_ERROR(_init_starcache());
+        RETURN_IF_ERROR(_init_starcache_based_object_cache());
+        RETURN_IF_ERROR(_init_page_cache());
+        RETURN_IF_ERROR(_init_datacache());
+#endif
+    } else if (config::datacache_engine == "lru_cache") {
+        RETURN_IF_ERROR(_init_lru_base_object_cache());
+        RETURN_IF_ERROR(_init_page_cache());
+    } else if (config::datacache_engine == "hybrid_cache") {
+#if defined(WITH_STARCACHE)
+        RETURN_IF_ERROR(_init_starcache());
+        RETURN_IF_ERROR(_init_starcache_based_object_cache());
+        RETURN_IF_ERROR(_init_lru_base_object_cache());
+        RETURN_IF_ERROR(_init_page_cache());
+        RETURN_IF_ERROR(_init_datacache());
+#endif
+    } else {
+        LOG(ERROR) << "not support cache engine";
+        return Status::InternalError("not support cache engine");
+    }
 
     return Status::OK();
 }
@@ -370,6 +405,23 @@ void CacheEnv::destroy() {
 
     _block_cache.reset();
     LOG(INFO) << "datacache shutdown successfully";
+}
+
+Status CacheEnv::_init_starcache() {
+#ifdef WITH_STARCACHE
+    ASSIGN_OR_RETURN(auto cache_options, _init_cache_options());
+    // init starcache & disk monitor
+    _local_cache = std::make_shared<StarCacheWrapper>();
+    _disk_space_monitor = std::make_shared<DiskSpaceMonitor>(_local_cache.get());
+    RETURN_IF_ERROR(_disk_space_monitor->init(&cache_options.disk_spaces));
+    RETURN_IF_ERROR(_local_cache->init(cache_options));
+    _disk_space_monitor->start();
+
+    // init remote cache
+    _remote_cache = std::make_shared<PeerCacheWrapper>();
+    RETURN_IF_ERROR(_remote_cache->init(cache_options));
+#endif
+    return Status::OK();
 }
 
 Status CacheEnv::_init_starcache_based_object_cache() {
@@ -401,39 +453,8 @@ Status CacheEnv::_init_page_cache() {
 }
 
 Status CacheEnv::_init_datacache() {
-    _block_cache = std::make_shared<BlockCache>();
-
-    // When configured old `block_cache` configurations, use the old items for compatibility.
-    if (config::block_cache_enable) {
-        config::datacache_enable = true;
-        config::datacache_mem_size = std::to_string(config::block_cache_mem_size);
-        config::datacache_disk_size = std::to_string(config::block_cache_disk_size);
-        LOG(WARNING) << "The configuration items prefixed with `block_cache_` will be deprecated soon"
-                     << ", you'd better use the configuration items prefixed `datacache` instead!";
-    }
-
-#if !defined(WITH_STARCACHE)
-    if (config::datacache_enable) {
-        LOG(WARNING) << "No valid engines supported, skip initializing datacache module";
-        config::datacache_enable = false;
-    }
-#endif
-
     if (config::datacache_enable) {
 #if defined(WITH_STARCACHE)
-        ASSIGN_OR_RETURN(auto cache_options, _init_cache_options());
-
-        // init starcache & disk monitor
-        _local_cache = std::make_shared<StarCacheWrapper>();
-        _disk_space_monitor = std::make_shared<DiskSpaceMonitor>(_local_cache.get());
-        RETURN_IF_ERROR(_disk_space_monitor->init(&cache_options.disk_spaces));
-        RETURN_IF_ERROR(_local_cache->init(cache_options));
-        _disk_space_monitor->start();
-
-        // init remote cache
-        _remote_cache = std::make_shared<PeerCacheWrapper>();
-        RETURN_IF_ERROR(_remote_cache->init(cache_options));
-
         // init block cache
         RETURN_IF_ERROR(_block_cache->init(cache_options, _local_cache, _remote_cache));
 

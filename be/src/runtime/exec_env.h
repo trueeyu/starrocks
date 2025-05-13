@@ -250,6 +250,8 @@ class CacheEnv {
 public:
     static CacheEnv* GetInstance();
 
+    CacheEnv();
+
     Status init(const std::vector<StorePath>& store_paths);
     void destroy();
 
@@ -269,6 +271,7 @@ public:
 
 private:
     StatusOr<CacheOptions> _init_cache_options();
+    Status _init_starcache();
     Status _init_datacache();
     Status _init_starcache_based_object_cache();
     Status _init_lru_base_object_cache();
