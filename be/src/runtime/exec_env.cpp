@@ -115,6 +115,8 @@
 #include "cache/starcache_wrapper.h"
 #endif
 
+#include "util/lru_cache.h"
+
 namespace starrocks {
 
 // Calculate the total memory limit of all load tasks on this BE
@@ -364,21 +366,15 @@ Status CacheEnv::init(const std::vector<StorePath>& store_paths) {
     if (config::datacache_engine == "starcache") {
 #if defined(WITH_STARCACHE)
         RETURN_IF_ERROR(_init_starcache());
-        RETURN_IF_ERROR(_init_starcache_based_object_cache());
+        RETURN_IF_ERROR(_init_object_cache(_local_cache.get()));
+        RETURN_IF_ERROR(_init_peer_cache());
         RETURN_IF_ERROR(_init_page_cache());
-        RETURN_IF_ERROR(_init_datacache());
+        RETURN_IF_ERROR(_init_block_cache());
 #endif
     } else if (config::datacache_engine == "lru_cache") {
-        RETURN_IF_ERROR(_init_lru_base_object_cache());
+        RETURN_IF_ERROR(_init_lru_cache());
+        RETURN_IF_ERROR(_init_object_cache());
         RETURN_IF_ERROR(_init_page_cache());
-    } else if (config::datacache_engine == "hybrid_cache") {
-#if defined(WITH_STARCACHE)
-        RETURN_IF_ERROR(_init_starcache());
-        RETURN_IF_ERROR(_init_starcache_based_object_cache());
-        RETURN_IF_ERROR(_init_lru_base_object_cache());
-        RETURN_IF_ERROR(_init_page_cache());
-        RETURN_IF_ERROR(_init_datacache());
-#endif
     } else {
         LOG(ERROR) << "not support cache engine";
         return Status::InternalError("not support cache engine");
@@ -407,8 +403,8 @@ void CacheEnv::destroy() {
     LOG(INFO) << "datacache shutdown successfully";
 }
 
+#if defined(WITH_STARCACHE)
 Status CacheEnv::_init_starcache() {
-#ifdef WITH_STARCACHE
     ASSIGN_OR_RETURN(auto cache_options, _init_cache_options());
     // init starcache & disk monitor
     _local_cache = std::make_shared<StarCacheWrapper>();
@@ -417,42 +413,47 @@ Status CacheEnv::_init_starcache() {
     RETURN_IF_ERROR(_local_cache->init(cache_options));
     _disk_space_monitor->start();
 
+    return Status::OK();
+}
+
+Status CacheEnv::_init_peer_cache() {
     // init remote cache
     _remote_cache = std::make_shared<PeerCacheWrapper>();
-    RETURN_IF_ERROR(_remote_cache->init(cache_options));
-#endif
-    return Status::OK();
+    return _remote_cache->init(cache_options);
 }
 
-Status CacheEnv::_init_starcache_based_object_cache() {
-#ifdef WITH_STARCACHE
-    if (_local_cache != nullptr && _local_cache->is_initialized()) {
-        auto* starcache = reinterpret_cast<StarCacheWrapper*>(_local_cache.get());
-        _starcache_based_object_cache = std::make_shared<StarCacheModule>(starcache->starcache_instance());
+
+Status CacheEnv::_init_object_cache(LocalCache* local_cache) {
+    if (local_cache != nullptr && local_cache->is_initialized()) {
+        auto* starcache = reinterpret_cast<StarCacheWrapper*>(local_cache.get());
+        _object_cache = std::make_shared<StarCacheModule>(starcache->starcache_instance());
     }
-#endif
     return Status::OK();
 }
+#endif
 
-Status CacheEnv::_init_lru_base_object_cache() {
-    ObjectCacheOptions options;
+Status CacheEnv::_init_lru_cache() {
     ASSIGN_OR_RETURN(int64_t storage_cache_limit, get_storage_page_cache_limit());
     storage_cache_limit = check_storage_page_cache_limit(storage_cache_limit);
-    options.capacity = storage_cache_limit;
 
-    _lru_based_object_cache = std::make_shared<LRUCacheModule>(options);
+    _lru_cache = std::make_shared<SharedLRUCache>(storage_cache_limit);
+    return Status::OK();
+}
+
+Status CacheEnv::_init_lru_cache(std::shared_ptr<SharedLRUCache> lru_cache) {
+    _object_cache = std::make_shared<LRUCacheModule>(std::move(lru_cache));
     LOG(INFO) << "object cache init successfully";
     return Status::OK();
 }
 
-Status CacheEnv::_init_page_cache() {
-    _page_cache = std::make_shared<StoragePageCache>(_lru_based_object_cache.get());
+Status CacheEnv::_init_page_cache(ObjectCache* obj_cache) {
+    _page_cache = std::make_shared<StoragePageCache>(obj_cache);
     _page_cache->init_metrics();
     LOG(INFO) << "storage page cache init successfully";
     return Status::OK();
 }
 
-Status CacheEnv::_init_datacache() {
+Status CacheEnv::_init_block_cache() {
     if (config::datacache_enable) {
 #if defined(WITH_STARCACHE)
         // init block cache

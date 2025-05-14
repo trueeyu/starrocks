@@ -50,7 +50,7 @@ CONF_Int32(brpc_port, "8060");
 CONF_Int32(brpc_num_threads, "-1");
 
 // The max number of single connections maintained by the brpc client and each server.
-// Theses connections are created during the first few access and will be used thereafter
+// These connections are created during the first few access and will be used thereafter
 CONF_Int32(brpc_max_connections_per_server, "1");
 
 // Declare a selection strategy for those servers have many ips.
@@ -297,7 +297,7 @@ CONF_Int64(index_stream_cache_capacity, "10737418240");
 CONF_Int32(data_page_size, "65536");
 
 // Cache for storage page size
-CONF_mString(storage_page_cache_limit, "20%");
+CONF_mString(storage_page_cache_limit, "-1");
 // whether to disable page cache feature in storage
 CONF_mBool(disable_storage_page_cache, "false");
 // whether to enable the bitmap index memory cache
@@ -1220,7 +1220,7 @@ CONF_mInt64(max_length_for_bitmap_function, "1000000");
 
 // Configuration items for datacache
 CONF_Bool(datacache_enable, "true");
-CONF_mString(datacache_mem_size, "0");
+CONF_mString(datacache_mem_size, "20%");
 CONF_mString(datacache_disk_size, "100%");
 CONF_Int64(datacache_block_size, "262144"); // 256K
 CONF_Bool(datacache_checksum_enable, "false");
