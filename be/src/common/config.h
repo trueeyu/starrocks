@@ -61,7 +61,7 @@ CONF_String(priority_networks, "");
 CONF_Bool(net_use_ipv6_when_priority_networks_empty, "false");
 
 CONF_mBool(enable_auto_adjust_pagecache, "true");
-// Memory urget water level, if the memory usage exceeds this level, reduce the size of
+// Memory urgent water level, if the memory usage exceeds this level, reduce the size of
 // the Pagecache immediately, it should be between (memory_high_level, 100].
 CONF_mInt64(memory_urgent_level, "85");
 // Memory high water level, if the memory usage exceeds this level, reduce the size of
@@ -1281,6 +1281,19 @@ CONF_mInt64(datacache_disk_idle_seconds_for_expansion, "7200");
 // cache quota will be reset to zero to avoid overly frequent population and eviction.
 // Default: 100G
 CONF_mInt64(datacache_min_disk_quota_for_adjustment, "107374182400");
+
+CONF_mBool(datacache_auto_adjust_memory_enable, "true");
+// Memory urgent water level, if the memory usage exceeds this level, reduce the size of
+// the Pagecache immediately, it should be between (memory_high_level, 100].
+CONF_mInt64(datacache_memory_urgent_level, "85");
+// Memory high water level, if the memory usage exceeds this level, reduce the size of
+// the Pagecache slowly, it should be between [1, memory_urgent_level).
+CONF_mInt64(datacache_memory_high_level, "75");
+// Pagecache size adjust period, default 20, it should be between [1, 180].
+CONF_mInt64(datacache_memory_adjust_period, "20");
+// Sleep time in seconds between pagecache adjust iterations.
+CONF_mInt64(datacache_auto_adjust_interval_seconds, "10");
+
 // The maximum inline cache item count in datacache.
 // When a cache item has a tiny data size, we will try to cache it inline with its metadata
 // to optimize the io performance and reduce disk waste.
