@@ -195,7 +195,7 @@ private:
 // An entry is a variable length heap-allocated structure.  Entries
 // are kept in a circular doubly linked list ordered by access time.
 typedef struct LRUHandle {
-    void* value;
+    const void* value;
     void (*deleter)(const CacheKey&, void* value);
     LRUHandle* next_hash;
     LRUHandle* next;
@@ -213,7 +213,7 @@ typedef struct LRUHandle {
         // For cheaper lookups, we allow a temporary Handle object
         // to store a pointer to a key in "value".
         if (next == this) {
-            return *(reinterpret_cast<CacheKey*>(value));
+            return *(reinterpret_cast<const CacheKey*>(value));
         } else {
             return {key_data, key_length};
         }
@@ -268,7 +268,7 @@ public:
     void set_capacity(size_t capacity);
 
     // Like Cache methods, but with an extra "hash" parameter.
-    Cache::Handle* insert(const CacheKey& key, uint32_t hash, void* value, size_t value_size,
+    Cache::Handle* insert(const CacheKey& key, uint32_t hash, const void* value, size_t value_size,
                           void (*deleter)(const CacheKey& key, void* value),
                           CachePriority priority = CachePriority::NORMAL);
     Cache::Handle* lookup(const CacheKey& key, uint32_t hash);

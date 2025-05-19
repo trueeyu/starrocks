@@ -294,7 +294,7 @@ void LRUCache::_evict_one_entry(LRUHandle* e) {
     _usage -= e->charge;
 }
 
-Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, void* value, size_t value_size,
+Cache::Handle* LRUCache::insert(const CacheKey& key, uint32_t hash, const void* value, size_t value_size,
                                 void (*deleter)(const CacheKey& key, void* value), CachePriority priority) {
     size_t key_mem_size = sizeof(LRUHandle) - 1 + key.size();
     size_t kv_mem_size = value_size + key_mem_size;
