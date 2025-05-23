@@ -83,6 +83,7 @@ private:
     std::string print_master_info(const TMasterInfo& master_info) const;
 
     StorageEngine* _olap_engine;
+
 }; // class HeartBeatServer
 
 StatusOr<std::unique_ptr<ThriftServer>> create_heartbeat_server(ExecEnv* exec_env, uint32_t heartbeat_server_port,
