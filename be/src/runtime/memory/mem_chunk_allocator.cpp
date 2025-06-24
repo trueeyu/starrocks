@@ -148,97 +148,32 @@ MemChunkAllocator::MemChunkAllocator(MemTracker* mem_tracker, size_t reserve_lim
 
 bool MemChunkAllocator::allocate(size_t size, MemChunk* chunk) {
     FAIL_POINT_TRIGGER_RETURN(random_error, false);
-    bool ret = true;
-#ifndef BE_TEST
-    MemTracker* prev_tracker = tls_thread_status.set_mem_tracker(_mem_tracker);
-    DeferOp op([&] {
-        if (ret) {
-            if (LIKELY(_mem_tracker != nullptr)) {
-                _mem_tracker->release(chunk->size);
-            }
-            if (LIKELY(prev_tracker != nullptr)) {
-                prev_tracker->consume(chunk->size);
-            }
-        }
-        tls_thread_status.set_mem_tracker(prev_tracker);
-    });
-#endif
 
-    // fast path: allocate from current core arena
-    int core_id = CpuInfo::get_current_core();
     chunk->size = size;
-    chunk->core_id = core_id;
-
-    if (_arenas[core_id]->pop_free_chunk(size, &chunk->data)) {
-        _reserved_bytes.fetch_sub(size);
-        local_core_alloc_count.increment(1);
-        ret = true;
-        return ret;
-    }
-    if (_reserved_bytes > size) {
-        // try to allocate from other core's arena
-        ++core_id;
-        for (int i = 1; i < _arenas.size(); ++i, ++core_id) {
-            if (_arenas[core_id % _arenas.size()]->pop_free_chunk(size, &chunk->data)) {
-                _reserved_bytes.fetch_sub(size);
-                other_core_alloc_count.increment(1);
-                // reset chunk's core_id to other
-                chunk->core_id = core_id % _arenas.size();
-                ret = true;
-                return ret;
-            }
-        }
-    }
 
     int64_t cost_ns = 0;
     {
         SCOPED_RAW_TIMER(&cost_ns);
         // allocate from system allocator
-        chunk->data = SystemAllocator::allocate(_mem_tracker, size);
+        chunk->data = SystemAllocator::allocate(tls_thread_status.mem_tracker(), size);
     }
     system_alloc_count.increment(1);
     system_alloc_cost_ns.increment(cost_ns);
     if (chunk->data == nullptr) {
-        ret = false;
-        return ret;
+        return false;
+    } else {
+        return true;
     }
-    ret = true;
-    return ret;
 }
 
 void MemChunkAllocator::free(const MemChunk& chunk) {
-#ifndef BE_TEST
-    MemTracker* prev_tracker = tls_thread_status.set_mem_tracker(_mem_tracker);
-    DeferOp op([&] {
-        int64_t chunk_size = chunk.size;
-        if (LIKELY(prev_tracker != nullptr)) {
-            prev_tracker->release(chunk_size);
-        }
-        if (LIKELY(_mem_tracker != nullptr)) {
-            _mem_tracker->consume(chunk_size);
-        }
-        tls_thread_status.set_mem_tracker(prev_tracker);
-    });
-#endif
-
-    int64_t old_reserved_bytes = _reserved_bytes;
-    int64_t new_reserved_bytes = 0;
-    do {
-        new_reserved_bytes = old_reserved_bytes + chunk.size;
-        if (new_reserved_bytes > _reserve_bytes_limit) {
-            int64_t cost_ns = 0;
-            {
-                SCOPED_RAW_TIMER(&cost_ns);
-                SystemAllocator::free(_mem_tracker, chunk.data, chunk.size);
-            }
-            system_free_count.increment(1);
-            system_free_cost_ns.increment(cost_ns);
-
-            return;
-        }
-    } while (!_reserved_bytes.compare_exchange_weak(old_reserved_bytes, new_reserved_bytes));
-
-    _arenas[chunk.core_id]->push_free_chunk(chunk.data, chunk.size);
+    int64_t cost_ns = 0;
+    {
+        SCOPED_RAW_TIMER(&cost_ns);
+        SystemAllocator::free(tls_thread_status.mem_tracker(), chunk.data, chunk.size);
+    }
+    system_free_count.increment(1);
+    system_free_cost_ns.increment(cost_ns);
 }
 
 } // namespace starrocks
