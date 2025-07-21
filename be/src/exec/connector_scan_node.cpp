@@ -34,7 +34,7 @@ static constexpr double kChunkBufferMemRatio = pipeline::ConnectorScanOperatorMe
 ConnectorScanNode::ConnectorScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : ScanNode(pool, tnode, descs) {
     _name = "connector_scan";
-    LOG(ERROR) << "LXH: CONNECTOR_NAME: " << tnode.connector_scan_node.connector_name;
+    LOG(ERROR) << "LXH: CONNECTOR_NAME: " << tnode;
     auto c = connector::ConnectorManager::default_instance()->get(tnode.connector_scan_node.connector_name);
     _connector_type = c->connector_type();
     _data_source_provider = c->create_data_source_provider(this, tnode);
