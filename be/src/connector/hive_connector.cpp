@@ -749,6 +749,7 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
 
     HdfsScanner* scanner = nullptr;
     auto format = scan_range.file_format;
+    LOG(ERROR) << "LXH: FORMAT: " << format;
 
     bool use_hudi_jni_reader = false;
     if (scan_range.__isset.use_hudi_jni_reader) {
