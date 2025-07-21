@@ -37,7 +37,6 @@ import static com.starrocks.connector.hive.HiveClassNames.RCFILE_OUTPUT_FORMAT_C
 import static com.starrocks.connector.hive.HiveClassNames.SEQUENCE_INPUT_FORMAT_CLASS;
 import static com.starrocks.connector.hive.HiveClassNames.SEQUENCE_OUTPUT_FORMAT_CLASS;
 import static com.starrocks.connector.hive.HiveClassNames.TEXT_INPUT_FORMAT_CLASS;
-
 import static com.starrocks.connector.hive.HiveMetastoreOperations.FILE_FORMAT;
 import static java.util.Objects.requireNonNull;
 
