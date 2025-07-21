@@ -809,6 +809,8 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
         scanner = new HdfsOrcScanner();
     } else if (format == THdfsFileFormat::TEXT) {
         scanner = new HdfsTextScanner();
+    } else if (format == THdfsFileFormat::OPENX_JSON) {
+        scanner = create_hive_jni_scanner(jni_scanner_create_options).release();
     } else if ((format == THdfsFileFormat::AVRO || format == THdfsFileFormat::RC_BINARY ||
                 format == THdfsFileFormat::RC_TEXT || format == THdfsFileFormat::SEQUENCE_FILE) &&
                (dynamic_cast<const HdfsTableDescriptor*>(_hive_table) != nullptr ||

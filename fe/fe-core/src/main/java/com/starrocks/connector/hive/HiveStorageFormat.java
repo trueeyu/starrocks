@@ -18,7 +18,26 @@ import com.starrocks.connector.exception.StarRocksConnectorException;
 
 import java.util.Map;
 
-import static com.starrocks.connector.hive.HiveClassNames.*;
+import static com.starrocks.connector.hive.HiveClassNames.AVRO_INPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.AVRO_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.AVRO_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.COLUMNAR_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.HIVE_IGNORE_KEY_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.LAZY_BINARY_COLUMNAR_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.LAZY_SIMPLE_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.MAPRED_PARQUET_INPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.MAPRED_PARQUET_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.OPENX_JSON_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.ORC_INPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.ORC_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.ORC_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.PARQUET_HIVE_SERDE_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.RCFILE_INPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.RCFILE_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.SEQUENCE_INPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.SEQUENCE_OUTPUT_FORMAT_CLASS;
+import static com.starrocks.connector.hive.HiveClassNames.TEXT_INPUT_FORMAT_CLASS;
+
 import static com.starrocks.connector.hive.HiveMetastoreOperations.FILE_FORMAT;
 import static java.util.Objects.requireNonNull;
 
