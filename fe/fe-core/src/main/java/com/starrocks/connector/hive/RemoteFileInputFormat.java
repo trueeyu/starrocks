@@ -33,6 +33,7 @@ public enum RemoteFileInputFormat {
     RCBINARY,
     RCTEXT,
     SEQUENCE,
+    OPENX_JSON,
     UNKNOWN;
     private static final ImmutableMap<String, RemoteFileInputFormat> CLASS_NAME_TO_INPUT_FORMAT =
             new ImmutableMap.Builder<String, RemoteFileInputFormat>()
@@ -97,6 +98,8 @@ public enum RemoteFileInputFormat {
                 return THdfsFileFormat.RC_TEXT;
             case SEQUENCE:
                 return THdfsFileFormat.SEQUENCE_FILE;
+            case OPENX_JSON:
+                return THdfsFileFormat.OPENX_JSON;
             default:
                 return THdfsFileFormat.UNKNOWN;
         }

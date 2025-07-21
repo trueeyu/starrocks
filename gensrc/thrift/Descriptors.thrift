@@ -75,6 +75,7 @@ enum THdfsFileFormat {
   PARQUET = 5,
   ORC = 6,
   SEQUENCE_FILE = 7,
+  OPENX_JSON = 8,
 
   UNKNOWN = 100
 }

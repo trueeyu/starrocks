@@ -61,7 +61,8 @@ public class FileTable extends Table {
             "avro", RemoteFileInputFormat.AVRO,
             "rctext", RemoteFileInputFormat.RCTEXT,
             "rcbinary", RemoteFileInputFormat.RCBINARY,
-            "sequence", RemoteFileInputFormat.SEQUENCE);
+            "sequence", RemoteFileInputFormat.SEQUENCE,
+            "openx_json", RemoteFileInputFormat.OPENX_JSON);
 
     @SerializedName(value = "fp")
     private Map<String, String> fileProperties = Maps.newHashMap();

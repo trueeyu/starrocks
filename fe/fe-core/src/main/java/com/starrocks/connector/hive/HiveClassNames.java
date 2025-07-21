@@ -51,7 +51,7 @@ public class HiveClassNames {
             "org.apache.hadoop.hive.ql.io.HiveSequenceFileOutputFormat";
 
     public static final String OPENX_JSON_SERDE_CLASS = "org.openx.data.jsonserde.JsonSerDe";
-    public static final String OPENX_JSON_INPUT_FORMAT_CLASS = "org.apache.hadoop.mapred.TextInputFormat";
-    public static final String OPENX_JSON_OUTPUT_FORMAT_CLASS = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
+    //public static final String OPENX_JSON_INPUT_FORMAT_CLASS = "org.apache.hadoop.mapred.TextInputFormat";
+    //public static final String OPENX_JSON_OUTPUT_FORMAT_CLASS = "org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat";
 
 }
