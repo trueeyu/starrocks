@@ -34,13 +34,13 @@
 
 
 
-        /*
+        <!--
         <dependency>
             <groupId>org.apache.hive</groupId>
             <artifactId>hive-serde</artifactId>
             <version>4.0.1</version>
         </dependency>
-        */
+        -->
 
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
