@@ -812,8 +812,15 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
         if (dynamic_cast<const HdfsTableDescriptor*>(_hive_table) != nullptr) {
             const auto* hdfs_table = down_cast<const HdfsTableDescriptor*>(_hive_table);
             LOG(ERROR) << "LXH: FORMAT: " << hdfs_table->get_serde_lib();
+            if (hdfs_table->get_serde_lib() == "org.openx.data.jsonserde.JsonSerDe") {
+                LOG(ERROR) << "LXH: CREATE JSON JUNI";
+                scanner = create_hive_jni_scanner(jni_scanner_create_options).release();
+            } else {
+                scanner = new HdfsTextScanner();
+            }
+        } else {
+            scanner = new HdfsTextScanner();
         }
-        scanner = new HdfsTextScanner();
     } else if ((format == THdfsFileFormat::AVRO || format == THdfsFileFormat::RC_BINARY ||
                 format == THdfsFileFormat::RC_TEXT || format == THdfsFileFormat::SEQUENCE_FILE) &&
                (dynamic_cast<const HdfsTableDescriptor*>(_hive_table) != nullptr ||
