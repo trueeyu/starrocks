@@ -281,6 +281,7 @@ public class HiveScanner extends ConnectorScanner {
 
     private Deserializer getDeserializer(Configuration configuration, Properties properties, String name)
             throws Exception {
+        LOG.warn("LXH: deserialize: " + name);
         Class<? extends Deserializer> deserializerClass = Class.forName(name, true, JavaUtils.getClassLoader())
                 .asSubclass(Deserializer.class);
         Deserializer deserializer = deserializerClass.getConstructor().newInstance();
