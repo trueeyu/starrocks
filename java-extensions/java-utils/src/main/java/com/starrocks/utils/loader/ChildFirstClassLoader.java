@@ -14,9 +14,6 @@
 
 package com.starrocks.utils.loader;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -49,7 +46,7 @@ public class ChildFirstClassLoader extends URLClassLoader {
 
     @Override
     public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
-        LOG.warn("LXH: child: " + name);
+        System.out.println("LXH: child: " + name);
         if (!parentFirstClass.isEmpty() && parentFirstClass.stream().anyMatch(c -> c.equals(name))) {
             return parentLoader.loadClass(name, resolve);
         }
