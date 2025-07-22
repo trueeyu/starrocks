@@ -22,6 +22,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 /**
  * Reference to Apache Spark with some customization
  * A mutable class loader that gives preference to its own URLs over the parent class loader
