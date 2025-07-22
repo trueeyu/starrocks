@@ -33,9 +33,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.spark-project.hive</groupId>
+            <groupId>org.apache.hive</groupId>
             <artifactId>hive-serde</artifactId>
-            <version>0.13.1</version>
+            <version>4.0.1</version>
         </dependency>
 
         <dependency>
