@@ -194,7 +194,7 @@ public class HiveScanner extends ConnectorScanner {
         InputFormat<?, ?> inputFormatClass = createInputFormat(jobConf, inputFormat);
         reader = (RecordReader<Writable, Writable>) inputFormatClass.getRecordReader(fileSplit, jobConf, Reporter.NULL);
 
-        LOG.warn("LXH: init reader: " + serde)
+        LOG.warn("LXH: init reader: " + serde);
         deserializer = getDeserializer(jobConf, properties, serde);
         rowInspector = getTableObjectInspector(deserializer);
         for (int i = 0; i < requiredFields.length; i++) {
