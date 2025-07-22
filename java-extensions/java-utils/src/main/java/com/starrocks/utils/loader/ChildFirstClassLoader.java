@@ -32,6 +32,8 @@ public class ChildFirstClassLoader extends URLClassLoader {
         ClassLoader.registerAsParallelCapable();
     }
 
+    private static final Logger LOG = LogManager.getLogger(ChildFirstClassLoader.class);
+
     private ParentClassLoader parentLoader;
     private ArrayList<String> parentFirstClass;
 
