@@ -99,6 +99,7 @@ public class HiveScanner extends ConnectorScanner {
         this.blockLength = Long.parseLong(params.get("block_length"));
         this.serde = params.get("serde");
         this.inputFormat = params.get("input_format");
+        LOG.warn("LXH: open scanner: " + this.serde + "," + this.input_format)
         this.fieldInspectors = new ObjectInspector[requiredFields.length];
         this.structFields = new StructField[requiredFields.length];
         this.classLoader = this.getClass().getClassLoader();
