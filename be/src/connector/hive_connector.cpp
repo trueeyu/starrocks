@@ -94,6 +94,7 @@ Status HiveDataSource::open(RuntimeState* state) {
     if (_hive_table == nullptr) {
         return Status::RuntimeError(
                 "Invalid table type. Only hive/iceberg/hudi/delta lake/file/paimon/kudu table are supported");
+    } else {
     }
     RETURN_IF_ERROR(_check_all_slots_nullable());
     bool enable_cache_select =
@@ -808,6 +809,10 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
         scanner_params.orc_use_column_names = state->query_options().orc_use_column_names;
         scanner = new HdfsOrcScanner();
     } else if (format == THdfsFileFormat::TEXT) {
+        if (dynamic_cast<const HdfsTableDescriptor*>(_hive_table) != nullptr) {
+            const auto* hdfs_table = down_cast<const HdfsTableDescriptor*>(_hive_table);
+            LOG(ERROR) << "LXH: FORMAT: " << hdfs_table->_serde_lib;
+        }
         scanner = new HdfsTextScanner();
     } else if ((format == THdfsFileFormat::AVRO || format == THdfsFileFormat::RC_BINARY ||
                 format == THdfsFileFormat::RC_TEXT || format == THdfsFileFormat::SEQUENCE_FILE) &&
