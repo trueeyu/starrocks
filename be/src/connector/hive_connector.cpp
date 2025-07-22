@@ -811,7 +811,7 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
     } else if (format == THdfsFileFormat::TEXT) {
         if (dynamic_cast<const HdfsTableDescriptor*>(_hive_table) != nullptr) {
             const auto* hdfs_table = down_cast<const HdfsTableDescriptor*>(_hive_table);
-            LOG(ERROR) << "LXH: FORMAT: " << hdfs_table->_serde_lib;
+            LOG(ERROR) << "LXH: FORMAT: " << hdfs_table->get_serde_lib();
         }
         scanner = new HdfsTextScanner();
     } else if ((format == THdfsFileFormat::AVRO || format == THdfsFileFormat::RC_BINARY ||
