@@ -14,6 +14,9 @@
 
 package com.starrocks.utils.loader;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import java.io.IOException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -21,9 +24,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Enumeration;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 
 /**
  * Reference to Apache Spark with some customization
