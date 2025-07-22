@@ -44,6 +44,7 @@ public class ChildFirstClassLoader extends URLClassLoader {
 
     @Override
     public Class<?> loadClass(String name, boolean resolve) throws ClassNotFoundException {
+        LOG.warn("LXH: child: " + name);
         if (!parentFirstClass.isEmpty() && parentFirstClass.stream().anyMatch(c -> c.equals(name))) {
             return parentLoader.loadClass(name, resolve);
         }
