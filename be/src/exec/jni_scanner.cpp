@@ -526,6 +526,7 @@ std::unique_ptr<JniScanner> create_hive_jni_scanner(const JniScanner::CreateOpti
         hive_column_types = hdfs_table->get_hive_column_types();
         serde = hdfs_table->get_serde_lib();
         input_format = hdfs_table->get_input_format();
+        LOG(ERROR) << "LXH: SCANNER: " << serde << "," << input_format;
         serde_properties = hdfs_table->get_serde_properties();
         time_zone = hdfs_table->get_time_zone();
     } else {
