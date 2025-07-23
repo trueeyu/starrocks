@@ -189,7 +189,7 @@ public class HiveScanner extends ConnectorScanner {
 
     private void initReader(JobConf jobConf, Properties properties) throws Exception {
         Path path = new Path(dataFilePath);
-        LOG.warn("LXH: init offset: " + path + ":" + blockOffset + ":" + blockLength)
+        LOG.warn("LXH: init offset: " + path + ":" + blockOffset + ":" + blockLength);
         FileSplit fileSplit = new FileSplit(path, blockOffset, blockLength, (String[]) null);
 
         InputFormat<?, ?> inputFormatClass = createInputFormat(jobConf, inputFormat);
