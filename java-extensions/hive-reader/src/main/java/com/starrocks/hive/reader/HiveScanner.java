@@ -118,7 +118,8 @@ public class HiveScanner extends ConnectorScanner {
         JobConf jobConf = new JobConf(conf);
         jobConf.setBoolean("hive.io.file.read.all.columns", false);
         properties.stringPropertyNames().forEach(name -> jobConf.set(name, properties.getProperty(name)));
-        LOG.warn("LXH: CONFIG: " + jobConf);
+        LOG.warn("LXH: CONFIG_ALL: " + jobConf.get("hive.io.file.read.all.columns"));
+        LOG.warn("LXH: CONFIG_COLUMNS: " + jobConf.get("hive.io.file.readcolumn.names"));
         return jobConf;
     }
 
