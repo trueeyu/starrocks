@@ -247,22 +247,24 @@ public class HiveScanner extends ConnectorScanner {
     public int getNext() throws IOException {
         try (ThreadContextClassLoader ignored = new ThreadContextClassLoader(classLoader)) {
             int numRows = 0;
+            LOG.error("LXH: TABLE_ROWS: " + getTableSize());
             for (; numRows < getTableSize(); numRows++) {
                 if (!reader.next(key, value)) {
                     break;
                 }
                 Object rowData = deserializer.deserialize(value);
-                for (int i = 0; i < requiredFields.length; i++) {
-                    Object fieldData = null;
-                    if (structFields[i] != null) {
-                        fieldData = rowInspector.getStructFieldData(rowData, structFields[i]);
-                    }
+                List<Object> fieldDatas = rowInspector.getStructFieldsDataAsList(rowData);
+                LOG.error("LXH: COLUMNS: " + fieldDatas.size());
+
+                int i = 0;
+                for (Object fieldData : fieldDatas) {
                     if (fieldData == null) {
                         appendData(i, null);
                     } else {
                         ColumnValue fieldValue = new HiveColumnValue(fieldInspectors[i], fieldData, timeZone);
                         appendData(i, fieldValue);
                     }
+                    i++;
                 }
             }
             return numRows;
