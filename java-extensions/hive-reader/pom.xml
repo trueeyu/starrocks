@@ -84,7 +84,7 @@
                 <!-- 根据实际情况选择排除其中一个 -->
                 <exclusion>
                     <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-to-slf4j</artifactId>
+                    <artifactId>log4j-to-impl</artifactId>
                 </exclusion>
             </exclusions>
         </dependency>
