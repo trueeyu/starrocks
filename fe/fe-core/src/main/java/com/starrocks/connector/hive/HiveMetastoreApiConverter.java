@@ -372,6 +372,7 @@ public class HiveMetastoreApiConverter {
                     .setTextFileFormatDesc(toTextFileFormatDesc(textFileParameters))
                     .setSplittable(RemoteFileInputFormat.isSplittable(sd.getInputFormat(),
                             sd.getSerdeInfo().getSerializationLib()));
+            return partitionBuilder.build();
         } else {
             Partition.Builder partitionBuilder = Partition.builder()
                     .setParams(params)
@@ -379,9 +380,8 @@ public class HiveMetastoreApiConverter {
                     .setInputFormat(toRemoteFileInputFormat(sd.getInputFormat()))
                     .setTextFileFormatDesc(toTextFileFormatDesc(textFileParameters))
                     .setSplittable(RemoteFileInputFormat.isSplittable(sd.getInputFormat()));
+            return partitionBuilder.build();
         }
-
-        return partitionBuilder.build();
     }
 
     public static org.apache.hadoop.hive.metastore.api.Partition toMetastoreApiPartition(
