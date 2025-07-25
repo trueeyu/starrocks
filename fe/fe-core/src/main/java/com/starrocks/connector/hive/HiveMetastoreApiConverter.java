@@ -364,12 +364,22 @@ public class HiveMetastoreApiConverter {
         textFileParameters.putAll(sd.getSerdeInfo().getParameters());
         // "skip.header.line.count" is set in TBLPROPERTIES
         textFileParameters.putAll(params);
-        Partition.Builder partitionBuilder = Partition.builder()
-                .setParams(params)
-                .setFullPath(sd.getLocation())
-                .setInputFormat(toRemoteFileInputFormat(sd.getInputFormat()))
-                .setTextFileFormatDesc(toTextFileFormatDesc(textFileParameters))
-                .setSplittable(RemoteFileInputFormat.isSplittable(sd.getInputFormat()));
+        if (sd.getSerdeInfo() != null) {
+            Partition.Builder partitionBuilder = Partition.builder()
+                    .setParams(params)
+                    .setFullPath(sd.getLocation())
+                    .setInputFormat(toRemoteFileInputFormat(sd.getInputFormat()))
+                    .setTextFileFormatDesc(toTextFileFormatDesc(textFileParameters))
+                    .setSplittable(RemoteFileInputFormat.isSplittable(sd.getInputFormat(),
+                            sd.getSerdeInfo().getSerializationLib()));
+        } else {
+            Partition.Builder partitionBuilder = Partition.builder()
+                    .setParams(params)
+                    .setFullPath(sd.getLocation())
+                    .setInputFormat(toRemoteFileInputFormat(sd.getInputFormat()))
+                    .setTextFileFormatDesc(toTextFileFormatDesc(textFileParameters))
+                    .setSplittable(RemoteFileInputFormat.isSplittable(sd.getInputFormat()));
+        }
 
         return partitionBuilder.build();
     }

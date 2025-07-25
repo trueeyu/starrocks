@@ -17,6 +17,8 @@ package com.starrocks.connector.hive;
 import com.google.common.collect.ImmutableMap;
 import com.starrocks.thrift.THdfsFileFormat;
 
+import java.util.Objects;
+
 import static com.starrocks.connector.hive.HiveClassNames.AVRO_INPUT_FORMAT_CLASS;
 import static com.starrocks.connector.hive.HiveClassNames.HUDI_PARQUET_INPUT_FORMAT;
 import static com.starrocks.connector.hive.HiveClassNames.MAPRED_PARQUET_INPUT_FORMAT_CLASS;
@@ -66,6 +68,14 @@ public enum RemoteFileInputFormat {
 
     public static boolean isSplittable(String className) {
         return INPUT_FORMAT_SPLITTABLE.getOrDefault(className, false);
+    }
+
+    public static boolean isSplittable(String className, String sreLib) {
+        if (Objects.equals(className, TEXT_INPUT_FORMAT_CLASS)) {
+            return !Objects.equals(sreLib, "org.openx.data.jsonserde.JsonSerDe");
+        } else {
+            return isSplittable(className);
+        }
     }
 
     public boolean isBackendSplittable() {
