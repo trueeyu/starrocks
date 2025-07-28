@@ -194,6 +194,8 @@ public class HiveScanner extends ConnectorScanner {
         LOG.warn("LXH: init offset: " + path + ":" + blockOffset + ":" + blockLength);
         FileSplit fileSplit = new FileSplit(path, blockOffset, blockLength, (String[]) null);
 
+        LOG.warn("LXH: format: " + inputFormat);
+
         InputFormat<?, ?> inputFormatClass = createInputFormat(jobConf, inputFormat);
         reader = (RecordReader<Writable, Writable>) inputFormatClass.getRecordReader(fileSplit, jobConf, Reporter.NULL);
 
@@ -214,8 +216,8 @@ public class HiveScanner extends ConnectorScanner {
                 fieldInspectors[i] = field.getFieldObjectInspector();
             }
         }
-        key = (Writable) reader.createKey();
-        value = (Writable) reader.createValue();
+        key = reader.createKey();
+        value = reader.createValue();
     }
 
     @Override
