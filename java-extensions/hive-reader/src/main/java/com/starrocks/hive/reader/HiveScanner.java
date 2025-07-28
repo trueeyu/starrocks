@@ -194,7 +194,11 @@ public class HiveScanner extends ConnectorScanner {
         LOG.warn("LXH: init offset: " + path + ":" + blockOffset + ":" + blockLength);
         FileSplit fileSplit = new FileSplit(path, blockOffset, blockLength, (String[]) null);
 
+        // org.apache.hadoop.hive.ql.io.RCFileInputFormat
         LOG.warn("LXH: format: " + inputFormat);
+        LOG.warn("LXH: path: " + dataFilePath);
+
+        //TrinoInputFile trinoInputFile = new LocalInputFile()
 
         InputFormat<?, ?> inputFormatClass = createInputFormat(jobConf, inputFormat);
         reader = (RecordReader<Writable, Writable>) inputFormatClass.getRecordReader(fileSplit, jobConf, Reporter.NULL);
