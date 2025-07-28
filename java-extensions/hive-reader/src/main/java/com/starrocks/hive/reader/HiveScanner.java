@@ -14,12 +14,18 @@
 
 package com.starrocks.hive.reader;
 
+import com.google.common.collect.ImmutableMap;
 import com.starrocks.jni.connector.ColumnType;
 import com.starrocks.jni.connector.ColumnValue;
 import com.starrocks.jni.connector.ConnectorScanner;
 import com.starrocks.jni.connector.ScannerHelper;
 import com.starrocks.jni.connector.SelectedFields;
 import com.starrocks.utils.loader.ThreadContextClassLoader;
+import io.trino.filesystem.TrinoInputFile;
+import io.trino.filesystem.local.LocalInputFile;
+import io.trino.hive.formats.encodings.binary.BinaryColumnEncodingFactory;
+import io.trino.hive.formats.rcfile.RcFileReader;
+import io.trino.spi.type.IntegerType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.common.JavaUtils;
@@ -36,7 +42,9 @@ import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.joda.time.DateTimeZone;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -196,9 +204,15 @@ public class HiveScanner extends ConnectorScanner {
 
         // org.apache.hadoop.hive.ql.io.RCFileInputFormat
         LOG.warn("LXH: format: " + inputFormat);
+        // hdfs://emr-header-1.cluster-49091:9000/user/hive/warehouse/lxh.db/lineorder_rcbinary/
+        // 20250723_062310_00021_7mstw_51c52943-786a-4895-a502-70be0cedcd34
         LOG.warn("LXH: path: " + dataFilePath);
 
-        //TrinoInputFile trinoInputFile = new LocalInputFile()
+        TrinoInputFile trinoInputFile = new LocalInputFile(new File(dataFilePath));
+        try (RcFileReader rcFileReader = new RcFileReader(trinoInputFile, new BinaryColumnEncodingFactory(DateTimeZone.UTC),
+                ImmutableMap.of(0, IntegerType.INTEGER), blockOffset, blockLength)) {
+            LOG.warn("LXH: create file reader success");
+        }
 
         InputFormat<?, ?> inputFormatClass = createInputFormat(jobConf, inputFormat);
         reader = (RecordReader<Writable, Writable>) inputFormatClass.getRecordReader(fileSplit, jobConf, Reporter.NULL);
