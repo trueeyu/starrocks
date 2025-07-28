@@ -110,20 +110,6 @@
             <artifactId>guava</artifactId>
             <version>${guava.version}</version>
         </dependency>
-        <dependency>
-            <groupId>com.starrocks</groupId>
-            <artifactId>jni-connector</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.apache.logging.log4j</groupId>
-                    <artifactId>log4j-to-slf4j</artifactId>
-                </exclusion>
-                <exclusion>
-                    <groupId>org.slf4j</groupId>
-                    <artifactId>log4j-over-slf4j</artifactId>
-                </exclusion>
-            </exclusions>
-        </dependency>
     </dependencies>
 
     <build>
