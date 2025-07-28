@@ -51,6 +51,12 @@
             <groupId>io.trino</groupId>
             <artifactId>trino-hive-formats</artifactId>
             <version>476</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.logging.log4j</groupId>
+                    <artifactId>log4j-to-slf4j</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!--
