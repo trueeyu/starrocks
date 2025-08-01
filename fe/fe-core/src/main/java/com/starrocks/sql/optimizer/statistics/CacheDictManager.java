@@ -129,7 +129,7 @@ public class CacheDictManager implements IDictManager, MemoryTrackable {
             int dictDataSize = 0;
             for (int i = 0; i < dictSize; i++) {
                 // a UTF-8 code may take up to 3 bytes
-                dictDataSize += tGlobalDict.strings.get(i).limit();
+                dictDataSize += tGlobalDict.strings.get(i).limit() - tGlobalDict.strings.get(i).position();
                 // string offsets
                 dictDataSize += 4;
             }
