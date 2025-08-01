@@ -16,6 +16,7 @@ package com.starrocks.sql.optimizer.statistics;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
+import com.starrocks.common.Config;
 
 import java.nio.ByteBuffer;
 
@@ -28,7 +29,7 @@ public final class ColumnDict {
     private long version;
 
     public ColumnDict(ImmutableMap<ByteBuffer, Integer> dict, long version) {
-        Preconditions.checkState(dict.size() > 0 && dict.size() <= 256,
+        Preconditions.checkState(dict.size() > 0 && dict.size() <= Config.low_cardinality_threshold,
                 "dict size %s is illegal", dict.size());
         this.dict = dict;
         this.collectedVersion = version;
