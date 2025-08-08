@@ -86,6 +86,7 @@ public class UDFHelper {
     private static final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
+    // TODO: Better to use the timezone set by session variables?
     private static final TimeZone timeZone = TimeZone.getDefault();
 
     private static void getBooleanBoxedResult(int numRows, Boolean[] boxedArr, long columnAddr) {
