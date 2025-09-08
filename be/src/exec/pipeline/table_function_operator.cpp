@@ -210,7 +210,7 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
     uint32_t final_start = _next_output_row;
     uint32_t final_count = 0;
     for (auto& col : columns) {
-        col.reserve(max_output_size);
+        col->reserve(max_output_size);
     }
     while (curr_output_size < max_output_size && _next_output_row < offsets_col->get_data().back()) {
         uint32_t start = _next_output_row;
