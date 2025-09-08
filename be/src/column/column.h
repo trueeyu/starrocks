@@ -334,7 +334,7 @@ public:
     // return new empty column with the same type
     virtual MutablePtr clone_empty() const = 0;
 
-    virtual MutablePtr clone_empty(size_t item_size, size_t byte_size) {
+    virtual MutablePtr clone_empty(size_t item_size, size_t byte_size) const {
         return clone_empty();
     }
 
