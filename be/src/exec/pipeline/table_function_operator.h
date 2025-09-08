@@ -52,6 +52,7 @@ private:
     ChunkPtr _build_chunk(const Columns& output_columns);
     Status _process_table_function(RuntimeState* state);
     void _copy_result(Columns& columns, uint32_t max_column_size);
+    void _copy_result2(Columns& columns, uint32_t max_column_size);
 
     const TPlanNode& _tnode;
     const TableFunction* _table_function = nullptr;

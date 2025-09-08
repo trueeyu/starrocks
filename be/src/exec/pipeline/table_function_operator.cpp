@@ -119,16 +119,16 @@ StatusOr<ChunkPtr> TableFunctionOperator::pull_chunk(RuntimeState* state) {
 
     output_columns.reserve(_outer_slots.size());
     for (int _outer_slot : _outer_slots) {
-        output_columns.emplace_back(_input_chunk->get_column_by_slot_id(_outer_slot)->clone_empty(4096, 4096*10));
+        output_columns.emplace_back(_input_chunk->get_column_by_slot_id(_outer_slot)->clone_empty(4096, 4096*100));
     }
     for (size_t i = 0; i < _fn_result_slots.size(); ++i) {
-        output_columns.emplace_back(_table_function_result.first[i]->clone_empty(4096, 4096*10));
+        output_columns.emplace_back(_table_function_result.first[i]->clone_empty(4096, 4096*100));
     }
 
     while (output_columns[0]->size() < max_chunk_size) {
         if (!_table_function_result.first.empty() && _table_function_result.second->size() > 1 &&
             _next_output_row < _table_function_result.second->get_data().back()) {
-            _copy_result(output_columns, max_chunk_size);
+            _copy_result2(output_columns, max_chunk_size);
         } else if (_table_function_state->processed_rows() < _input_chunk->num_rows()) {
             RETURN_IF_ERROR(_process_table_function(state));
         } else {
@@ -198,6 +198,52 @@ Status TableFunctionOperator::reset_state(RuntimeState* state, const std::vector
         _table_function_state->set_params(Columns{});
     }
     return Status::OK();
+}
+
+void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_size) {
+    DCHECK(_table_function_result.second->size() > 1 &&
+           _next_output_row < _table_function_result.second->get_data().back());
+    DCHECK_LT(_next_output_row_offset, _table_function_result.second->size());
+    uint32_t curr_output_size = columns[0]->size();
+    const auto& fn_result_cols = _table_function_result.first;
+    const auto& offsets_col = _table_function_result.second;
+    while (_next_output_row < offsets_col->get_data().back()) {
+        uint32_t start = _next_output_row;
+        uint32_t end = offsets_col->get_data()[_next_output_row_offset + 1];
+        DCHECK_GE(start, offsets_col->get_data()[_next_output_row_offset]);
+        DCHECK_LE(start, end);
+        uint32_t copy_rows = end - start;
+
+        if (copy_rows > 0) {
+            // Build outer data, repeat multiple times
+            for (size_t i = 0; i < _outer_slots.size(); ++i) {
+                ColumnPtr& input_column_ptr = _input_chunk->get_column_by_slot_id(_outer_slots[i]);
+                Datum value = input_column_ptr->get(_input_index_of_first_result + _next_output_row_offset);
+                if (value.is_null()) {
+                    DCHECK(columns[i]->is_nullable());
+                    down_cast<NullableColumn*>(columns[i].get())->append_nulls(copy_rows);
+                } else {
+                    columns[i]->append_value_multiple_times(&value, copy_rows);
+                }
+            }
+
+
+        }
+
+        curr_output_size += copy_rows;
+        _next_output_row += copy_rows;
+        DCHECK_LE(start + copy_rows, end);
+        if (start + copy_rows == end) {
+            _next_output_row_offset++;
+        }
+    }
+
+    // Build table function result
+    if (_fn_result_required) {
+        for (size_t i = 0; i < _fn_result_slots.size(); ++i) {
+            columns[_outer_slots.size() + i]->append(*(fn_result_cols[i]), 0, _next_output_row);
+        }
+    }
 }
 
 void TableFunctionOperator::_copy_result(Columns& columns, uint32_t max_output_size) {
