@@ -207,7 +207,9 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
     uint32_t curr_output_size = columns[0]->size();
     const auto& fn_result_cols = _table_function_result.first;
     const auto& offsets_col = _table_function_result.second;
-    while (_next_output_row < offsets_col->get_data().back()) {
+    uint32_t final_start = _next_output_row;
+    uint32_t final_count = 0;
+    while (curr_output_size < max_output_size && _next_output_row < offsets_col->get_data().back()) {
         uint32_t start = _next_output_row;
         uint32_t end = offsets_col->get_data()[_next_output_row_offset + 1];
         DCHECK_GE(start, offsets_col->get_data()[_next_output_row_offset]);
@@ -226,12 +228,11 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
                     columns[i]->append_value_multiple_times(&value, copy_rows);
                 }
             }
-
-
         }
 
         curr_output_size += copy_rows;
         _next_output_row += copy_rows;
+        final_count += copy_rows;
         DCHECK_LE(start + copy_rows, end);
         if (start + copy_rows == end) {
             _next_output_row_offset++;
@@ -241,7 +242,7 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
     // Build table function result
     if (_fn_result_required) {
         for (size_t i = 0; i < _fn_result_slots.size(); ++i) {
-            columns[_outer_slots.size() + i]->append(*(fn_result_cols[i]), 0, _next_output_row);
+            columns[_outer_slots.size() + i]->append(*(fn_result_cols[i]), final_start, final_count);
         }
     }
 }
