@@ -119,10 +119,10 @@ StatusOr<ChunkPtr> TableFunctionOperator::pull_chunk(RuntimeState* state) {
 
     output_columns.reserve(_outer_slots.size());
     for (int _outer_slot : _outer_slots) {
-        output_columns.emplace_back(_input_chunk->get_column_by_slot_id(_outer_slot)->clone_empty(4096, 4096*100));
+        output_columns.emplace_back(_input_chunk->get_column_by_slot_id(_outer_slot)->clone_empty());
     }
     for (size_t i = 0; i < _fn_result_slots.size(); ++i) {
-        output_columns.emplace_back(_table_function_result.first[i]->clone_empty(4096, 4096*100));
+        output_columns.emplace_back(_table_function_result.first[i]->clone_empty());
     }
 
     while (output_columns[0]->size() < max_chunk_size) {
@@ -209,6 +209,9 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
     const auto& offsets_col = _table_function_result.second;
     uint32_t final_start = _next_output_row;
     uint32_t final_count = 0;
+    for (auto& col : columns) {
+        col.reserve(max_output_size);
+    }
     while (curr_output_size < max_output_size && _next_output_row < offsets_col->get_data().back()) {
         uint32_t start = _next_output_row;
         uint32_t end = offsets_col->get_data()[_next_output_row_offset + 1];
