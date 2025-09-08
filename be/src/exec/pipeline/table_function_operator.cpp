@@ -214,7 +214,7 @@ void TableFunctionOperator::_copy_result2(Columns& columns, uint32_t max_output_
         uint32_t end = offsets_col->get_data()[_next_output_row_offset + 1];
         DCHECK_GE(start, offsets_col->get_data()[_next_output_row_offset]);
         DCHECK_LE(start, end);
-        uint32_t copy_rows = end - start;
+        uint32_t copy_rows = std::min(end - start, max_output_size - curr_output_size);
 
         if (copy_rows > 0) {
             // Build outer data, repeat multiple times
