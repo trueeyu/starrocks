@@ -334,6 +334,10 @@ public:
     // return new empty column with the same type
     virtual MutablePtr clone_empty() const = 0;
 
+    virtual MutablePtr clone_empty(size_t item_size, size_t byte_size) {
+        return clone_empty();
+    }
+
     virtual MutablePtr clone() const = 0;
 
     // REQUIRES: size of |filter| equals to the size of this column.

@@ -259,6 +259,12 @@ public:
 
     MutableColumnPtr clone_empty() const override { return BinaryColumnBase<T>::create(); }
 
+    MutableColumnPtr clone_empty(size_t item_size, size_t byte_size) const override {
+        auto col = BinaryColumnBase<T>::create();
+        col->reserve(item_size, byte_size);
+        return col;
+    }
+
     ColumnPtr cut(size_t start, size_t length) const;
     size_t filter_range(const Filter& filter, size_t start, size_t to) override;
 
