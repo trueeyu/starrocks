@@ -276,7 +276,6 @@ public:
     //  - the count of copied integers on success.
     //  - -1 if this is not a numeric column.
     [[nodiscard]] virtual size_t append_numbers(const void* buff, size_t length) = 0;
-    virtual size_t append_numbers(const ContainerResource& res) { return append_numbers(res.data(), res.length()); }
 
     // Append |*value| |count| times, this is only used when load default value.
     virtual void append_value_multiple_times(const void* value, size_t count) = 0;

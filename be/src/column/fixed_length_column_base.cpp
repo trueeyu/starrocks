@@ -83,19 +83,6 @@ void FixedLengthColumnBase<T>::append_value_multiple_times(const Column& src, ui
 }
 
 template <typename T>
-size_t FixedLengthColumnBase<T>::append_numbers(const ContainerResource& res) {
-    if (config::enable_zero_copy_from_page_cache && empty() && _resource.empty() && _resource.is_aligned<T>()) {
-        DCHECK(res.length() % sizeof(ValueType) == 0);
-        _resource.acquire(res);
-        _resource.set_data(res.data());
-        _resource.set_length(res.length() / sizeof(ValueType));
-        return _resource.length();
-    } else {
-        return append_numbers(res.data(), res.length());
-    }
-}
-
-template <typename T>
 void FixedLengthColumnBase<T>::append_default() {
     auto& datas = get_data();
     datas.emplace_back(DefaultValueGenerator<ValueType>::next_value());
