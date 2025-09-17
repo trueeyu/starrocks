@@ -18,6 +18,7 @@
 #include <utility>
 
 #include "column/column.h"
+#include "column/container_resource.h"
 #include "column/datum.h"
 #include "column/vectorized_fwd.h"
 #include "common/statusor.h"
@@ -167,6 +168,8 @@ public:
         return count;
     }
 
+    size_t append_numbers(const ContainerResource& res) override;
+
     void append_value_multiple_times(const void* value, size_t count) override {
         auto& datas = get_data();
         datas.insert(datas.end(), count, *reinterpret_cast<const T*>(value));
@@ -272,6 +275,7 @@ public:
 
     void reset_column() override {
         Column::reset_column();
+        _resource.reset();
         _data.clear();
     }
 
@@ -282,6 +286,7 @@ public:
     void check_or_die() const override {}
 
 protected:
+    ContainerResource _resource;
     Container _data;
 
 private:
