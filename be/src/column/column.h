@@ -20,6 +20,7 @@
 
 #include "column/column_visitor.h"
 #include "column/column_visitor_mutable.h"
+#include "column/container_resource.h"
 #include "column/vectorized_fwd.h"
 #include "common/cow.h"
 #include "common/statusor.h"

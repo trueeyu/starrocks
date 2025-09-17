@@ -35,6 +35,7 @@
 #pragma once
 
 #include "column/column.h"
+#include "column/container_resource.h"
 #include "storage/olap_common.h"
 #include "storage/range.h"
 #include "storage/rowset/options.h"
