@@ -168,8 +168,6 @@ public:
         return count;
     }
 
-    size_t append_numbers(const ContainerResource& res) override;
-
     void append_value_multiple_times(const void* value, size_t count) override {
         auto& datas = get_data();
         datas.insert(datas.end(), count, *reinterpret_cast<const T*>(value));
