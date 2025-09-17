@@ -238,6 +238,7 @@ public:
     Container& get_data() {
         // Note: not thread safe !
         if (!_resource.empty()) {
+            LOG(FATAL) << "FFFF";
             auto span = _resource.span<T>();
             _data.assign(span.begin(), span.end());
             _resource.reset();
