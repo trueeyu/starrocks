@@ -142,6 +142,7 @@ public:
         static void* tmp_src_ptr = nullptr;
         static void* tmp_dst_ptr = nullptr;
         static typename FixedLengthColumn<DestType>::Container* tmp_dst_data = nullptr;
+        static typename FixedLengthColumn<uint8_t>::Container* tmp_dst_null_data = nullptr;
 
         LOG(ERROR) << "LXH 1: " << src->debug_string() << ":" << get_stack_pointer();
         LOG(ERROR) << "LXH 2: " << dst->debug_string();
@@ -166,6 +167,7 @@ public:
 
         auto& src_null_data = src_null_col->get_data();
         auto& dst_null_data = dst_null_col->get_data();
+        tmp_dst_null_data = &dst_null_data;
 
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
