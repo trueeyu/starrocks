@@ -139,6 +139,7 @@ public:
         // hive only support null column
         // TODO: support not null
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
+        LOG(ERROR) << "LXH 4: " << dst_nullable_column->debug_string();
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
         auto* src_column =
