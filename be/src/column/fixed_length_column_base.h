@@ -235,7 +235,18 @@ public:
 
     std::string get_name() const override;
 
-    Container& get_data();
+    Container& get_data() {
+        //    // Note: not thread safe !
+        //    /*
+        //    if (!_resource.empty()) {
+        //        LOG(FATAL) << "FFFF";
+        //        auto span = _resource.span<T>();
+        //        _data.assign(span.begin(), span.end());
+        //        _resource.reset();
+        //    }
+        //    */
+        return _data;
+    }
 
     const ImmContainer immutable_data() const {
         if (!_resource.empty()) {
