@@ -176,6 +176,7 @@ public:
     StatusOr<bool> row_group_zone_map_filter(const std::vector<const ColumnPredicate*>& predicates,
                                              CompoundNodeType pred_relation, const uint64_t rg_first_row,
                                              const uint64_t rg_num_rows) const override {
+        LOG(ERROR) << "LXH: ZONE: " << _col_type->debug_string();
         return _row_group_zone_map_filter(predicates, pred_relation, *_col_type, rg_first_row, rg_num_rows);
     }
 

@@ -151,17 +151,12 @@ public:
         auto& src_null_col = src_nullable_column->null_column();
         auto& dst_null_col = dst_nullable_column->null_column();
 
-        LOG(INFO) << "LXH_PTR_1: " << (void*)&src_null_col << ":" << (void*)&dst_null_col;
-
         auto& src_null_data = src_null_col->get_data();
         auto& dst_null_data = dst_null_col->get_data();
-
-        LOG(INFO) << "LXH_PTR_2: " << (void*)&src_null_data << ":" << (void*)&dst_null_data;
 
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
-        LOG(INFO) << "LXH: " << (void*)src_ptr << ":" << (void*)dst_ptr << ":" << size;
         memcpy(dst_ptr, src_ptr, size);
         //LOG(FATAL) << "LXH: crash" ;
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
