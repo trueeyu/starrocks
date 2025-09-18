@@ -746,10 +746,10 @@ Status ConnectorChunkSource::_open_data_source(RuntimeState* state, bool* mem_al
 }
 
 uint64_t get_stack_pointer() {
-    uint64_t rsp;
-    // 内联汇编读取 rsp 寄存器（x86_64 栈指针寄存器）
-    asm("mov %%rsp, %0" : "=r"(rsp));
-    return rsp;
+    uint64_t sp;
+    // 内联汇编读取 sp 寄存器（ARM64 栈指针寄存器）
+    asm("mov %0, sp" : "=r"(sp));
+    return sp;
 }
 
 Status ConnectorChunkSource::_read_chunk(RuntimeState* state, ChunkPtr* chunk) {
