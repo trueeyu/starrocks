@@ -167,7 +167,7 @@ public:
 
         auto& src_null_data = src_null_col->get_data();
         auto& dst_null_data = dst_null_col->get_data();
-        tmp_dst_null_data = &dst_null_data;
+        //tmp_dst_null_data = &dst_null_data;
 
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
