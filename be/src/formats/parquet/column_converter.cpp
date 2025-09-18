@@ -154,7 +154,6 @@ public:
         auto& src_null_col = src_nullable_column->null_column();
         auto& dst_null_col = dst_nullable_column->null_column();
 
-        std::atomic_thread_fence(std::memory_order_seq_cst);
 
         auto& src_null_data = src_null_col->get_data();
         auto& dst_null_data = dst_null_col->get_data();
