@@ -139,19 +139,10 @@ public:
     }
 
     Status convert(const ColumnPtr& src, Column* dst) override {
-        static void* tmp_src_ptr = nullptr;
-        static void* tmp_dst_ptr = nullptr;
-        static typename FixedLengthColumn<DestType>::Container* tmp_dst_data = nullptr;
-        static typename FixedLengthColumn<uint8_t>::Container* tmp_dst_null_data = nullptr;
-
-        LOG(ERROR) << "LXH 1: " << src->debug_string() << ":" << get_stack_pointer();
-        LOG(ERROR) << "LXH 2: " << dst->debug_string();
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
-        LOG(ERROR) << "LXH 3: " << src_nullable_column->debug_string();
         // hive only support null column
         // TODO: support not null
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
-        LOG(ERROR) << "LXH 4: " << dst_nullable_column->debug_string() << ":" << src_nullable_column->size();
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
         auto* src_column =
@@ -160,7 +151,6 @@ public:
 
         auto& src_data = src_column->get_data();
         auto& dst_data = dst_column->get_data();
-        tmp_dst_data = &dst_data;
 
         auto& src_null_col = src_nullable_column->null_column();
         auto& dst_null_col = dst_nullable_column->null_column();
@@ -172,8 +162,6 @@ public:
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
-        tmp_src_ptr = (void*)src_ptr;
-        tmp_dst_ptr = (void*)dst_ptr;
         if (dst_ptr == nullptr) {
             LOG(FATAL) << "LXH TRIGGER CRASH";
         }
