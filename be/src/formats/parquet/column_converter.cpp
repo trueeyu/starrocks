@@ -139,9 +139,8 @@ public:
         // hive only support null column
         // TODO: support not null
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
-        LOG(ERROR) << "LXH 4: " << dst_nullable_column->debug_string();
+        LOG(ERROR) << "LXH 4: " << dst_nullable_column->debug_string() << ":" << src_nullable_column->size();
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
-        LOG(ERROR) << "LXH 5: " << dst_nullable_column->debug_string();
 
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
@@ -153,7 +152,9 @@ public:
         auto& dst_null_data = dst_nullable_column->null_column()->get_data();
 
         size_t size = src_column->size();
-        memcpy(dst_null_data.data(), src_null_data.data(), size);
+        auto* dst_ptr = dst_null_data.data();
+        auto* src_ptr = src_null_data.data();
+        memcpy(dst_ptr, src_ptr, size);
         //LOG(FATAL) << "LXH: crash" ;
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
         dst_nullable_column->set_has_null(src_nullable_column->has_null());
