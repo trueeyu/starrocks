@@ -142,6 +142,18 @@ Status FixedLengthColumnBase<T>::fill_range(const std::vector<T>& ids, const Fil
 }
 
 template <typename T>
+typename FixedLengthColumnBase<T>::Container& FixedLengthColumnBase<T>::get_data() {
+    // Note: not thread safe !
+    if (!_resource.empty()) {
+        LOG(FATAL) << "FFFF";
+        auto span = _resource.span<T>();
+        _data.assign(span.begin(), span.end());
+        _resource.reset();
+    }
+    return _data;
+}
+
+template <typename T>
 void FixedLengthColumnBase<T>::update_rows(const Column& src, const uint32_t* indexes) {
     auto& datas = get_data();
 
