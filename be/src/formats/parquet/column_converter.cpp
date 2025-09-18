@@ -118,7 +118,7 @@ private:
 };
 
 template <typename SourceType, typename DestType>
-void convert_int_to_int(SourceType* __restrict__ src, DestType* __restrict__ dst, size_t size) {
+void convert_int_to_int(const SourceType* __restrict__ src, DestType* __restrict__ dst, size_t size) {
     for (size_t i = 0; i < size; i++) {
         dst[i] = DestType(src[i]);
     }
@@ -143,23 +143,23 @@ public:
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
-        auto* src_column =
+        const auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
         size_t size = src_column->size();
         auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
 
-        auto& src_data = src_column->get_data();
+        const auto& src_data = src_column->get_data();
         auto& dst_data = dst_column->get_data();
 
-        auto& src_null_col = src_nullable_column->null_column();
+        const auto& src_null_col = src_nullable_column->null_column();
         auto& dst_null_col = dst_nullable_column->null_column();
 
 
-        auto& src_null_data = src_null_col->get_data();
+        const auto& src_null_data = src_null_col->get_data();
         auto& dst_null_data = dst_null_col->get_data();
         //tmp_dst_null_data = &dst_null_data;
 
-        auto* dst_ptr = dst_null_data.data();
+        const auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
         if (dst_ptr == nullptr) {
             LOG(FATAL) << "LXH TRIGGER CRASH";
