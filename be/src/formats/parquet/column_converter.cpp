@@ -141,7 +141,7 @@ public:
     Status convert(const ColumnPtr& src, Column* dst) override {
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
-        dst_nullable_column->resize(src_nullable_column->size());
+        dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
