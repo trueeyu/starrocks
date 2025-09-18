@@ -140,13 +140,12 @@ public:
 
     Status convert(const ColumnPtr& src, Column* dst) override {
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
-        // hive only support null column
-        // TODO: support not null
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
-        dst_nullable_column->resize_uninitialized(src_nullable_column->size());
+        dst_nullable_column->resize(src_nullable_column->size());
 
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
+        size_t size = src_column->size();
         auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
 
         auto& src_data = src_column->get_data();
@@ -159,7 +158,6 @@ public:
         auto& dst_null_data = dst_null_col->get_data();
         //tmp_dst_null_data = &dst_null_data;
 
-        size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
         if (dst_ptr == nullptr) {
