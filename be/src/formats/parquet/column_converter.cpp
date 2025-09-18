@@ -135,6 +135,7 @@ public:
         LOG(ERROR) << "LXH 1: " << src->debug_string();
         LOG(ERROR) << "LXH 2: " << dst->debug_string();
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
+        LOG(ERROR) << "LXH 3: " << src_nullable_column->debug_string();
         // hive only support null column
         // TODO: support not null
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
