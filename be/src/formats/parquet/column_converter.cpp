@@ -141,6 +141,7 @@ public:
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
         LOG(ERROR) << "LXH 4: " << dst_nullable_column->debug_string();
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
+        LOG(ERROR) << "LXH 5: " << dst_nullable_column->debug_string();
 
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
