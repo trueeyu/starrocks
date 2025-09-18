@@ -139,6 +139,9 @@ public:
     }
 
     Status convert(const ColumnPtr& src, Column* dst) override {
+        static void* tmp_src_ptr = nullptr;
+        static void* tmp_dst_ptr = nullptr;
+
         LOG(ERROR) << "LXH 1: " << src->debug_string() << ":" << get_stack_pointer();
         LOG(ERROR) << "LXH 2: " << dst->debug_string();
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
@@ -164,8 +167,8 @@ public:
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
-        static auto* tmp_src_ptr = src_ptr;
-        static auto* tmp_dst_ptr = dst_ptr;
+        tmp_src_ptr = (void*)src_ptr;
+        tmp_dst_ptr = (void*)dst_ptr;
         if (dst_ptr == nullptr) {
             LOG(FATAL) << "LXH TRIGGER CRASH";
         }
