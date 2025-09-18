@@ -131,8 +131,15 @@ public:
     NumericToNumericConverter() = default;
     ~NumericToNumericConverter() override = default;
 
+    uint64_t get_stack_pointer() {
+        uint64_t rsp;
+        // 内联汇编读取 rsp 寄存器（x86_64 栈指针寄存器）
+        asm("mov %%rsp, %0" : "=r"(rsp));
+        return rsp;
+    }
+
     Status convert(const ColumnPtr& src, Column* dst) override {
-        LOG(ERROR) << "LXH 1: " << src->debug_string();
+        LOG(ERROR) << "LXH 1: " << src->debug_string() << ":" << get_stack_pointer();
         LOG(ERROR) << "LXH 2: " << dst->debug_string();
         auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
         LOG(ERROR) << "LXH 3: " << src_nullable_column->debug_string();

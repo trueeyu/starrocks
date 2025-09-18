@@ -745,7 +745,16 @@ Status ConnectorChunkSource::_open_data_source(RuntimeState* state, bool* mem_al
     return Status::OK();
 }
 
+uint64_t get_stack_pointer() {
+    uint64_t rsp;
+    // 内联汇编读取 rsp 寄存器（x86_64 栈指针寄存器）
+    asm("mov %%rsp, %0" : "=r"(rsp));
+    return rsp;
+}
+
 Status ConnectorChunkSource::_read_chunk(RuntimeState* state, ChunkPtr* chunk) {
+    LOG(ERROR) << "LXH read_chunk: " << get_stack_pointer();
+
     ConnectorScanOperator* scan_op = down_cast<ConnectorScanOperator*>(_scan_op);
     ConnectorScanOperatorAdaptiveProcessor& P = *(scan_op->adaptive_processor());
 
