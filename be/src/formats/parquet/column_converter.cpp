@@ -164,10 +164,10 @@ public:
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
-        memcpy(dst_ptr, src_ptr, size);
         if (dst_ptr == nullptr) {
             LOG(FATAL) << "LXH TRIGGER CRASH";
         }
+        memcpy(dst_ptr, src_ptr, size);
         //LOG(FATAL) << "LXH: crash" ;
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
         dst_nullable_column->set_has_null(src_nullable_column->has_null());
