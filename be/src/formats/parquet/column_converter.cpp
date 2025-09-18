@@ -141,6 +141,8 @@ public:
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
         auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
+        LOG(ERROR) << "LXH 1: " << src_column->debug_string();
+        LOG(ERROR) << "LXH 2: " << dst_column->debug_string();
 
         auto& src_data = src_column->get_data();
         auto& dst_data = dst_column->get_data();
