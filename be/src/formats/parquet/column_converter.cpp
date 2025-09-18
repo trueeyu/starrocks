@@ -154,6 +154,7 @@ public:
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
+        LOG(INFO) << "LXH: " << (void*)src_ptr << ":" << (void*)dst_ptr << ":" << size;
         memcpy(dst_ptr, src_ptr, size);
         //LOG(FATAL) << "LXH: crash" ;
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
