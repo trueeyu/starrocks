@@ -148,8 +148,11 @@ public:
 
         auto& src_data = src_column->get_data();
         auto& dst_data = dst_column->get_data();
-        auto& src_null_data = src_nullable_column->null_column()->get_data();
-        auto& dst_null_data = dst_nullable_column->null_column()->get_data();
+        auto& src_null_col = src_nullable_column->null_column();
+        auto& dst_null_col = dst_nullable_column->null_column();
+
+        auto& src_null_data = src_null_col->get_data();
+        auto& dst_null_data = dst_null_col->get_data();
 
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
