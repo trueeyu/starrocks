@@ -164,6 +164,8 @@ public:
         size_t size = src_column->size();
         auto* dst_ptr = dst_null_data.data();
         auto* src_ptr = src_null_data.data();
+        static auto* tmp_src_ptr = src_ptr;
+        static auto* tmp_dst_ptr = dst_ptr;
         if (dst_ptr == nullptr) {
             LOG(FATAL) << "LXH TRIGGER CRASH";
         }
