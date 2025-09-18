@@ -141,6 +141,7 @@ public:
     Status convert(const ColumnPtr& src, Column* dst) override {
         static void* tmp_src_ptr = nullptr;
         static void* tmp_dst_ptr = nullptr;
+        static typename FixedLengthColumn<DestType>::Container* tmp_dst_data = nullptr;
 
         LOG(ERROR) << "LXH 1: " << src->debug_string() << ":" << get_stack_pointer();
         LOG(ERROR) << "LXH 2: " << dst->debug_string();
@@ -158,6 +159,8 @@ public:
 
         auto& src_data = src_column->get_data();
         auto& dst_data = dst_column->get_data();
+        tmp_dst_data = &dst_data;
+
         auto& src_null_col = src_nullable_column->null_column();
         auto& dst_null_col = dst_nullable_column->null_column();
 
