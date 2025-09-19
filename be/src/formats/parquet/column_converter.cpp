@@ -133,21 +133,19 @@ public:
 
     Status convert(const ColumnPtr& src, Column* dst) override {
         const auto* src_nullable_column = ColumnHelper::as_raw_column<NullableColumn>(src);
-        auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
-        dst_nullable_column->resize_uninitialized(src_nullable_column->size());
-
-        asm volatile ("dmb sy" ::: "memory");
-
         const auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
-        auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
-
         const auto& src_data = src_column->get_data();
-        auto& dst_data = dst_column->get_data();
         const auto& src_null_data = src_nullable_column->null_column()->get_data();
+        size_t size = src_column->size();
+
+        auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
+        dst_nullable_column->resize_uninitialized(src_nullable_column->size());
+        auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
+        auto& dst_data = dst_column->get_data();
         auto& dst_null_data = dst_nullable_column->null_column()->get_data();
 
-        size_t size = src_column->size();
+        //asm volatile ("dmb sy" ::: "memory");
         memcpy(dst_null_data.data(), src_null_data.data(), size);
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
         dst_nullable_column->set_has_null(src_nullable_column->has_null());
