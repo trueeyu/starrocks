@@ -136,6 +136,8 @@ public:
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
+        asm volatile ("dmb sy" ::: "memory");
+
         const auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
         auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
