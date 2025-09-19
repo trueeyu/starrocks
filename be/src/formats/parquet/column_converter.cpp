@@ -138,6 +138,8 @@ public:
         auto* dst_nullable_column = down_cast<NullableColumn*>(dst);
         dst_nullable_column->resize_uninitialized(src_nullable_column->size());
 
+        std::atomic_signal_fence(std::memory_order_acquire);
+
         auto* src_column =
                 ColumnHelper::as_raw_column<FixedLengthColumn<SourceType>>(src_nullable_column->data_column());
         auto* dst_column = ColumnHelper::as_raw_column<FixedLengthColumn<DestType>>(dst_nullable_column->data_column());
@@ -148,6 +150,7 @@ public:
         auto& dst_null_data = dst_nullable_column->null_column()->get_data();
 
         size_t size = src_column->size();
+
         memcpy(dst_null_data.data(), src_null_data.data(), size);
         convert_int_to_int<SourceType, DestType>(src_data.data(), dst_data.data(), size);
         dst_nullable_column->set_has_null(src_nullable_column->has_null());
