@@ -229,9 +229,11 @@ Status HiveDataSource::_init_partition_values() {
     for (const auto& item : _hive_table->partition_map()) {
         if (item.second != nullptr) {
             LOG(ERROR) << "LXH: P_MAP: " << tmp_i << ":" << item.first <<
-                    ":" << item.second->partition_key_value_evals()[tmp_i]->root()->debug_string();
+                    ":" << item.second->partition_key_value_evals()[0]->root()->debug_string();
+            //LOG(ERROR) << "LXH: P_MAP: " << tmp_i << ":" << item.first <<
+            //        ":" << item.second->partition_key_value_evals()[tmp_i]->root()->debug_string();
         } else {
-            LOG(ERROR) << "LXH: P_MAP_NULL: " << tmp_i << ":" << item.first << ":" << item.second->id();
+            LOG(ERROR) << "LXH: P_MAP_NULL: " << tmp_i << ":" << item.first << ":" << item.second;
         }
         tmp_i++;
     }
