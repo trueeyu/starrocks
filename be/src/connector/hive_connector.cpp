@@ -309,17 +309,20 @@ void HiveDataSource::_init_tuples_and_slots(RuntimeState* state) {
     const auto& slots = _tuple_desc->slots();
     for (int i = 0; i < slots.size(); i++) {
         if (_hive_table != nullptr && _hive_table->is_partition_col(slots[i])) {
+            LOG(ERROR) << "LXH: TUPLE_1: " << i << ":" << slots[i]->debug_string();
             _partition_slots.push_back(slots[i]);
             _partition_index_in_chunk.push_back(i);
             _partition_index_in_hdfs_partition_columns.push_back(_hive_table->get_partition_col_index(slots[i]));
             _has_partition_columns = true;
         } else if (int32_t index = scan_range_indicate_const_column_index(slots[i]->id()); index >= 0) {
+            LOG(ERROR) << "LXH: TUPLE_2: " << i << ":" << slots[i]->debug_string();
             _partition_slots.push_back(slots[i]);
             _partition_index_in_chunk.push_back(i);
             _partition_index_in_hdfs_partition_columns.push_back(index);
             _has_partition_columns = true;
             _has_scan_range_indicate_const_column = true;
         } else {
+            LOG(ERROR) << "LXH: TUPLE_3: " << i << ":" << slots[i]->debug_string();
             _materialize_slots.push_back(slots[i]);
             _materialize_index_in_chunk.push_back(i);
         }
