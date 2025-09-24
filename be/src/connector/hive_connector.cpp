@@ -233,6 +233,16 @@ Status HiveDataSource::_init_partition_values() {
     const auto& partition_values = partition_desc->partition_key_value_evals();
     _partition_values = partition_desc->partition_key_value_evals();
 
+    for (size_t i = 0; i < _partition_values.size(); i++) {
+        LOG(ERROR) << "LXH: PARTITION: " << i << ":" << _partition_values[i]->root()->debug_string();
+    }
+    for (size_t i = 0; i < _partition_index_in_hdfs_partition_columns.size(); i++) {
+        LOG(ERROR) << "LXH: P_INDEX: " << i << ":" << _partition_index_in_hdfs_partition_columns[i];
+    }
+    for (size_t i = 0; i < _partition_slots.size(); i++) {
+        LOG(ERROR) << "LXH: SLOT: " << i << ":" << _partition_slots[i]->debug_string();
+    }
+
     // init partition chunk
     auto partition_chunk = std::make_shared<Chunk>();
     for (int i = 0; i < _partition_slots.size(); i++) {
