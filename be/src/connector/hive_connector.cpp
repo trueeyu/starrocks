@@ -225,6 +225,12 @@ Status HiveDataSource::_init_partition_values() {
 
     LOG(ERROR) << "LXH: SCAN_RANGE_P_ID: " << _scan_range.partition_id;
 
+    int tmp_i = 0;
+    for (const auto& item : _hive_table->partition_map()) {
+        LOG(ERROR) << "LXH: P_MAP: " << tmp_i << ":" << item.first << ":" << item.second->id();
+        tmp_i++;
+    }
+
     auto* partition_desc = _hive_table->get_partition(_scan_range.partition_id);
     if (partition_desc == nullptr) {
         return Status::InternalError(
