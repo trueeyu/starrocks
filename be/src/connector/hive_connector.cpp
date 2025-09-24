@@ -307,6 +307,7 @@ void HiveDataSource::_init_tuples_and_slots(RuntimeState* state) {
     }
 
     const auto& slots = _tuple_desc->slots();
+    LOG(ERROR) << "LXH: PAR_COUNT: " << _hive_table->partition_columns().size();
     for (int i = 0; i < _hive_table->partition_columns().size(); i++) {
         LOG(ERROR) << "LXH: PAR: " << i << ":" << _hive_table->partition_columns()[i].column_name;
     }
