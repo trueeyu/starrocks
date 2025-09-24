@@ -205,6 +205,9 @@ public:
         return Status::OK();
     }
 
+    const std::vector<TColumn>& partition_columns() const { return _partition_columns; }
+    const std::map<int64_t, HdfsPartitionDescriptor*>& partition_map() const { return _partition_id_to_desc_map; };
+
     StatusOr<TPartitionMap*> deserialize_partition_map(const TCompressedPartitionMap& compressed_partition_map,
                                                        ObjectPool* pool);
 
