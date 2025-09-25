@@ -706,6 +706,7 @@ Status FragmentExecutor::_prepare_global_dict(const UnifiedExecPlanFragmentParam
 
 Status FragmentExecutor::prepare(ExecEnv* exec_env, const TExecPlanFragmentParams& common_request,
                                  const TExecPlanFragmentParams& unique_request) {
+    LOG(ERROR) << "LXH: prepare executor";
     DCHECK(common_request.__isset.desc_tbl);
     DCHECK(common_request.__isset.fragment);
 
