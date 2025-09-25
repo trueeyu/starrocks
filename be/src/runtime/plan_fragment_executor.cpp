@@ -80,7 +80,7 @@ Status PlanFragmentExecutor::prepare(const TExecPlanFragmentParams& request) {
     const TPlanFragmentExecParams& params = request.params;
     _query_id = params.query_id;
 
-    VLOG(1) << "Prepare(): query_id=" << print_id(_query_id)
+    LOG(ERROR) << "LXH: Prepare(): query_id=" << print_id(_query_id)
             << " fragment_instance_id=" << print_id(params.fragment_instance_id)
             << " backend_num=" << request.backend_num;
 
