@@ -201,6 +201,9 @@ Status FragmentExecutor::_prepare_runtime_state(ExecEnv* exec_env, const Unified
     const auto& query_globals = request.common().query_globals;
     const auto& query_options = request.common().query_options;
     const auto& t_desc_tbl = request.common().desc_tbl;
+    std::ostringstream out;
+    t_desc_tbl.printTo(out);
+    LOG(ERROR) << "LXH: DESC: " << out.str();
     auto& wg = _wg;
 
     _fragment_ctx->set_runtime_state(
