@@ -284,6 +284,14 @@ Status IcebergTableDescriptor::set_partition_desc_map(const starrocks::TIcebergT
             auto* partition = pool->add(new HdfsPartitionDescriptor(thrift_table, entry.second));
             _partition_id_to_desc_map[entry.first] = partition;
         }
+        int i = 0;
+        for (auto& item : _partition_id_to_desc_map) {
+            LOG(ERROR) << "LXH: P_ID_MAP: " << i << ":" << item.first << ":" << item.second;
+            for (size_t j = 0; j < item.second->partition_key_value_evals().size(); j++) {
+                LOG(ERROR) << "LXH: KVS: " << j << ":" << item.second->partition_key_value_evals()[j]->root()->debug_string();
+            }
+            i++;
+        }
     }
     return Status::OK();
 }
