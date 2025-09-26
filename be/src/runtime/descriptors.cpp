@@ -785,6 +785,8 @@ Status DescriptorTbl::create(RuntimeState* state, ObjectPool* pool, const TDescr
         SlotDescriptor* slot_d = pool->add(new SlotDescriptor(tdesc));
         (*tbl)->_slot_desc_map[tdesc.id] = slot_d;
 
+        LOG(ERROR) << "LXH: SLOT: " << tdesc.id << ":" << tdesc.parent << ":" << slot_d->debug_string();
+
         // link to parent
         auto entry = (*tbl)->_tuple_desc_map.find(tdesc.parent);
 
