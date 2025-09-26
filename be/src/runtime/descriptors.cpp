@@ -759,6 +759,7 @@ Status DescriptorTbl::create(RuntimeState* state, ObjectPool* pool, const TDescr
             DCHECK(false) << "invalid table type: " << tdesc.tableType;
         }
 
+        LOG(ERROR) << "LXH: TABLE_ID: " << tdesc.id;
         (*tbl)->_tbl_desc_map[tdesc.id] = desc;
     }
 
