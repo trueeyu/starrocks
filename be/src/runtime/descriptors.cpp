@@ -772,6 +772,7 @@ Status DescriptorTbl::create(RuntimeState* state, ObjectPool* pool, const TDescr
         }
 
         (*tbl)->_tuple_desc_map[tdesc.id] = desc;
+        LOG(ERROR) << "LXH: TUPLE: " << tdesc.id << ":" << tdesc.__isset.tableId << ":" << desc->_table_desc->debug_string();
     }
 
     for (const auto& tdesc : thrift_tbl.slotDescriptors) {
