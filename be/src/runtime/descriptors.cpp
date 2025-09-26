@@ -282,8 +282,10 @@ Status IcebergTableDescriptor::set_partition_desc_map(const starrocks::TIcebergT
         int i = 0;
         for (auto& item : _partition_id_to_desc_map) {
             LOG(ERROR) << "LXH: P_ID_MAP: " << i << ":" << item.first << ":" << item.second;
-            for (size_t j = 0; j < item.second->partition_key_value_evals().size(); j++) {
-                LOG(ERROR) << "LXH: KVS: " << j << ":" << item.second->partition_key_value_evals()[j]->root()->debug_string();
+            for (size_t j = 0; j < item.second->thrift_partition_key_exprs().size(); j++) {
+                std::ostringstream out;
+                item.second->thrift_partition_key_exprs()[j].printTo(out);
+                LOG(ERROR) << "LXH: KVS: " << j << ":" << out.str();
             }
             i++;
         }

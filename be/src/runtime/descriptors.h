@@ -177,6 +177,7 @@ public:
     // partition slots would be [x, y]
     // partition key values wold be [1, 2]
     std::vector<ExprContext*>& partition_key_value_evals() { return _partition_key_value_evals; }
+    const std::vector<TExpr>& thrift_partition_key_exprs() const { return _thrift_partition_key_exprs; }
     Status create_part_key_exprs(RuntimeState* state, ObjectPool* pool);
 
 private:
