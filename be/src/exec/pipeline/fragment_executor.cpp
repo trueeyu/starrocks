@@ -268,11 +268,13 @@ Status FragmentExecutor::_prepare_runtime_state(ExecEnv* exec_env, const Unified
     DescriptorTbl* desc_tbl = nullptr;
     if (t_desc_tbl.__isset.is_cached) {
         if (t_desc_tbl.is_cached) {
+            LOG(ERROR) << "LXH: T_DESC IS CACHED";
             desc_tbl = _query_ctx->desc_tbl();
             if (desc_tbl == nullptr) {
                 return Status::Cancelled("Query terminates prematurely");
             }
         } else {
+            LOG(ERROR) << "LXH: T_DESC IS NOT CACHED";
             RETURN_IF_ERROR(DescriptorTbl::create(runtime_state, _query_ctx->object_pool(), t_desc_tbl, &desc_tbl,
                                                   runtime_state->chunk_size()));
             _query_ctx->set_desc_tbl(desc_tbl);
