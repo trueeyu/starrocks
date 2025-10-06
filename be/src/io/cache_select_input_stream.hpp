@@ -42,6 +42,7 @@ public:
 
 protected:
     Status _read_block_from_local(const int64_t offset, const int64_t size, char* out) override {
+        LOG(ERROR) << "LXH: read from local" << offset << ":" << size;
         if (UNLIKELY(size == 0)) {
             return Status::OK();
         }
@@ -69,6 +70,7 @@ protected:
     }
 
     Status _read_blocks_from_remote(const int64_t offset, const int64_t size, char* out) override {
+        LOG(ERROR) << "LXH: read from remote: " << offset << ":" << size;
         const int64_t start_block_id = offset / _block_size;
         const int64_t end_block_id = (offset + size - 1) / _block_size;
 
