@@ -1562,6 +1562,7 @@ Status SegmentIterator::_do_get_next(Chunk* result, vector<rowid_t>* rowid) {
 #ifdef USE_STAROS
     // only used for CACHE SELECT, do not form any chunk to save CPU time,
     // just read file content in `_scan_range`
+    LOG(ERROR) << "LXH: OPT: " << _opts.lake_io_opts.cache_file_only;
     if (_opts.lake_io_opts.cache_file_only) {
         // read every column in this segment at once, maybe optimize this later
         size_t buf_size = config::starlet_fs_stream_buffer_size_bytes;
