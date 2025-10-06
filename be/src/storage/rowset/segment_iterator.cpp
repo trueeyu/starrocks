@@ -1562,6 +1562,7 @@ Status SegmentIterator::_do_get_next(Chunk* result, vector<rowid_t>* rowid) {
 #ifdef USE_STAROS
     // only used for CACHE SELECT, do not form any chunk to save CPU time,
     // just read file content in `_scan_range`
+    LOG(ERROR) << "LXH: OPT: " << _opts.lake_io_opts.cache_file_only;
     if (_opts.lake_io_opts.cache_file_only) {
         // read every column in this segment at once, maybe optimize this later
         size_t buf_size = config::starlet_fs_stream_buffer_size_bytes;
@@ -1571,7 +1572,6 @@ Status SegmentIterator::_do_get_next(Chunk* result, vector<rowid_t>* rowid) {
         _context->_read_chunk->reset();
         Chunk* chunk = _context->_read_chunk.get();
         size_t column_index = 0;
-        std::unique_ptr<char[]> buf(new char[buf_size]);
         for (size_t cid = 0; cid < _column_iterators.size(); ++cid) {
             if (_column_iterators[cid] == nullptr) {
                 continue;
@@ -1585,7 +1585,7 @@ Status SegmentIterator::_do_get_next(Chunk* result, vector<rowid_t>* rowid) {
                 size_t size = e.second + (e.first % buf_size);
                 while (size > 0) {
                     size_t cur_size = std::min(buf_size, size);
-                    RETURN_IF_ERROR(_column_files[cid]->read_at_fully(offset, buf.get(), cur_size));
+                    RETURN_IF_ERROR(_column_files[cid]->touch_cache(offset, cur_size));
                     offset += cur_size;
                     size -= cur_size;
                 }
