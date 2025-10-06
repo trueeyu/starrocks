@@ -327,6 +327,7 @@ struct ReadFromRemoteIORange {
 };
 
 Status CacheInputStream::read_at_fully(int64_t offset, void* out, int64_t count) {
+    LOG(ERROR) << "LXH: " << "read_at_fully";
     const int64_t origin_offset = offset;
     count = std::min(_size - offset, count);
     if (count < 0) {
