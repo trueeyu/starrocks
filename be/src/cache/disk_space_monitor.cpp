@@ -62,6 +62,7 @@ bool DiskSpace::adjust_spaces(const AdjustContext& ctx) {
         return false;
     }
 
+    LOG(ERROR) << "LXH: LOW: HIGH: " << _disk_opts.low_level_size << ":" << _disk_opts.high_level_size;
     if (_disk_stats.used_bytes() < _disk_opts.low_level_size) {
         _disk_free_period += config::datacache_disk_adjust_interval_seconds;
         if (!_allow_expansion(ctx)) {
@@ -70,6 +71,7 @@ bool DiskSpace::adjust_spaces(const AdjustContext& ctx) {
     } else if (_disk_stats.used_bytes() <= _disk_opts.high_level_size) {
         return false;
     }
+    LOG(ERROR) << "LXH: DECRESS";
 
     int64_t old_cache_quota = cache_quota();
     int64_t new_cache_quota = _calc_new_cache_quota(_cache_usage(ctx));
