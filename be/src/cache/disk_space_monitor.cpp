@@ -321,6 +321,7 @@ bool DiskSpaceMonitor::_adjust_spaces_by_disk_usage() {
 
     DiskSpace::AdjustContext ctx = {.total_cache_quota = _total_cache_quota, .total_cache_usage = _total_cache_usage};
     bool changed = false;
+    LOG(ERROR) << "LXH DISK_COUNT: " << _disk_spaces.size();
     for (auto& disk_space : _disk_spaces) {
         if (disk_space.adjust_spaces(ctx)) {
             changed = true;
