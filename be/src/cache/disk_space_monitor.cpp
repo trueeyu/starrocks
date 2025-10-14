@@ -63,7 +63,7 @@ bool DiskSpace::adjust_spaces(const AdjustContext& ctx) {
     }
 
     if (_disk_stats.used_bytes() < _disk_opts.low_level_size) {
-        _disk_free_period += _disk_opts.adjust_interval_s;
+        _disk_free_period += config::datacache_disk_adjust_interval_seconds;
         if (!_allow_expansion(ctx)) {
             return false;
         }
@@ -161,7 +161,7 @@ size_t DiskSpace::_calc_new_cache_quota(size_t cur_cache_usage) {
 }
 
 bool DiskSpace::_allow_expansion(const AdjustContext& ctx) {
-    if (_disk_free_period < _disk_opts.idle_for_expansion_s) {
+    if (_disk_free_period < config::datacache_disk_idle_seconds_for_expansion) {
         return false;
     }
     if (ctx.total_cache_quota > 0) {
