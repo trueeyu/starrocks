@@ -426,7 +426,7 @@ public:
     Status get_dict_values(Column* column) override {
         auto ret = column->append_strings_overflow(_dict.data(), _dict.size(), _max_value_length);
         if (UNLIKELY(!ret)) {
-            return Status::InternalError("DictDecoder append strings to column failed");
+            return Status::InternalError("DictDecoder append strings to column failed 1");
         }
         return Status::OK();
     }
@@ -468,7 +468,7 @@ public:
         bool ret = column->append_strings_overflow(slices.data(), slices.size(), _max_value_length);
 
         if (UNLIKELY(!ret)) {
-            return Status::InternalError("DictDecoder append strings to column failed");
+            return Status::InternalError("DictDecoder append strings to column failed 2");
         }
         return Status::OK();
     }
@@ -634,7 +634,7 @@ private:
             }
             ret = dst->append_strings_overflow(_slices.data(), _slices.size(), _max_value_length);
             if (UNLIKELY(!ret)) {
-                return Status::InternalError("DictDecoder append strings to column failed");
+                return Status::InternalError("DictDecoder append strings to column failed 3");
             }
         }
         return Status::OK();
