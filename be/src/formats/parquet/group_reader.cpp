@@ -209,6 +209,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         }
 
         // deal with lazy columns
+        LOG(ERROR) << "LXH: LAZY: " << _lazy_column_indices.size();
         if (!_lazy_column_indices.empty()) {
             _lazy_column_needed = true;
             ChunkPtr lazy_chunk = _create_read_chunk(_lazy_column_indices, true);
