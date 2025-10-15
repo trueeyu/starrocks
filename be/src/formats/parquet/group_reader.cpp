@@ -298,7 +298,7 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
         auto type1 = tmp_column2->get_name();
         auto st = _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id));
         auto& tmp_column3 = (*chunk)->get_column_by_slot_id(slot_id);
-        auto type2 = tmp_column2->get_name();
+        auto type2 = tmp_column3->get_name();
         if (type1 != type2) {
             LOG(ERROR) << "LXH: TYPE_MATCH: " << slot_id << ":" << type1 << ":" << type2;
         }
