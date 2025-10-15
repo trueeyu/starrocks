@@ -290,21 +290,23 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
     DeferOp defer([&]() { _column_read_order_ctx->update_ctx(round_cost, first_selectivity); });
     size_t hit_count = 0;
 
-    auto tmp_chunk = (*chunk)->clone_empty_with_slot();
-
     for (int col_idx : read_order) {
         auto& column = _param.read_cols[col_idx];
         round_cost += _column_read_order_ctx->get_column_cost(col_idx);
         SlotId slot_id = column.slot_id();
         auto& tmp_column2 = (*chunk)->get_column_by_slot_id(slot_id);
+        auto type1 = tmp_column2->get_name();
         auto st = _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id));
+        auto& tmp_column3 = (*chunk)->get_column_by_slot_id(slot_id);
+        auto type2 = tmp_column2->get_name();
+        if (type1 != type2) {
+            LOG(ERROR) << "LXH: TYPE_MATCH: " << slot_id << ":" << type1 << ":" << type2;
+        }
         if (!st.ok()) {
             auto tmp_column = (*chunk)->get_column_by_slot_id(slot_id);
-            auto tmp_column3 = tmp_chunk->get_column_by_slot_id(slot_id);
             LOG(ERROR) << "LXH: C_ERROR: " << _column_readers[slot_id]->get_column_parquet_field()->debug_string();
             LOG(ERROR) << "LXH: C_COLUMN_1: " << slot_id << ":" << tmp_column->get_name();
             LOG(ERROR) << "LXH: C_COLUMN_2: " << slot_id << ":" << tmp_column2->get_name();
-            LOG(ERROR) << "LXH: C_COLUMN_3: " << slot_id << ":" << tmp_column3->get_name();
             return st;
         }
         //RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
