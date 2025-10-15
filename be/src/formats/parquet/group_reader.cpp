@@ -309,6 +309,8 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
         }
         //RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
 
+        LOG(ERROR) << "LXH: DICT_IND: " << _dict_column_indices.size();
+
         if (std::find(_dict_column_indices.begin(), _dict_column_indices.end(), col_idx) !=
             _dict_column_indices.end()) {
             SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
@@ -518,7 +520,6 @@ ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices,
     for (auto col_idx : column_indices) {
         SlotId slot_id = _param.read_cols[col_idx].slot_id();
         ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot_id);
-        LOG(ERROR) << "LXH: PRE: " << col_idx << ":" << slot_id << ":" << _param.read_cols[col_idx].slot_type().type << ":" << column->get_name();
         chunk->append_column(column, slot_id);
     }
     return chunk;
