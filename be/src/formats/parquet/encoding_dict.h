@@ -634,7 +634,7 @@ private:
             }
             ret = dst->append_strings_overflow(_slices.data(), _slices.size(), _max_value_length);
             if (UNLIKELY(!ret)) {
-                return Status::InternalError("DictDecoder append strings to column failed 3");
+                return Status::InternalError(fmt::format("DictDecoder append strings to column failed 3: {}", ret));
             }
         }
         return Status::OK();
