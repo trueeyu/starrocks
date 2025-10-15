@@ -204,7 +204,23 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         // we really have predicate to run round by round
         if (!_dict_column_indices.empty() || !_left_no_dict_filter_conjuncts_by_slot.empty()) {
             has_filter = true;
+            for (const auto& column : _param.read_cols) {
+                auto slot_id = column.slot_id();
+                auto& col1 = active_chunk->get_column_by_slot_id(slot_id);
+                auto& col2 = (*chunk)->get_column_by_slot_id(slot_id);
+                if (col1->get_name() != col2->get_name()) {
+                    LOG(ERROR) << "LXH: DIFF: " << slot_id << ":" << col1->get_name() << ":" << col2->get_name();
+                }
+            }
             ASSIGN_OR_RETURN(size_t hit_count, _read_range_round_by_round(r, &chunk_filter, &active_chunk));
+            for (const auto& column : _param.read_cols) {
+                auto slot_id = column.slot_id();
+                auto& col1 = active_chunk->get_column_by_slot_id(slot_id);
+                auto& col2 = (*chunk)->get_column_by_slot_id(slot_id);
+                if (col1->get_name() != col2->get_name()) {
+                    LOG(ERROR) << "LXH: DIFF: " << slot_id << ":" << col1->get_name() << ":" << col2->get_name();
+                }
+            }
             if (hit_count == 0) {
                 _param.stats->late_materialize_skip_rows += count;
                 continue;
