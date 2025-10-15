@@ -162,6 +162,15 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
     _read_chunk->reset();
 
     ChunkPtr active_chunk = _create_read_chunk(_active_column_indices, false);
+
+    for (const auto& column : _param.read_cols) {
+        auto slot_id = column.slot_id();
+        auto& col1 = active_chunk->get_column_by_slot_id(slot_id);
+        auto& col2 = (*chunk)->get_column_by_slot_id(slot_id);
+        if (col1->get_name() != col2->get_name()) {
+            LOG(ERROR) << "LXH: DIFF: " << slot_id << ":" << col1->get_name() << ":" << col2->get_name();
+        }
+    }
     // to complicity with _do_get_next will break and return even active_row is all filtered.
     // but a better choice is don't return until really have some results.
     while (true) {
