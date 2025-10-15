@@ -301,6 +301,9 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             auto tmp_column = (*chunk)->get_column_by_slot_id(slot_id);
             LOG(ERROR) << "LXH: C_ERROR: " << _column_readers[slot_id]->get_column_parquet_field()->debug_string();
             LOG(ERROR) << "LXH: C_COLUMN: " << slot_id << ":" << tmp_column->get_name();
+            for (size_t i = 0; i < _param.read_cols.size(); i++) {
+                LOG(ERROR) << "LXH: C_IDX: " << i << ":" << _param.read_cols[i].slot_id() << ":" << _param.read_cols[i].slot_type().type;
+            }
             return st;
         }
         //RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
