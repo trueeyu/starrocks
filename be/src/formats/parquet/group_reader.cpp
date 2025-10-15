@@ -208,31 +208,6 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
             RETURN_IF_ERROR(_read_range(_active_column_indices, r, nullptr, &active_chunk));
         }
 
-        // deal with lazy columns
-        LOG(ERROR) << "LXH: LAZY: " << _lazy_column_indices.size();
-        if (!_lazy_column_indices.empty()) {
-            _lazy_column_needed = true;
-            ChunkPtr lazy_chunk = _create_read_chunk(_lazy_column_indices, true);
-
-            if (has_filter) {
-                Range<uint64_t> lazy_read_range = r.filter(&chunk_filter);
-                // if all data is filtered, we have skipped early.
-                DCHECK(lazy_read_range.span_size() > 0);
-                Filter lazy_filter = {chunk_filter.begin() + lazy_read_range.begin() - r.begin(),
-                                      chunk_filter.begin() + lazy_read_range.end() - r.begin()};
-                RETURN_IF_ERROR(_read_range(_lazy_column_indices, lazy_read_range, &lazy_filter, &lazy_chunk, true));
-                lazy_chunk->filter_range(lazy_filter, 0, lazy_read_range.span_size());
-            } else {
-                RETURN_IF_ERROR(_read_range(_lazy_column_indices, r, nullptr, &lazy_chunk, true));
-            }
-
-            if (lazy_chunk->num_rows() != active_chunk->num_rows()) {
-                return Status::InternalError(strings::Substitute("Unmatched row count, active_rows=$0, lazy_rows=$1",
-                                                                 active_chunk->num_rows(), lazy_chunk->num_rows()));
-            }
-            active_chunk->merge(std::move(*lazy_chunk));
-        }
-
         *row_count = active_chunk->num_rows();
 
         SCOPED_RAW_TIMER(&_param.stats->group_dict_decode_ns);
@@ -585,15 +560,11 @@ Status GroupReader::_fill_dst_chunk(ChunkPtr& read_chunk, ChunkPtr* chunk) {
     read_chunk->check_or_die();
     for (const auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
+        auto& col1 = (*chunk)->get_column_by_slot_id(slot_id);
+        auto& col2 = read_chunk->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: FILL: " << col1->get_name() << ":" << col2->get_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                   read_chunk->get_column_by_slot_id(slot_id)));
-    }
-    if (_param.reserved_field_slots != nullptr) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),
-                                                                      read_chunk->get_column_by_slot_id(slot_id)));
-        }
     }
     read_chunk->check_or_die();
     return Status::OK();
