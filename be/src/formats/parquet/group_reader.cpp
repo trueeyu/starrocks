@@ -275,6 +275,13 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
 
     for (int col_idx : read_order) {
         auto& column = _param.read_cols[col_idx];
+        SlotId slot_id = column.slot_id();
+        auto tmp_column = (*chunk)->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: TEST: " << slot_id << ":" << tmp_column->get_name();
+    }
+
+    for (int col_idx : read_order) {
+        auto& column = _param.read_cols[col_idx];
         round_cost += _column_read_order_ctx->get_column_cost(col_idx);
         SlotId slot_id = column.slot_id();
         auto st = _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id));
@@ -282,9 +289,6 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             auto tmp_column = (*chunk)->get_column_by_slot_id(slot_id);
             LOG(ERROR) << "LXH: C_ERROR: " << _column_readers[slot_id]->get_column_parquet_field()->debug_string();
             LOG(ERROR) << "LXH: C_COLUMN: " << slot_id << ":" << tmp_column->get_name();
-            for (size_t i = 0; i < _param.read_cols.size(); i++) {
-                LOG(ERROR) << "LXH: C_IDX: " << i << ":" << _param.read_cols[i].slot_id() << ":" << _param.read_cols[i].slot_type().type;
-            }
             return st;
         }
         //RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
@@ -303,20 +307,6 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             }
         }
 
-        LOG(ERROR) << "LXH: NO_DICT: " << _left_no_dict_filter_conjuncts_by_slot.size();
-
-        if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) != _left_no_dict_filter_conjuncts_by_slot.end()) {
-            SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
-            std::vector<ExprContext*> ctxs = _left_no_dict_filter_conjuncts_by_slot.at(slot_id);
-            auto temp_chunk = std::make_shared<Chunk>();
-            temp_chunk->columns().reserve(1);
-            ColumnPtr& column = (*chunk)->get_column_by_slot_id(slot_id);
-            temp_chunk->append_column(column, slot_id);
-            ASSIGN_OR_RETURN(hit_count, ExecNode::eval_conjuncts_into_filter(ctxs, temp_chunk.get(), filter));
-            if (hit_count == 0) {
-                break;
-            }
-        }
         first_selectivity = first_selectivity < 0 ? hit_count * 1.0 / filter->size() : first_selectivity;
     }
 
