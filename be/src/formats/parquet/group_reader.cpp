@@ -501,7 +501,7 @@ ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices,
     for (auto col_idx : column_indices) {
         SlotId slot_id = _param.read_cols[col_idx].slot_id();
         ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot_id);
-        LOG(ERROR) << "LXH: PRE: " << col_idx << ":" << _param.read_cols[col_idx].slot_type().type << ":" << column->get_name();
+        LOG(ERROR) << "LXH: PRE: " << col_idx << ":" << slot_id << ":" << _param.read_cols[col_idx].slot_type().type << ":" << column->get_name();
         chunk->append_column(column, slot_id);
     }
     return chunk;
