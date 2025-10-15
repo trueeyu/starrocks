@@ -532,6 +532,7 @@ ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices,
         chunk->append_column(column, slot_id);
     }
     if (!ignore_reserved_fields && _param.reserved_field_slots != nullptr) {
+        LOG(ERROR) << "LXH: reserve: " << _param.reserved_field_slots->size();
         for (const auto* slot : *_param.reserved_field_slots) {
             ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot->id());
             chunk->append_column(column, slot->id());
