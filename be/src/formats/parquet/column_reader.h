@@ -112,6 +112,7 @@ public:
     explicit ColumnReader(const ParquetField* parquet_field) : _parquet_field(parquet_field) {}
     virtual ~ColumnReader() = default;
     virtual Status prepare() = 0;
+    virtual std::string type() = 0;
 
     virtual Status read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) = 0;
 

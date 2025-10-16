@@ -26,6 +26,8 @@ public:
 
     Status prepare() override { return _element_reader->prepare(); }
 
+    std::string type() override { return "ListColumnReader"; }
+
     Status read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) override;
 
     Status fill_dst_column(ColumnPtr& dst, ColumnPtr& src) override;
@@ -59,6 +61,8 @@ public:
                              std::unique_ptr<ColumnReader>&& value_reader)
             : ColumnReader(parquet_field), _key_reader(std::move(key_reader)), _value_reader(std::move(value_reader)) {}
     ~MapColumnReader() override = default;
+
+    std::string type() override { return "MapColumnReader"; }
 
     Status prepare() override {
         // Check must has one valid column reader
@@ -129,6 +133,8 @@ public:
                                 std::map<std::string, std::unique_ptr<ColumnReader>>&& child_readers)
             : ColumnReader(parquet_field), _child_readers(std::move(child_readers)) {}
     ~StructColumnReader() override = default;
+
+    std::string type() override { return "StructColumnReader"; }
 
     Status prepare() override {
         if (_child_readers.empty()) {

@@ -526,6 +526,11 @@ Status GroupReader::_rewrite_conjunct_ctxs_to_predicates(bool* is_group_filtered
 
 Status GroupReader::_fill_dst_chunk(ChunkPtr& read_chunk, ChunkPtr* chunk) {
     read_chunk->check_or_die();
+    for (size_t i = 0; i < _param.read_cols.size(); i++) {
+        auto slot_id = _param.read_cols[i].slot_id();
+        LOG(ERROR) << "LXH: FILL: " << i << ":" << _param.read_cols[i].slot_id()
+                   << ":" << _param.read_cols[i].slot_type() << ":" << _column_readers[slot_id]->type();
+    }
     for (const auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
         RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),

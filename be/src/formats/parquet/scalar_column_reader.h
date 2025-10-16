@@ -30,6 +30,8 @@ public:
 
     Status prepare() override { return Status::OK(); }
 
+    std::string type() override { return "FixedValueColumnReader"; }
+
     void get_levels(level_t** def_levels, level_t** rep_levels, size_t* num_levels) override {}
 
     void set_need_parse_levels(bool need_parse_levels) override {}
@@ -73,6 +75,8 @@ public:
               _opts(reader._opts),
               _chunk_metadata(reader._chunk_metadata) {}
     ~RawColumnReader() override = default;
+
+    std::string type() override { return "RawColumnReader"; }
 
     Status prepare() override {
         return StoredColumnReader::create(_opts, get_column_parquet_field(), get_chunk_metadata(), &_reader);

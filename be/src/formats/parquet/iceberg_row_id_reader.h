@@ -27,6 +27,8 @@ public:
 
     Status prepare() override { return Status::OK(); }
 
+    std::string type() override { return "IcebergRowIdReader"; }
+
     Status read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) override;
     void get_levels(level_t** def_levels, level_t** rep_levels, size_t* num_levels) override {}
     void set_need_parse_levels(bool need_parse_levels) override {}
