@@ -484,6 +484,7 @@ bool ScalarColumnReader::try_to_use_dict_filter(ExprContext* ctx, bool is_decode
 
 Status ScalarColumnReader::fill_dst_column(ColumnPtr& dst, ColumnPtr& src) {
     auto need_lazy_covert = _can_lazy_convert && _converter->need_convert;
+    LOG(ERROR) << "LXH: " << need_lazy_covert << ":" << _need_lazy_decode;
     if (_need_lazy_decode) {
         return _fill_dst_column_impl<true, false>(dst, src);
     } else if (need_lazy_covert) {
