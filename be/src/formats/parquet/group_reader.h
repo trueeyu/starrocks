@@ -125,7 +125,6 @@ public:
     // then we can use inited column collect io range.
     Status init();
     Status prepare();
-    const tparquet::ColumnChunk* get_chunk_metadata(SlotId slot_id);
     const ParquetField* get_column_parquet_field(SlotId slot_id);
     ColumnReader* get_column_reader(SlotId slot_id);
     uint64_t get_row_group_first_row() const { return _row_group_first_row; }
@@ -155,7 +154,7 @@ private:
     Status _create_column_readers();
     StatusOr<ColumnReaderPtr> _create_column_reader(const GroupReaderParam::Column& column);
     Status _prepare_column_readers() const;
-    ChunkPtr _create_read_chunk(const std::vector<int>& column_indices, bool ignore_reserved_field = false);
+    ChunkPtr _create_read_chunk(const std::vector<int>& column_indices);
     // Extract dict filter columns and conjuncts
     void _process_columns_and_conjunct_ctxs();
 

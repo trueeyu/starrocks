@@ -125,14 +125,6 @@ Status GroupReader::prepare() {
     return Status::OK();
 }
 
-const tparquet::ColumnChunk* GroupReader::get_chunk_metadata(SlotId slot_id) {
-    const auto& it = _column_readers.find(slot_id);
-    if (it == _column_readers.end()) {
-        return nullptr;
-    }
-    return it->second->get_chunk_metadata();
-}
-
 ColumnReader* GroupReader::get_column_reader(SlotId slot_id) {
     const auto& it = _column_readers.find(slot_id);
     if (it == _column_readers.end()) {
@@ -161,7 +153,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
     }
     _read_chunk->reset();
 
-    ChunkPtr active_chunk = _create_read_chunk(_active_column_indices, false);
+    ChunkPtr active_chunk = _create_read_chunk(_active_column_indices);
     LOG(ERROR) << "LXH: ACTIVE: " << active_chunk->debug_columns();
     if ((*chunk) != nullptr) {
         LOG(ERROR) << "LXH: PARAM: " << (*chunk)->debug_columns();
@@ -212,15 +204,8 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
 
 Status GroupReader::_read_range(const std::vector<int>& read_columns, const Range<uint64_t>& range,
                                 const Filter* filter, ChunkPtr* chunk, bool ignore_reserved_field) {
-    if (read_columns.empty() && _param.reserved_field_slots == nullptr) {
+    if (read_columns.empty()) {
         return Status::OK();
-    }
-    if (!ignore_reserved_field && _param.reserved_field_slots != nullptr) {
-        for (const auto& slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            RETURN_IF_ERROR(
-                    _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
-        }
     }
 
     for (int col_idx : read_columns) {
@@ -305,13 +290,6 @@ Status GroupReader::_create_column_readers() {
         }
     }
 
-    if (_param.reserved_field_slots != nullptr && !_param.reserved_field_slots->empty()) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            if (slot->col_name() == HdfsScanner::ICEBERG_ROW_ID) {
-                _column_readers.emplace(slot->id(), std::make_unique<IcebergRowIdReader>(_row_group_first_row_id));
-            }
-        }
-    }
     return Status::OK();
 }
 
@@ -391,24 +369,6 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
     }
 
     bool has_reserved_field_filter = false;
-    if (_param.reserved_field_slots != nullptr) {
-        for (auto* slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
-                for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
-                    DLOG(INFO) << "append reserved field slot conjunct ctx: " << ctx->root()->debug_string()
-                               << ", id: " << slot_id;
-                    if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
-                        _left_no_dict_filter_conjuncts_by_slot.end()) {
-                        _left_no_dict_filter_conjuncts_by_slot.insert({slot_id, std::vector<ExprContext*>{ctx}});
-                    } else {
-                        _left_no_dict_filter_conjuncts_by_slot[slot_id].emplace_back(ctx);
-                    }
-                }
-                has_reserved_field_filter = true;
-            }
-        }
-    }
 
     std::unordered_map<int, size_t> col_cost;
     size_t all_cost = 0;
@@ -449,19 +409,13 @@ bool GroupReader::_try_to_use_dict_filter(const GroupReaderParam::Column& column
     }
 }
 
-ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices, bool ignore_reserved_fields) {
+ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices) {
     auto chunk = std::make_shared<Chunk>();
     chunk->columns().reserve(column_indices.size());
     for (auto col_idx : column_indices) {
         SlotId slot_id = _param.read_cols[col_idx].slot_id();
         ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot_id);
         chunk->append_column(column, slot_id);
-    }
-    if (!ignore_reserved_fields && _param.reserved_field_slots != nullptr) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot->id());
-            chunk->append_column(column, slot->id());
-        }
     }
     return chunk;
 }
@@ -489,11 +443,6 @@ void GroupReader::_init_read_chunk() {
     std::vector<SlotDescriptor*> read_slots;
     for (const auto& column : _param.read_cols) {
         read_slots.emplace_back(column.slot_desc);
-    }
-    if (_param.reserved_field_slots != nullptr) {
-        for (auto* slot : *_param.reserved_field_slots) {
-            read_slots.push_back(slot);
-        }
     }
     size_t chunk_size = _param.chunk_size;
     _read_chunk = ChunkHelper::new_chunk(read_slots, chunk_size);
