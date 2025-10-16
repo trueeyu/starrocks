@@ -153,6 +153,8 @@ public:
         return RawColumnReader::prepare();
     }
 
+    std::string type() override { return "ScalarColumnReader"; }
+
     Status read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) override;
 
     bool try_to_use_dict_filter(ExprContext* ctx, bool is_decode_needed, const SlotId slotId,
@@ -236,6 +238,8 @@ public:
     bool try_to_use_dict_filter(ExprContext* ctx, bool is_decode_needed, const SlotId slotId,
                                 const std::vector<std::string>& sub_field_path, const size_t& layer) override;
 
+    std::string type() override { return "LowCardColumnReader"; }
+
     Status rewrite_conjunct_ctxs_to_predicate(bool* is_group_filtered, const std::vector<std::string>& sub_field_path,
                                               const size_t& layer) override {
         DCHECK_EQ(sub_field_path.size(), layer);
@@ -296,6 +300,8 @@ public:
     Status read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) override;
 
     Status fill_dst_column(ColumnPtr& dst, ColumnPtr& src) override;
+
+    std::string type() override { return "LowRowsColumnReader"; }
 
     StatusOr<bool> row_group_zone_map_filter(const std::vector<const ColumnPredicate*>& predicates,
                                              CompoundNodeType pred_relation, const uint64_t rg_first_row,

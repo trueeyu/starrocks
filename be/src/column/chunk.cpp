@@ -417,16 +417,10 @@ std::string Chunk::debug_columns() const {
     std::stringstream os;
     os << "nullable[";
     for (size_t col = 0; col < _columns.size() - 1; ++col) {
-        os << _columns[col]->is_nullable();
+        os << _columns[col]->debug_string();
         os << ", ";
     }
-    os << _columns[_columns.size() - 1]->is_nullable() << "]";
-    os << " const[";
-    for (size_t col = 0; col < _columns.size() - 1; ++col) {
-        os << _columns[col]->is_constant();
-        os << ", ";
-    }
-    os << _columns[_columns.size() - 1]->is_constant() << "]";
+    os << "]";
     return os.str();
 }
 
