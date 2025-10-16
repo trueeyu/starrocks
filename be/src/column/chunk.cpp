@@ -417,7 +417,7 @@ std::string Chunk::debug_columns() const {
     std::stringstream os;
     os << "nullable[";
     for (size_t col = 0; col < _columns.size() - 1; ++col) {
-        os << _columns[col]->debug_string();
+        os << _columns[col]->get_name();
         os << ", ";
     }
     os << "]";
