@@ -360,15 +360,14 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
         } else {
             if (config::parquet_late_materialization_enable) {
                 _lazy_column_indices.emplace_back(read_col_idx);
+                _column_readers[slot_id]->set_can_lazy_decode(true);
             } else {
                 _active_column_indices.emplace_back(read_col_idx);
             }
-            _column_readers[slot_id]->set_can_lazy_decode(true);
+            //_column_readers[slot_id]->set_can_lazy_decode(true);
         }
         ++read_col_idx;
     }
-
-    bool has_reserved_field_filter = false;
 
     std::unordered_map<int, size_t> col_cost;
     size_t all_cost = 0;
@@ -380,7 +379,7 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
     _column_read_order_ctx =
             std::make_unique<ColumnReadOrderCtx>(_active_column_indices, all_cost, std::move(col_cost));
 
-    if (_active_column_indices.empty() && !has_reserved_field_filter) {
+    if (_active_column_indices.empty()) {
         _active_column_indices.swap(_lazy_column_indices);
     }
 }
