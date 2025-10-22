@@ -453,7 +453,7 @@ Status ScalarColumnReader::read_range(const Range<uint64_t>& range, const Filter
                                             SIMD::count_nonzero(*filter) * 1.0 / filter->size() < FILTER_RATIO);
     ColumnContentType content_type = !_need_lazy_decode ? ColumnContentType::VALUE : ColumnContentType::DICT_CODE;
     auto need_lazy_covert = _can_lazy_convert && _converter->need_convert;
-    LOG(ERROR) << "LXH: DD: " << _need_lazy_decode << ":" << need_lazy_covert;
+    LOG(ERROR) << "LXH: DD: " << _need_lazy_decode << ":" << need_lazy_covert << ":" << content_type;
     if (_need_lazy_decode) {
         return _read_range_impl<true, false>(range, filter, content_type, dst);
     } else if (need_lazy_covert) {
