@@ -443,6 +443,7 @@ StatusOr<bool> RawColumnReader::_row_group_bloom_filter(const std::vector<const 
 // ScalarColumnReader
 
 Status ScalarColumnReader::read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) {
+    LOG(ERROR) << "LXH: read_range: " <<  _can_lazy_dict_decode;
     DCHECK(get_column_parquet_field()->is_nullable ? dst->is_nullable() : true);
     _need_lazy_decode =
             _dict_filter_ctx != nullptr || (_can_lazy_dict_decode && filter != nullptr &&
