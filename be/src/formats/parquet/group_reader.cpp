@@ -283,6 +283,8 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
     DeferOp defer([&]() { _column_read_order_ctx->update_ctx(round_cost, first_selectivity); });
     size_t hit_count = 0;
 
+    LOG(ERROR) << "LXH_RESER: " << (_param.reserved_field_slots != nullptr);
+
     if (_param.reserved_field_slots != nullptr) {
         for (const auto* slot : *_param.reserved_field_slots) {
             SlotId slot_id = slot->id();
