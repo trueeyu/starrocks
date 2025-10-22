@@ -512,6 +512,7 @@ Status ScalarColumnReader::_read_range_impl(const Range<uint64_t>& range, const 
         SCOPED_RAW_TIMER(&_opts.stats->column_read_ns);
         return _reader->read_range(range, filter, content_type, dst.get());
     } else {
+        LOG(ERROR) << "LXH: CONV: " << _converter->need_convert;
         if (!_converter->need_convert) {
             SCOPED_RAW_TIMER(&_opts.stats->column_read_ns);
             return _reader->read_range(range, filter, content_type, dst.get());
