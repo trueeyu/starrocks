@@ -268,8 +268,11 @@ Status GroupReader::_read_range(const std::vector<int>& read_columns, const Rang
     for (int col_idx : read_columns) {
         auto& column = _param.read_cols[col_idx];
         SlotId slot_id = column.slot_id();
-        LOG(ERROR) << "LXH: COLUMN: " << slot_id << ":" << column.slot_desc->col_name();
+        auto col1 = (*chunk)->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: COLUMN_1: " << slot_id << ":" << column.slot_desc->col_name() << ":" << col1->get_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
+        auto col2 = (*chunk)->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: COLUMN_2: " << slot_id << ":" << column.slot_desc->col_name() << ":" << col1->get_name();
     }
 
     return Status::OK();
@@ -283,46 +286,15 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
     DeferOp defer([&]() { _column_read_order_ctx->update_ctx(round_cost, first_selectivity); });
     size_t hit_count = 0;
 
-    if (_param.reserved_field_slots != nullptr) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            RETURN_IF_ERROR(
-                    _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
-            if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) != _left_no_dict_filter_conjuncts_by_slot.end()) {
-                SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
-                std::vector<ExprContext*> ctxs = _left_no_dict_filter_conjuncts_by_slot.at(slot_id);
-                auto temp_chunk = std::make_shared<Chunk>();
-                temp_chunk->columns().reserve(1);
-                ColumnPtr& column = (*chunk)->get_column_by_slot_id(slot_id);
-                temp_chunk->append_column(column, slot_id);
-                ASSIGN_OR_RETURN(hit_count, ExecNode::eval_conjuncts_into_filter(ctxs, temp_chunk.get(), filter));
-                if (hit_count == 0) {
-                    break;
-                }
-            }
-        }
-    }
     for (int col_idx : read_order) {
         auto& column = _param.read_cols[col_idx];
         round_cost += _column_read_order_ctx->get_column_cost(col_idx);
         SlotId slot_id = column.slot_id();
-        LOG(ERROR) << "LXH: COLUMN_START: " << slot_id << ":" << column.slot_desc->col_name();
+        auto col1 = (*chunk)->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: READ_RANGE_BY_ROUND_START: " << slot_id << ":" << column.slot_desc->col_name() << ":" << col1->get_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
-        LOG(ERROR) << "LXH: COLUMN_END: " << (*chunk)->get_column_by_slot_id(slot_id)->get_name();
-
-        if (std::find(_dict_column_indices.begin(), _dict_column_indices.end(), col_idx) !=
-            _dict_column_indices.end()) {
-            SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
-            SCOPED_RAW_TIMER(&_param.stats->group_dict_filter_ns);
-            for (const auto& sub_field_path : _dict_column_sub_field_paths[col_idx]) {
-                RETURN_IF_ERROR(_column_readers[slot_id]->filter_dict_column((*chunk)->get_column_by_slot_id(slot_id),
-                                                                             filter, sub_field_path, 0));
-                hit_count = SIMD::count_nonzero(*filter);
-                if (hit_count == 0) {
-                    return hit_count;
-                }
-            }
-        }
+        auto col2 = (*chunk)->get_column_by_slot_id(slot_id);
+        LOG(ERROR) << "LXH: READ_RANGE_BY_ROUND_END: " << slot_id << ":" << column.slot_desc->col_name() << ":" << col2->get_name();
 
         if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) != _left_no_dict_filter_conjuncts_by_slot.end()) {
             SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
