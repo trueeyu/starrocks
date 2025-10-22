@@ -426,6 +426,9 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
                 std::vector<std::string> sub_field_path;
                 if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
                     LOG(ERROR) << "LXH: USE_AS_DICT: " << column.slot_desc->col_name();
+                    for (auto& item : sub_field_path) {
+                        LOG(ERROR) << "LXH: TTT: " << item;
+                    }
                     _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
                 } else {
                     LOG(ERROR) << "LXH: USE_AS_NORMAL: " << column.slot_desc->col_name();
