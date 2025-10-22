@@ -261,6 +261,7 @@ Status GroupReader::_read_range(const std::vector<int>& read_columns, const Rang
     for (int col_idx : read_columns) {
         auto& column = _param.read_cols[col_idx];
         SlotId slot_id = column.slot_id();
+        LOG(ERRO) << "LXH: COLUMN: " << slot_id << ":" << column.slot_desc->col_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
     }
 
