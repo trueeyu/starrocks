@@ -299,6 +299,7 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
         auto& column = _param.read_cols[col_idx];
         round_cost += _column_read_order_ctx->get_column_cost(col_idx);
         SlotId slot_id = column.slot_id();
+        LOG(ERROR) << "LXH: COLUMN: " << slot_id << ":" << column.slot_desc->col_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
 
         if (std::find(_dict_column_indices.begin(), _dict_column_indices.end(), col_idx) !=
