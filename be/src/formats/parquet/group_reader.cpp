@@ -425,8 +425,10 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
             for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
                 std::vector<std::string> sub_field_path;
                 if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
+                    LOG(ERROR) << "LXH: USE_AS_DICT: " << column.slot_desc->col_name();
                     _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
                 } else {
+                    LOG(ERROR) << "LXH: USE_AS_NORMAL: " << column.slot_desc->col_name();
                     _left_conjunct_ctxs.emplace_back(ctx);
                     // used for struct col, some dict filter conjunct pushed down to leaf some left
                     if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
