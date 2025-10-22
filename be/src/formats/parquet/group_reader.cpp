@@ -198,6 +198,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         if (!_dict_column_indices.empty() || !_left_no_dict_filter_conjuncts_by_slot.empty()) {
             has_filter = true;
             ASSIGN_OR_RETURN(size_t hit_count, _read_range_round_by_round(r, &chunk_filter, &active_chunk));
+            LOG(ERROR) << "LXH: HIT_COUNT: " << hit_count;
             if (hit_count == 0) {
                 _param.stats->late_materialize_skip_rows += count;
                 continue;
