@@ -192,6 +192,8 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
             }
         }
 
+        LOG(ERROR) << "LXH: DICT: " << _dict_column_indices.size() << ":" << _left_no_dict_filter_conjuncts_by_slot.size();
+
         // we really have predicate to run round by round
         if (!_dict_column_indices.empty() || !_left_no_dict_filter_conjuncts_by_slot.empty()) {
             has_filter = true;
