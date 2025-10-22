@@ -569,6 +569,7 @@ void GroupReader::_use_as_dict_filter_column(int col_idx, SlotId slot_id, std::v
     if (_dict_column_sub_field_paths.find(col_idx) == _dict_column_sub_field_paths.end()) {
         _dict_column_sub_field_paths.insert({col_idx, std::vector<std::vector<std::string>>({sub_field_path})});
     } else {
+        LOG(ERROR) << "LXH_FUCK: " << sub_field_path;
         _dict_column_sub_field_paths[col_idx].emplace_back(sub_field_path);
     }
 }
