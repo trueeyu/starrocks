@@ -427,6 +427,7 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
     for (auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
         if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
+            LOG(ERROR) << "LXH: ERROR_1: " << column.slot_desc->col_name();
             for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
                 std::vector<std::string> sub_field_path;
                 if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
@@ -444,6 +445,7 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
             }
             _active_column_indices.emplace_back(read_col_idx);
         } else {
+            LOG(ERROR) << "LXH: ERROR_2: " << column.slot_desc->col_name();
             if (config::parquet_late_materialization_enable) {
                 _lazy_column_indices.emplace_back(read_col_idx);
             } else {
