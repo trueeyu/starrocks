@@ -286,6 +286,7 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
     LOG(ERROR) << "LXH_RESER: " << (_param.reserved_field_slots != nullptr);
 
     if (_param.reserved_field_slots != nullptr) {
+        LOG(ERROR) << "LXH_RESER2: " << _param.reserved_field_slots->size();
         for (const auto* slot : *_param.reserved_field_slots) {
             SlotId slot_id = slot->id();
             RETURN_IF_ERROR(
