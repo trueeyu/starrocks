@@ -444,6 +444,9 @@ StatusOr<bool> RawColumnReader::_row_group_bloom_filter(const std::vector<const 
 
 Status ScalarColumnReader::read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) {
     LOG(ERROR) << "LXH: read_range: " <<  _can_lazy_dict_decode << ":" << (_dict_filter_ctx != nullptr) << ":" << (filter != nullptr);
+    if (filter != nullptr) {
+        LOG(ERROR) << "LXH: RANGE2:" << SIMD::count_nonzero(*filter) << ":" << filter->size();
+    }
     DCHECK(get_column_parquet_field()->is_nullable ? dst->is_nullable() : true);
     _need_lazy_decode =
             _dict_filter_ctx != nullptr || (_can_lazy_dict_decode && filter != nullptr &&
