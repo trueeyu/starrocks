@@ -240,9 +240,12 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         SCOPED_RAW_TIMER(&_param.stats->group_dict_decode_ns);
         // convert from _read_chunk to chunk.
         for (auto col : active_chunk->columns()) {
-            LOG(ERROR) << "LXH: ACTIVE: " << col->get_name();
+            LOG(ERROR) << "LXH: ACTIVE START: " << col->get_name();
         }
         RETURN_IF_ERROR(_fill_dst_chunk(active_chunk, chunk));
+        for (auto col : active_chunk->columns()) {
+            LOG(ERROR) << "LXH: ACTIVE END: " << col->get_name();
+        }
         break;
     }
 
