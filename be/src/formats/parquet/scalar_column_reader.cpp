@@ -491,7 +491,7 @@ Status ScalarColumnReader::fill_dst_column(ColumnPtr& dst, ColumnPtr& src) {
         LOG(ERROR) << "LXH: lazy convert";
         return _fill_dst_column_impl<false, true>(dst, src);
     } else {
-        LOG(ERROR) << "LXH: no lazy"
+        LOG(ERROR) << "LXH: no lazy";
         return _fill_dst_column_impl<false, false>(dst, src);
     }
 }
