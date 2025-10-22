@@ -295,6 +295,7 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             _dict_column_indices.end()) {
             SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
             SCOPED_RAW_TIMER(&_param.stats->group_dict_filter_ns);
+            LOG(ERROR) << "LXH_TEST: " << _dict_column_sub_field_paths[col_idx].size();
             for (const auto& sub_field_path : _dict_column_sub_field_paths[col_idx]) {
                 RETURN_IF_ERROR(_column_readers[slot_id]->filter_dict_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                              filter, sub_field_path, 0));
