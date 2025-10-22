@@ -561,10 +561,12 @@ template <bool LAZY_DICT_DECODE, bool LAZY_CONVERT>
 Status ScalarColumnReader::_fill_dst_column_impl(ColumnPtr& dst, ColumnPtr& src) {
     if constexpr (LAZY_DICT_DECODE) {
         if (_dict_filter_ctx != nullptr && !_dict_filter_ctx->is_decode_needed) {
+            LOG(ERROR) << "LXH: dict filter";
             dst->append_default(src->size());
             src->reset_column();
         } else {
             static_assert(!LAZY_CONVERT, "LAZY_DICT_DECODE && LAZY_CONVERT == true is not supported by now");
+            LOG(ERROR) << "LXH: dict decode";
             RETURN_IF_ERROR(_dict_decode(dst, src));
         }
         src = _ori_column;
