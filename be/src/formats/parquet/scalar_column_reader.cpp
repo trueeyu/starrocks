@@ -490,14 +490,18 @@ bool ScalarColumnReader::try_to_use_dict_filter(ExprContext* ctx, bool is_decode
 Status ScalarColumnReader::fill_dst_column(ColumnPtr& dst, ColumnPtr& src) {
     auto need_lazy_covert = _can_lazy_convert && _converter->need_convert;
     if (_need_lazy_decode) {
-        LOG(ERROR) << "LXH: lazy decode";
-        return _fill_dst_column_impl<true, false>(dst, src);
+        LOG(ERROR) << "LXH: lazy decode start: " << src->get_name() << ":" << dst->get_name();
+        auto st = _fill_dst_column_impl<true, false>(dst, src);
+        LOG(ERROR) << "LXH: lazy decode end: " << src->get_name() << ":" << dst->get_name();
+        return st;
     } else if (need_lazy_covert) {
         LOG(ERROR) << "LXH: lazy convert";
         return _fill_dst_column_impl<false, true>(dst, src);
     } else {
-        LOG(ERROR) << "LXH: no lazy";
-        return _fill_dst_column_impl<false, false>(dst, src);
+        LOG(ERROR) << "LXH: no lazy start: " << src->get_name() << ":" << dst->get_name();
+        auto st = _fill_dst_column_impl<false, false>(dst, src);
+        LOG(ERROR) << "LXH: no lazy end: " << src->get_name() << ":" << dst->get_name();
+        return st;
     }
 }
 

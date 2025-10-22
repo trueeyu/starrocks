@@ -614,6 +614,7 @@ Status GroupReader::_fill_dst_chunk(ChunkPtr& read_chunk, ChunkPtr* chunk) {
     read_chunk->check_or_die();
     for (const auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
+        LOG(ERROR) << "LXH: FILL: " << column.slot_desc->col_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                   read_chunk->get_column_by_slot_id(slot_id)));
     }
