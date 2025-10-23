@@ -195,6 +195,10 @@ public:
     void collect_column_io_range(std::vector<io::SharedBufferedInputStream::IORange>* ranges, int64_t* end_offset,
                                  ColumnIOTypeFlags types, bool active) override;
 
+    void set_name(const std::string& name) override {
+        _name = name;
+    }
+
 private:
     template <bool LAZY_DICT_DECODE, bool LAZY_CONVERT>
     Status _read_range_impl(const Range<uint64_t>& range, const Filter* filter, ColumnContentType content_type,
@@ -209,6 +213,7 @@ private:
 
     std::unique_ptr<ColumnDictFilterContext> _dict_filter_ctx;
     const TypeDescriptor* _col_type = nullptr;
+    std::string _name;
 
     // _can_lazy_dict_decode means string type and all page dict code
     bool _can_lazy_dict_decode = false;

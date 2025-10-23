@@ -205,6 +205,7 @@ private:
 
     // columns(index) use as dict filter column
     std::vector<int> _dict_column_indices;
+    std::map<size_t, std::string> _slot_name_map;
     std::unordered_map<int, std::vector<std::vector<std::string>>> _dict_column_sub_field_paths;
     std::unordered_map<SlotId, std::vector<ExprContext*>> _left_no_dict_filter_conjuncts_by_slot;
 

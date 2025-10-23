@@ -319,34 +319,11 @@ Status GroupReader::_create_column_readers() {
     opts.datacache_options = _param.datacache_options;
     for (const auto& column : _param.read_cols) {
         ASSIGN_OR_RETURN(ColumnReaderPtr column_reader, _create_column_reader(column));
+        column_reader->set_name(column.slot_desc->col_name());
         _column_readers[column.slot_id()] = std::move(column_reader);
+        _slot_name_map[column.slot_id()] = column.slot_desc->col_name();
     }
 
-    // create for partition values
-    if (_param.partition_columns != nullptr && _param.partition_values != nullptr) {
-        for (size_t i = 0; i < _param.partition_columns->size(); i++) {
-            const auto& column = (*_param.partition_columns)[i];
-            const auto* slot_desc = column.slot_desc;
-            const auto value = (*_param.partition_values)[i];
-            _column_readers.emplace(slot_desc->id(), std::make_unique<FixedValueColumnReader>(value->get(0)));
-        }
-    }
-
-    // create for not existed column
-    if (_param.not_existed_slots != nullptr) {
-        for (size_t i = 0; i < _param.not_existed_slots->size(); i++) {
-            const auto* slot = (*_param.not_existed_slots)[i];
-            _column_readers.emplace(slot->id(), std::make_unique<FixedValueColumnReader>(kNullDatum));
-        }
-    }
-
-    if (_param.reserved_field_slots != nullptr && !_param.reserved_field_slots->empty()) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            if (slot->col_name() == HdfsScanner::ICEBERG_ROW_ID) {
-                _column_readers.emplace(slot->id(), std::make_unique<IcebergRowIdReader>(_row_group_first_row_id));
-            }
-        }
-    }
     return Status::OK();
 }
 
