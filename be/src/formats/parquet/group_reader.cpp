@@ -179,8 +179,6 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         bool has_filter = false;
         Filter chunk_filter(count, 1);
 
-        LOG(ERROR) << "LXH: DICT: " << _dict_column_indices.size() << ":" << _left_no_dict_filter_conjuncts_by_slot.size();
-
         // we really have predicate to run round by round
         if (!_dict_column_indices.empty() || !_left_no_dict_filter_conjuncts_by_slot.empty()) {
             has_filter = true;
@@ -275,12 +273,7 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             _dict_column_indices.end()) {
             SCOPED_RAW_TIMER(&_param.stats->expr_filter_ns);
             SCOPED_RAW_TIMER(&_param.stats->group_dict_filter_ns);
-            LOG(ERROR) << "LXH_TEST: " << _dict_column_sub_field_paths[col_idx].size();
             for (const auto& sub_field_path : _dict_column_sub_field_paths[col_idx]) {
-                LOG(ERROR) << "LXH_SUB_SIZE: " << sub_field_path.size();
-                for (auto& item : sub_field_path) {
-                    LOG(ERROR) << "LXH_SUB_FIELD: " << item;
-                }
                 RETURN_IF_ERROR(_column_readers[slot_id]->filter_dict_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                              filter, sub_field_path, 0));
                 hit_count = SIMD::count_nonzero(*filter);
@@ -405,17 +398,11 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
     for (auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
         if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
-            LOG(ERROR) << "LXH: ERROR_1: " << column.slot_desc->col_name();
             for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
                 std::vector<std::string> sub_field_path;
                 if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
-                    LOG(ERROR) << "LXH: USE_AS_DICT: " << column.slot_desc->col_name();
-                    for (auto& item : sub_field_path) {
-                        LOG(ERROR) << "LXH: TTT: " << item;
-                    }
                     _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
                 } else {
-                    LOG(ERROR) << "LXH: USE_AS_NORMAL: " << column.slot_desc->col_name();
                     _left_conjunct_ctxs.emplace_back(ctx);
                     // used for struct col, some dict filter conjunct pushed down to leaf some left
                     if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
@@ -428,7 +415,6 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
             }
             _active_column_indices.emplace_back(read_col_idx);
         } else {
-            LOG(ERROR) << "LXH: ERROR_2: " << column.slot_desc->col_name();
             if (config::parquet_late_materialization_enable) {
                 _lazy_column_indices.emplace_back(read_col_idx);
             } else {
@@ -546,10 +532,8 @@ void GroupReader::_use_as_dict_filter_column(int col_idx, SlotId slot_id, std::v
     _dict_column_indices.emplace_back(col_idx);
     if (_dict_column_sub_field_paths.find(col_idx) == _dict_column_sub_field_paths.end()) {
         _dict_column_sub_field_paths.insert({col_idx, std::vector<std::vector<std::string>>({sub_field_path})});
-        LOG(ERROR) << "LXH_FUCK_1: " << _dict_column_sub_field_paths[col_idx].size();
     } else {
         _dict_column_sub_field_paths[col_idx].emplace_back(sub_field_path);
-        LOG(ERROR) << "LXH_FUCK_2: " << _dict_column_sub_field_paths[col_idx].size();
     }
 }
 
@@ -585,21 +569,12 @@ StatusOr<bool> GroupReader::_filter_chunk_with_dict_filter(ChunkPtr* chunk, Filt
 }
 
 Status GroupReader::_fill_dst_chunk(ChunkPtr& read_chunk, ChunkPtr* chunk) {
-    read_chunk->check_or_die();
     for (const auto& column : _param.read_cols) {
         SlotId slot_id = column.slot_id();
         LOG(ERROR) << "LXH: FILL: " << column.slot_desc->col_name();
         RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                   read_chunk->get_column_by_slot_id(slot_id)));
     }
-    if (_param.reserved_field_slots != nullptr) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            RETURN_IF_ERROR(_column_readers[slot_id]->fill_dst_column((*chunk)->get_column_by_slot_id(slot_id),
-                                                                      read_chunk->get_column_by_slot_id(slot_id)));
-        }
-    }
-    read_chunk->check_or_die();
     return Status::OK();
 }
 

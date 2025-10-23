@@ -146,7 +146,6 @@ public:
     Status prepare() override {
         RETURN_IF_ERROR(ColumnConverterFactory::create_converter(*get_column_parquet_field(), *_col_type,
                                                                  _opts.timezone, &_converter));
-        LOG(ERROR) << "LXH_NEED_CONV: " << _converter->need_convert;
         return RawColumnReader::prepare();
     }
 
