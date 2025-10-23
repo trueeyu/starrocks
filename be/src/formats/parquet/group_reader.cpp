@@ -162,6 +162,10 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
     _read_chunk->reset();
 
     ChunkPtr active_chunk = _create_read_chunk(_active_column_indices, false);
+    for (auto& item : _param.read_cols) {
+        auto& col = active_chunk->get_column_by_slot_id(item.slot_id());
+        LOG(ERROR) << "LXH: ACTIVE INIT: " << item.slot_desc->col_name() << ":" << col->get_name();
+    }
     // to complicity with _do_get_next will break and return even active_row is all filtered.
     // but a better choice is don't return until really have some results.
     while (true) {
@@ -497,11 +501,6 @@ void GroupReader::_init_read_chunk() {
     std::vector<SlotDescriptor*> read_slots;
     for (const auto& column : _param.read_cols) {
         read_slots.emplace_back(column.slot_desc);
-    }
-    if (_param.reserved_field_slots != nullptr) {
-        for (auto* slot : *_param.reserved_field_slots) {
-            read_slots.push_back(slot);
-        }
     }
     size_t chunk_size = _param.chunk_size;
     _read_chunk = ChunkHelper::new_chunk(read_slots, chunk_size);
