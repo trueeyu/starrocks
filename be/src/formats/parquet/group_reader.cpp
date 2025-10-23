@@ -201,6 +201,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         }
 
         // deal with lazy columns
+        LOG(ERROR) << "LXH_LAZY: " << _lazy_column_indices.empty();
         if (!_lazy_column_indices.empty()) {
             _lazy_column_needed = true;
             ChunkPtr lazy_chunk = _create_read_chunk(_lazy_column_indices, true);
@@ -239,7 +240,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         }
         break;
     }
-    LOG(ERROR) << "=====================";
+    LOG(ERROR) << "LXH: =====================";
 
     return _range_iter.has_more() ? Status::OK() : Status::EndOfFile("");
 }
