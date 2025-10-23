@@ -443,9 +443,9 @@ StatusOr<bool> RawColumnReader::_row_group_bloom_filter(const std::vector<const 
 // ScalarColumnReader
 
 Status ScalarColumnReader::read_range(const Range<uint64_t>& range, const Filter* filter, ColumnPtr& dst) {
-    LOG(ERROR) << "LXH: read_range: " <<  _can_lazy_dict_decode << ":" << (_dict_filter_ctx != nullptr) << ":" << (filter != nullptr);
+    LOG(ERROR) << "LXH: read_range: " << _name << ":" <<  _can_lazy_dict_decode << ":" << (_dict_filter_ctx != nullptr) << ":" << (filter != nullptr);
     if (filter != nullptr) {
-        LOG(ERROR) << "LXH: RANGE2:" << SIMD::count_nonzero(*filter) << ":" << filter->size();
+        LOG(ERROR) << "LXH: RANGE2:" << _name << ":" << SIMD::count_nonzero(*filter) << ":" << filter->size();
     }
     DCHECK(get_column_parquet_field()->is_nullable ? dst->is_nullable() : true);
     _need_lazy_decode =
@@ -453,7 +453,7 @@ Status ScalarColumnReader::read_range(const Range<uint64_t>& range, const Filter
                                             SIMD::count_nonzero(*filter) * 1.0 / filter->size() < FILTER_RATIO);
     ColumnContentType content_type = !_need_lazy_decode ? ColumnContentType::VALUE : ColumnContentType::DICT_CODE;
     auto need_lazy_covert = _can_lazy_convert && _converter->need_convert;
-    LOG(ERROR) << "LXH: DD: " << _need_lazy_decode << ":" << need_lazy_covert << ":" << content_type;
+    LOG(ERROR) << "LXH: DD: " << _name << ":" << _need_lazy_decode << ":" << need_lazy_covert << ":" << content_type;
     if (_need_lazy_decode) {
         return _read_range_impl<true, false>(range, filter, content_type, dst);
     } else if (need_lazy_covert) {
@@ -490,17 +490,17 @@ bool ScalarColumnReader::try_to_use_dict_filter(ExprContext* ctx, bool is_decode
 Status ScalarColumnReader::fill_dst_column(ColumnPtr& dst, ColumnPtr& src) {
     auto need_lazy_covert = _can_lazy_convert && _converter->need_convert;
     if (_need_lazy_decode) {
-        LOG(ERROR) << "LXH: lazy decode start: " << src->get_name() << ":" << dst->get_name();
+        LOG(ERROR) << "LXH: lazy decode start: " << _name << ":" << src->get_name() << ":" << dst->get_name();
         auto st = _fill_dst_column_impl<true, false>(dst, src);
-        LOG(ERROR) << "LXH: lazy decode end: " << src->get_name() << ":" << dst->get_name();
+        LOG(ERROR) << "LXH: lazy decode end: " << _name << ":" << src->get_name() << ":" << dst->get_name();
         return st;
     } else if (need_lazy_covert) {
-        LOG(ERROR) << "LXH: lazy convert";
+        LOG(ERROR) << "LXH: lazy convert: " << _name;
         return _fill_dst_column_impl<false, true>(dst, src);
     } else {
-        LOG(ERROR) << "LXH: no lazy start: " << src->get_name() << ":" << dst->get_name();
+        LOG(ERROR) << "LXH: no lazy start: " << _name << ":" << src->get_name() << ":" << dst->get_name();
         auto st = _fill_dst_column_impl<false, false>(dst, src);
-        LOG(ERROR) << "LXH: no lazy end: " << src->get_name() << ":" << dst->get_name();
+        LOG(ERROR) << "LXH: no lazy end: " << _name << ":" << src->get_name() << ":" << dst->get_name();
         return st;
     }
 }
