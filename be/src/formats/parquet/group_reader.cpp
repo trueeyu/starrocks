@@ -162,10 +162,7 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
     _read_chunk->reset();
 
     ChunkPtr active_chunk = _create_read_chunk(_active_column_indices, false);
-    for (auto& item : _param.read_cols) {
-        auto& col = active_chunk->get_column_by_slot_id(item.slot_id());
-        LOG(ERROR) << "LXH: ACTIVE INIT: " << item.slot_desc->col_name() << ":" << col->get_name();
-    }
+
     // to complicity with _do_get_next will break and return even active_row is all filtered.
     // but a better choice is don't return until really have some results.
     while (true) {
@@ -182,6 +179,11 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
 
         bool has_filter = false;
         Filter chunk_filter(count, 1);
+
+        for (auto& item : _param.read_cols) {
+            auto& col = active_chunk->get_column_by_slot_id(item.slot_id());
+            LOG(ERROR) << "LXH: ACTIVE INIT: " << item.slot_desc->col_name() << ":" << col->get_name();
+        }
 
         // we really have predicate to run round by round
         if (!_dict_column_indices.empty() || !_left_no_dict_filter_conjuncts_by_slot.empty()) {
