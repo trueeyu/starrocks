@@ -194,9 +194,11 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
             }
             active_chunk->filter_range(chunk_filter, 0, count);
         } else if (has_filter) {
+            LOG(ERROR) << "LXH has filter";
             RETURN_IF_ERROR(_read_range(_active_column_indices, r, &chunk_filter, &active_chunk));
             active_chunk->filter_range(chunk_filter, 0, count);
         } else {
+            LOG(ERROR) << "LXH no filter";
             RETURN_IF_ERROR(_read_range(_active_column_indices, r, nullptr, &active_chunk));
         }
 
