@@ -387,26 +387,6 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
         ++read_col_idx;
     }
 
-    bool has_reserved_field_filter = false;
-    if (_param.reserved_field_slots != nullptr) {
-        for (auto* slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
-                for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
-                    DLOG(INFO) << "append reserved field slot conjunct ctx: " << ctx->root()->debug_string()
-                               << ", id: " << slot_id;
-                    if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
-                        _left_no_dict_filter_conjuncts_by_slot.end()) {
-                        _left_no_dict_filter_conjuncts_by_slot.insert({slot_id, std::vector<ExprContext*>{ctx}});
-                    } else {
-                        _left_no_dict_filter_conjuncts_by_slot[slot_id].emplace_back(ctx);
-                    }
-                }
-                has_reserved_field_filter = true;
-            }
-        }
-    }
-
     std::unordered_map<int, size_t> col_cost;
     size_t all_cost = 0;
     for (int col_idx : _active_column_indices) {
@@ -416,10 +396,6 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
     }
     _column_read_order_ctx =
             std::make_unique<ColumnReadOrderCtx>(_active_column_indices, all_cost, std::move(col_cost));
-
-    if (_active_column_indices.empty() && !has_reserved_field_filter) {
-        _active_column_indices.swap(_lazy_column_indices);
-    }
 }
 
 bool GroupReader::_try_to_use_dict_filter(const GroupReaderParam::Column& column, ExprContext* ctx,
@@ -465,13 +441,6 @@ void GroupReader::collect_io_ranges(std::vector<io::SharedBufferedInputStream::I
         const auto& column = _param.read_cols[index];
         SlotId slot_id = column.slot_id();
         _column_readers[slot_id]->collect_column_io_range(ranges, &end, types, true);
-    }
-
-    // collect io of lazy column
-    for (const auto& index : _lazy_column_indices) {
-        const auto& column = _param.read_cols[index];
-        SlotId slot_id = column.slot_id();
-        _column_readers[slot_id]->collect_column_io_range(ranges, &end, types, false);
     }
     *end_offset = end;
 }
