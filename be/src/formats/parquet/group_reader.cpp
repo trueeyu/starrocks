@@ -235,10 +235,11 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         RETURN_IF_ERROR(_fill_dst_chunk(active_chunk, chunk));
         for (auto& item : _param.read_cols) {
             auto& col = active_chunk->get_column_by_slot_id(item.slot_id());
-            LOG(ERROR) << "LXH: ACTIVE START: " << item.slot_desc->col_name() << ":" << col->get_name();
+            LOG(ERROR) << "LXH: ACTIVE END: " << item.slot_desc->col_name() << ":" << col->get_name();
         }
         break;
     }
+    LOG(ERROR) << "=====================";
 
     return _range_iter.has_more() ? Status::OK() : Status::EndOfFile("");
 }
