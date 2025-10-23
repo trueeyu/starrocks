@@ -297,6 +297,10 @@ StatusOr<size_t> GroupReader::_read_range_round_by_round(const Range<uint64_t>& 
             SCOPED_RAW_TIMER(&_param.stats->group_dict_filter_ns);
             LOG(ERROR) << "LXH_TEST: " << _dict_column_sub_field_paths[col_idx].size();
             for (const auto& sub_field_path : _dict_column_sub_field_paths[col_idx]) {
+                LOG(ERROR) << "LXH_SUB_SIZE: " << sub_field_path.size();
+                for (auto& item : sub_field_path) {
+                    LOG(ERROR) << "LXH_SUB_FIELD: " << item;
+                }
                 RETURN_IF_ERROR(_column_readers[slot_id]->filter_dict_column((*chunk)->get_column_by_slot_id(slot_id),
                                                                              filter, sub_field_path, 0));
                 hit_count = SIMD::count_nonzero(*filter);
