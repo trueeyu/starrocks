@@ -179,19 +179,6 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
         bool has_filter = false;
         Filter chunk_filter(count, 1);
 
-        // row id filter
-        if (nullptr != _skip_rows_ctx && _skip_rows_ctx->has_skip_rows()) {
-            {
-                SCOPED_RAW_TIMER(&_param.stats->build_rowid_filter_ns);
-                ASSIGN_OR_RETURN(has_filter,
-                                 _skip_rows_ctx->deletion_bitmap->fill_filter(r.begin(), r.end(), chunk_filter));
-
-                if (SIMD::count_nonzero(chunk_filter.data(), count) == 0) {
-                    continue;
-                }
-            }
-        }
-
         LOG(ERROR) << "LXH: DICT: " << _dict_column_indices.size() << ":" << _left_no_dict_filter_conjuncts_by_slot.size();
 
         // we really have predicate to run round by round
@@ -254,15 +241,8 @@ Status GroupReader::get_next(ChunkPtr* chunk, size_t* row_count) {
 
 Status GroupReader::_read_range(const std::vector<int>& read_columns, const Range<uint64_t>& range,
                                 const Filter* filter, ChunkPtr* chunk, bool ignore_reserved_field) {
-    if (read_columns.empty() && _param.reserved_field_slots == nullptr) {
+    if (read_columns.empty()) {
         return Status::OK();
-    }
-    if (!ignore_reserved_field && _param.reserved_field_slots != nullptr) {
-        for (const auto& slot : *_param.reserved_field_slots) {
-            SlotId slot_id = slot->id();
-            RETURN_IF_ERROR(
-                    _column_readers[slot_id]->read_range(range, filter, (*chunk)->get_column_by_slot_id(slot_id)));
-        }
     }
 
     for (int col_idx : read_columns) {
@@ -525,12 +505,6 @@ ChunkPtr GroupReader::_create_read_chunk(const std::vector<int>& column_indices,
         SlotId slot_id = _param.read_cols[col_idx].slot_id();
         ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot_id);
         chunk->append_column(column, slot_id);
-    }
-    if (!ignore_reserved_fields && _param.reserved_field_slots != nullptr) {
-        for (const auto* slot : *_param.reserved_field_slots) {
-            ColumnPtr& column = _read_chunk->get_column_by_slot_id(slot->id());
-            chunk->append_column(column, slot->id());
-        }
     }
     return chunk;
 }
