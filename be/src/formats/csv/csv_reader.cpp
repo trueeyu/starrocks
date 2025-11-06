@@ -595,6 +595,9 @@ void CSVReader::split_record(const Record& record, Fields* columns) const {
         columns->emplace_back(value, ptr - value);
     }
     LOG(ERROR) << "LXH: COLUMN_SIZE: " << columns->size();
+    for (const auto& item : *columns) {
+        LOG(ERROR) << "LXH: ITEM: " << PrintVisible::print_visible(item.to_string());
+    }
 }
 
 size_t CSVReader::buff_capacity() const {
