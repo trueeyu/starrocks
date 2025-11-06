@@ -33,6 +33,7 @@
 namespace starrocks::csv {
 
 static std::unique_ptr<Converter> create_converter(const TypeDescriptor& t, const bool is_hive) {
+    LOG(ERROR) << "LXH: CONV: " << t.type;
     switch (t.type) {
     case TYPE_BOOLEAN:
         return std::make_unique<BooleanConverter>();
