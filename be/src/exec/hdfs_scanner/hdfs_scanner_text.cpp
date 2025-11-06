@@ -281,6 +281,7 @@ Status HdfsTextScanner::do_open(RuntimeState* runtime_state) {
     }
 
     RETURN_IF_ERROR(_build_hive_column_name_2_index());
+    LOG(ERROR) << "LXH: MATERIALIZED BEFORE";
     for (const auto& column : _scanner_ctx.materialized_columns) {
         // We don't care about _invalid_field_as_null here, if get converter failed,
         // we use DefaultValueConverter instead.
@@ -288,6 +289,7 @@ Status HdfsTextScanner::do_open(RuntimeState* runtime_state) {
         DCHECK(converter != nullptr);
         _converters.emplace_back(std::move(converter));
     }
+    LOG(ERROR) << "LXH: MATERIALIZED AFTER";
     return Status::OK();
 }
 
