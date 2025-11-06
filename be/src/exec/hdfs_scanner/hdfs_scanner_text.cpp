@@ -375,6 +375,7 @@ Status HdfsTextScanner::_parse_csv(int chunk_size, ChunkPtr* chunk) {
         size_t num_materialize_columns = _scanner_ctx.materialized_columns.size();
 
         // Fill materialize columns first, then fill partition column
+        LOG(ERROR) << "LXH: NUM_MATER: " << num_materialize_columns << ":" << fields.size();
         for (int j = 0; j < num_materialize_columns; j++) {
             const auto& column_info = _scanner_ctx.materialized_columns[j];
 
@@ -384,6 +385,7 @@ Status HdfsTextScanner::_parse_csv(int chunk_size, ChunkPtr* chunk) {
             if (csv_index < fields.size()) {
                 const Slice& field = fields[csv_index];
                 options.type_desc = &(column_info.slot_type());
+                LOG(ERROR) << "LXH: READ_STRING: " << options.type_desc->type;
                 if (!_converters[j]->read_string(column, field, options)) {
                     return Status::InternalError(
                             strings::Substitute("CSV converter encountered an error for field: $0, column name is: $1",
