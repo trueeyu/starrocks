@@ -494,6 +494,7 @@ Status CSVReader::next_record(Record* record) {
     }
     char* d;
     size_t pos = 0;
+    LOG(ERROR) << "LXH: RAW: " << _buff.base_ptr();
     while ((d = _find_line_delimiter(_buff, pos)) == nullptr) {
         pos = _buff.available();
         _buff.compact();
