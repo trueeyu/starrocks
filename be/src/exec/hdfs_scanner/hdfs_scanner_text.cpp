@@ -91,6 +91,18 @@ Status HdfsScannerCSVReader::next_record(Record* record) {
     return Status::OK();
 }
 
+std::string print_visible(const std::string& s) {
+    std::stringstream ss;
+    for (char c : s) {
+        if (isprint(static_cast<unsigned char>(c))) {  // 判断是否为可打印字符
+            ss << c;
+        } else {
+            ss << "[" << static_cast<int>(c) << "]";  // 输出不可见字符的 ASCII 码
+        }
+    }
+    return ss.str();
+}
+
 Status HdfsScannerCSVReader::_fill_buffer() {
     if (_should_stop_scan) {
         return Status::EndOfFile("");
@@ -104,7 +116,7 @@ Status HdfsScannerCSVReader::_fill_buffer() {
     // For uncompressed text file, we can split csv file into chunks and process chunks parallelly.
     // For compressed text file, we only can parse csv file in sequential way.
     ASSIGN_OR_RETURN(s.size, _file->read(s.data, std::min(s.size, _file_length - _offset)));
-    LOG(ERROR) << "LXH: BUFFER: " << s.size << ":" << s;
+    LOG(ERROR) << "LXH: BUFFER: " << print_visible(s.to_string());
     _offset += s.size;
     _buff.add_limit(s.size);
     if (s.size == 0) {
