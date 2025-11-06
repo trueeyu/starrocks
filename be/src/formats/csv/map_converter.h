@@ -23,8 +23,8 @@ public:
     explicit MapConverter(std::unique_ptr<Converter> key_converter, std::unique_ptr<Converter> value_converter)
             : _key_converter(std::move(key_converter)),
               _value_converter(std::move(value_converter)),
-              _map_delimiter(3),
-              _kv_delimiter(2) {}
+              _map_delimiter(','),
+              _kv_delimiter(':') {}
 
     Status write_string(OutputStream* os, const Column& column, size_t row_num, const Options& options) const override;
     Status write_quoted_string(OutputStream* os, const Column& column, size_t row_num,

@@ -113,6 +113,7 @@ bool MapConverter::read_string(Column* column, const Slice& s, const Options& op
     auto* keys = map->keys_column().get();
     auto* values = map->values_column().get();
     std::vector<Slice> key_fields, value_fields;
+    LOG(ERROR) << "LXH: str: " << s.size << ":" << s;
     if (!s.empty() && !split_map_key_value(s, key_fields, value_fields)) {
         return false;
     }
