@@ -77,7 +77,7 @@ Status HdfsScannerCSVReader::next_record(Record* record) {
         return Status::EndOfFile("");
     }
     RETURN_IF_ERROR(CSVReader::next_record(record));
-    LOG(ERROR) << "LXH: RECORED: " << record;
+    LOG(ERROR) << "LXH: RECORED: " << record->size << ":" << *record;
     // We should still read if remain_length is zero(we stop right at row delimiter)
     // because next scan range will skip a record till row delimiter.
     // so it's current reader's responsibility to consume this record.
