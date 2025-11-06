@@ -77,6 +77,7 @@ Status HdfsScannerCSVReader::next_record(Record* record) {
         return Status::EndOfFile("");
     }
     RETURN_IF_ERROR(CSVReader::next_record(record));
+    LOG(ERROR) << "LXH: RECORED: " << record;
     // We should still read if remain_length is zero(we stop right at row delimiter)
     // because next scan range will skip a record till row delimiter.
     // so it's current reader's responsibility to consume this record.
@@ -349,6 +350,7 @@ Status HdfsTextScanner::_parse_csv(int chunk_size, ChunkPtr* chunk) {
     CSVReader::Fields fields{};
     for (; rows_read < chunk_size; rows_read++) {
         CSVReader::Record record{};
+        LOG(ERROR) << "LXH: Start read record";
         Status status = down_cast<HdfsScannerCSVReader*>(_reader.get())->next_record(&record);
         if (status.is_end_of_file()) {
             break;
