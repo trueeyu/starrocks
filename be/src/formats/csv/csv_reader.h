@@ -106,6 +106,20 @@ struct CSVColumn {
     CSVColumn(size_t pos, size_t len, bool isEscape) : start_pos(pos), length(len), is_escaped_column(isEscape) {}
 };
 
+struct PrintVisible {
+    static std::string print_visible(const std::string& s) {
+        std::stringstream ss;
+        for (char c : s) {
+            if (isprint(static_cast<unsigned char>(c))) { // 判断是否为可打印字符
+                ss << c;
+            } else {
+                ss << "[" << static_cast<int>(c) << "]"; // 输出不可见字符的 ASCII 码
+            }
+        }
+        return ss.str();
+    }
+};
+
 struct CSVRow {
     std::vector<CSVColumn> columns;
     size_t parsed_start;

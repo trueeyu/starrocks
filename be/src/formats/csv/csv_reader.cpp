@@ -548,18 +548,6 @@ Status CSVReader::_expand_buffer_loosely() {
     return Status::OK();
 }
 
-std::string print_visible(const std::string& s) {
-    std::stringstream ss;
-    for (char c : s) {
-        if (isprint(static_cast<unsigned char>(c))) {  // 判断是否为可打印字符
-            ss << c;
-        } else {
-            ss << "[" << static_cast<int>(c) << "]";  // 输出不可见字符的 ASCII 码
-        }
-    }
-    return ss.str();
-}
-
 void CSVReader::split_record(const Record& record, Fields* columns) const {
     DCHECK(_column_delimiter_length > 0);
 
@@ -567,7 +555,7 @@ void CSVReader::split_record(const Record& record, Fields* columns) const {
     const char* ptr = record.data;
     const size_t size = record.size;
 
-    LOG(ERROR) << "LXH: SPLIT_RECORD: " << print_visible(_parse_options.column_delimiter);
+    LOG(ERROR) << "LXH: SPLIT_RECORD: " << PrintVisible::print_visible(_parse_options.column_delimiter);
 
     if (_column_delimiter_length == 1) {
         for (size_t i = 0; i < size; ++i, ++ptr) {
