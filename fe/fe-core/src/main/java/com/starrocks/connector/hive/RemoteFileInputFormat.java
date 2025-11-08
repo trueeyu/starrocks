@@ -31,7 +31,6 @@ public enum RemoteFileInputFormat {
     TEXTFILE,
     AVRO,
     RCBINARY,
-    RCTEXT,
     SEQUENCE,
     UNKNOWN;
     private static final ImmutableMap<String, RemoteFileInputFormat> CLASS_NAME_TO_INPUT_FORMAT =
@@ -82,7 +81,7 @@ public enum RemoteFileInputFormat {
             case ORC -> THdfsFileFormat.ORC;
             case TEXTFILE -> THdfsFileFormat.TEXT;
             case AVRO -> THdfsFileFormat.AVRO;
-            case RCBINARY, RCTEXT -> THdfsFileFormat.RC_FILE;
+            case RCBINARY -> THdfsFileFormat.RC_FILE;
             case SEQUENCE -> THdfsFileFormat.SEQUENCE_FILE;
             default -> THdfsFileFormat.UNKNOWN;
         };
