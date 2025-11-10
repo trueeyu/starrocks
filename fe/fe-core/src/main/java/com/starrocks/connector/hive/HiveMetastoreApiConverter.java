@@ -161,6 +161,12 @@ public class HiveMetastoreApiConverter {
     public static HiveTable toHiveTable(Table table, String catalogName) {
         validateHiveTableType(table.getTableType());
 
+        Map<String, String> properties = toHiveProperties(table);
+        HiveStorageFormat storageFormat = HiveStorageFormat.get(
+                properties.getOrDefault(HIVE_TABLE_INPUT_FORMAT, HiveStorageFormat.UNSUPPORTED.getInputFormat()),
+                properties.getOrDefault(HIVE_TABLE_SERDE_LIB, HiveStorageFormat.UNSUPPORTED.getSerde()));
+
+
         HiveTable.Builder tableBuilder = HiveTable.builder()
                 .setId(ConnectorTableId.CONNECTOR_ID_GENERATOR.getNextId().asInt())
                 .setTableName(table.getTableName())
@@ -177,11 +183,9 @@ public class HiveMetastoreApiConverter {
                 .setFullSchema(toFullSchemasForHiveTable(table))
                 .setComment(toComment(table.getParameters()))
                 .setTableLocation(toTableLocation(table.getSd(), table.getParameters()))
-                .setProperties(toHiveProperties(table,
-                        HiveStorageFormat.get(fromHdfsInputFormatClass(table.getSd().getInputFormat()).name())))
+                .setProperties(properties)
                 .setSerdeProperties(toSerDeProperties(table))
-                .setStorageFormat(
-                        HiveStorageFormat.get(fromHdfsInputFormatClass(table.getSd().getInputFormat()).name()))
+                .setStorageFormat(storageFormat)
                 .setCreateTime(table.getCreateTime())
                 .setHiveTableType(HiveTable.HiveTableType.fromString(table.getTableType()));
 
@@ -198,7 +202,7 @@ public class HiveMetastoreApiConverter {
         apiTable.setDbName(table.getCatalogDBName());
         apiTable.setTableName(table.getCatalogTableName());
         apiTable.setTableType(table.getHiveTableType().name());
-        
+
         ConnectContext ctx = ConnectContext.get();
         if (ctx != null && StringUtils.isNotBlank(ctx.getQualifiedUser())) {
             apiTable.setOwner(ctx.getQualifiedUser());
@@ -206,7 +210,7 @@ public class HiveMetastoreApiConverter {
             String hadoopUserName = System.getenv("HADOOP_USER_NAME");
             apiTable.setOwner(hadoopUserName);
         }
-        
+
         apiTable.setParameters(toApiTableProperties(table));
         apiTable.setPartitionKeys(table.getPartitionColumns().stream()
                 .map(HiveMetastoreApiConverter::toMetastoreApiFieldSchema)
@@ -393,34 +397,24 @@ public class HiveMetastoreApiConverter {
         return result;
     }
 
-    public static Map<String, String> toHiveProperties(Table metastoreTable, HiveStorageFormat storageFormat) {
+    public static Map<String, String> toHiveProperties(Table metastoreTable) {
         Map<String, String> hiveProperties = Maps.newHashMap();
+        StorageDescriptor sd = metastoreTable.getSd();
 
-        String serdeLib = storageFormat.getSerde();
-        if (!Strings.isNullOrEmpty(serdeLib)) {
-            // metaStore has more accurate information about serde
-            if (metastoreTable.getSd() != null && metastoreTable.getSd().getSerdeInfo() != null &&
-                    metastoreTable.getSd().getSerdeInfo().getSerializationLib() != null) {
-                serdeLib = metastoreTable.getSd().getSerdeInfo().getSerializationLib();
-            }
-            hiveProperties.put(HIVE_TABLE_SERDE_LIB, serdeLib);
+        if (sd.getSerdeInfo() != null && sd.getSerdeInfo().getSerializationLib() != null) {
+            hiveProperties.put(HIVE_TABLE_SERDE_LIB, sd.getSerdeInfo().getSerializationLib());
         }
 
-        String inputFormat = storageFormat.getInputFormat();
-        if (!Strings.isNullOrEmpty(inputFormat)) {
-            hiveProperties.put(HIVE_TABLE_INPUT_FORMAT, inputFormat);
+        if (sd.getInputFormat() != null) {
+            hiveProperties.put(HIVE_TABLE_INPUT_FORMAT, sd.getInputFormat());
         }
 
-        String dataColumnNames = metastoreTable.getSd().getCols().stream()
-                .map(FieldSchema::getName).collect(Collectors.joining(","));
-
+        String dataColumnNames = sd.getCols().stream().map(FieldSchema::getName).collect(Collectors.joining(","));
         if (!Strings.isNullOrEmpty(dataColumnNames)) {
             hiveProperties.put(HIVE_TABLE_COLUMN_NAMES, dataColumnNames);
         }
 
-        String dataColumnTypes = metastoreTable.getSd().getCols().stream()
-                .map(FieldSchema::getType).collect(Collectors.joining("#"));
-
+        String dataColumnTypes = sd.getCols().stream().map(FieldSchema::getType).collect(Collectors.joining("#"));
         if (!Strings.isNullOrEmpty(dataColumnTypes)) {
             hiveProperties.put(HIVE_TABLE_COLUMN_TYPES, dataColumnTypes);
         }

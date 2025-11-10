@@ -103,7 +103,8 @@ public class FileTable extends Table {
     }
 
     public HiveStorageFormat getFileFormat() {
-        String format = fileProperties.get(JSON_KEY_FORMAT).toLowerCase();
+        String format = fileProperties.get(JSON_KEY_FORMAT);
+
         return SUPPORTED_FORMAT.getOrDefault(format, HiveStorageFormat.UNSUPPORTED);
     }
 

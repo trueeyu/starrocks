@@ -199,7 +199,7 @@ public class HiveMetastoreOperations {
                 .setFullSchema(stmt.getColumns())
                 .setTableLocation(tablePath == null ? null : tablePath.toString())
                 .setProperties(stmt.getProperties())
-                .setStorageFormat(HiveStorageFormat.get(properties.getOrDefault(FILE_FORMAT, "parquet")))
+                .setStorageFormat(HiveStorageFormat.get(properties.getOrDefault(FILE_FORMAT, HiveStorageFormat.PARQUET.name())))
                 .setCreateTime(System.currentTimeMillis())
                 .setHiveTableType(tableType);
         Table table = builder.build();
