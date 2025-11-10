@@ -18,6 +18,7 @@ import com.starrocks.connector.exception.StarRocksConnectorException;
 import com.starrocks.thrift.THdfsFileFormat;
 
 import java.util.Map;
+import java.util.Objects;
 
 import static com.starrocks.connector.hive.HiveClassNames.AVRO_INPUT_FORMAT_CLASS;
 import static com.starrocks.connector.hive.HiveClassNames.AVRO_OUTPUT_FORMAT_CLASS;
@@ -80,6 +81,9 @@ public enum HiveStorageFormat {
     private final String outputFormat;
 
     public static HiveStorageFormat get(String format) {
+        if (Objects.equals(format, "RCFILE")) {
+            return RCBINARY;
+        }
         for (HiveStorageFormat storageFormat : HiveStorageFormat.values()) {
             if (storageFormat.name().equalsIgnoreCase(format)) {
                 return storageFormat;
