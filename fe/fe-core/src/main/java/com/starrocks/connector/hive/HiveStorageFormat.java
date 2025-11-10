@@ -81,7 +81,7 @@ public enum HiveStorageFormat {
     private final String outputFormat;
 
     public static HiveStorageFormat get(String format) {
-        if (Objects.equals(format, "RCFILE")) {
+        if (format.equals("RCFILE")) {
             return RCBINARY;
         }
         for (HiveStorageFormat storageFormat : HiveStorageFormat.values()) {
