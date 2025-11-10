@@ -18,7 +18,6 @@ import com.starrocks.connector.exception.StarRocksConnectorException;
 import com.starrocks.thrift.THdfsFileFormat;
 
 import java.util.Map;
-import java.util.Objects;
 
 import static com.starrocks.connector.hive.HiveClassNames.AVRO_INPUT_FORMAT_CLASS;
 import static com.starrocks.connector.hive.HiveClassNames.AVRO_OUTPUT_FORMAT_CLASS;
