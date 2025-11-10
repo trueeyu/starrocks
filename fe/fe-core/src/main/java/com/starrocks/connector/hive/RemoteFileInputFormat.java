@@ -81,7 +81,7 @@ public enum RemoteFileInputFormat {
             case ORC -> THdfsFileFormat.ORC;
             case TEXTFILE -> THdfsFileFormat.TEXT;
             case AVRO -> THdfsFileFormat.AVRO;
-            case RCBINARY -> THdfsFileFormat.RC_FILE;
+            case RCFILE -> THdfsFileFormat.RC_FILE;
             case SEQUENCE -> THdfsFileFormat.SEQUENCE_FILE;
             default -> THdfsFileFormat.UNKNOWN;
         };
