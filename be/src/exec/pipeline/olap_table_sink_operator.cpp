@@ -151,6 +151,7 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
     if (num_rows == 0) {
         return Status::OK();
     }
+    LOG(ERROR) << "LXH: " << chunk->debug_row(0);
 
     // send_chunk_nonblocking() will return EAGAIN to avoid block
     auto st = _sink->send_chunk_nonblocking(state, chunk.get());
