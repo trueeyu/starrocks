@@ -70,7 +70,7 @@ StorageEngine* init_storage_engine(GlobalEnv* global_env, std::vector<StorePath>
     EngineOptions options;
     options.store_paths = std::move(paths);
     options.backend_uid = UniqueId::gen_uid();
-    std::cout << "LXH: seed: " << options.backend_uid.to_string();
+    std::cout << "LXH: seed: " << options.backend_uid.to_string() << std::endl;
     options.compaction_mem_tracker = global_env->compaction_mem_tracker();
     options.update_mem_tracker = global_env->update_mem_tracker();
     options.need_write_cluster_id = !as_cn;
