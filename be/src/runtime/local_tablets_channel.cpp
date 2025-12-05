@@ -204,7 +204,9 @@ void LocalTabletsChannel::add_segment(brpc::Controller* cntl, const PTabletWrite
     req.response = response;
     req.done = done;
 
+    LOG(ERROR) << "LXH: BEFORE write_segment";
     delta_writer->write_segment(req);
+    LOG(ERROR) << "LXH: AFTER write_segment";
     closure_guard.release();
 }
 
