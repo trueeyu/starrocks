@@ -64,6 +64,7 @@ DeltaWriter::DeltaWriter(DeltaWriterOptions opt, MemTracker* mem_tracker, Storag
           _with_rollback_log(true) {}
 
 DeltaWriter::~DeltaWriter() {
+    LOG(ERROR) << "LXH: BEFORE DESTRUCT DELTA WRITER";
     SCOPED_THREAD_LOCAL_MEM_SETTER(_mem_tracker, false);
     if (_flush_token != nullptr) {
         _flush_token->shutdown();
@@ -88,6 +89,7 @@ DeltaWriter::~DeltaWriter() {
     _mem_table_sink.reset();
     _rowset_writer.reset();
     _cur_rowset.reset();
+    LOG(ERROR) << "LXH: AFTER DESTRUCT DELTA WRITER";
 }
 
 void DeltaWriter::_garbage_collection() {
