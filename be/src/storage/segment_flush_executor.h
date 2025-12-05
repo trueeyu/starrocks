@@ -71,7 +71,7 @@ public:
 
     void shutdown();
 
-    Status wait();
+    //Status wait();
 
     const SegmentFlushStat& get_stat() const { return _stat; }
 

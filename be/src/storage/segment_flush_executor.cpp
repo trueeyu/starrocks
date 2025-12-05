@@ -204,10 +204,10 @@ void SegmentFlushToken::shutdown() {
     _flush_token->shutdown();
 }
 
-Status SegmentFlushToken::wait() {
-    _flush_token->wait();
-    return status();
-}
+//Status SegmentFlushToken::wait() {
+//    _flush_token->wait();
+//    return status();
+//}
 
 Status SegmentFlushExecutor::init(const std::vector<DataDir*>& data_dirs) {
     int data_dir_num = static_cast<int>(data_dirs.size());
