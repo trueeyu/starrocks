@@ -841,7 +841,9 @@ void DeltaWriter::abort(bool with_log) {
         _replicate_token->shutdown();
     }
     if (_segment_flush_token != nullptr) {
+        LOG(ERROR) << "LXH: BEFORE SHUTDOWN";
         _segment_flush_token->shutdown();
+        LOG(ERROR) << "LXH: AFTER SHUTDOWN";
     }
 
     VLOG(2) << "Aborted delta writer. tablet_id: " << _tablet->tablet_id() << " txn_id: " << _opt.txn_id
