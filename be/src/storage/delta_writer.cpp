@@ -464,6 +464,8 @@ Status DeltaWriter::write(const Chunk& chunk, const uint32_t* indexes, uint32_t 
     }
     Status st;
     ASSIGN_OR_RETURN(auto full, _mem_table->insert(chunk, indexes, from, size));
+    full = true;
+    LOG(ERROR) << "LXH: full: " << full;
     _last_write_ts = butil::gettimeofday_s();
     _write_buffer_size = _mem_table->write_buffer_size();
     if (_mem_tracker->limit_exceeded()) {
