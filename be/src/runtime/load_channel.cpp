@@ -308,9 +308,11 @@ void LoadChannel::abort() {
     _span->AddEvent("cancel");
     auto scoped = trace::Scope(_span);
     std::lock_guard l(_lock);
+    LOG(ERROR) << "LXH: BEFORE abort";
     for (auto& it : _tablets_channels) {
         it.second->abort();
     }
+    LOG(ERROR) << "LXH: AFTER abort";
 }
 
 void LoadChannel::abort(const TabletsChannelKey& key, const std::vector<int64_t>& tablet_ids,
