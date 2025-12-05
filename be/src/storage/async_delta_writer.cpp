@@ -43,7 +43,9 @@ int AsyncDeltaWriter::_execute(void* meta, bthread::TaskIterator<AsyncDeltaWrite
         pending_time_ns += MonotonicNanos() - iter->create_time_ns;
         Status st;
         if (iter->abort) {
+            LOG(ERROR) << "LXH: before _execute" ;
             writer->abort(iter->abort_with_log);
+            LOG(ERROR) << "LXH: after _execute" ;
             continue;
         }
         if (iter->chunk != nullptr && iter->indexes_size > 0) {
