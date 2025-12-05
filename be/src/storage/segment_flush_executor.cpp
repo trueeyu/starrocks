@@ -187,6 +187,9 @@ Status SegmentFlushToken::submit(DeltaWriter* writer, brpc::Controller* cntl,
     }
 
     auto task = std::make_shared<SegmentFlushTask>(this, writer, cntl, request, response, done);
+    LOG(ERROR) << "LXH: Before token submit";
+    sleep(5);
+    LOG(ERROR) << "LXH: After token submit";
     auto submit_st = _flush_token->submit(task);
     if (submit_st.ok()) {
         _stat.num_pending_tasks.fetch_add(1, std::memory_order_relaxed);
