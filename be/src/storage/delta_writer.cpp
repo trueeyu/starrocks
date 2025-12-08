@@ -587,12 +587,12 @@ Status DeltaWriter::flush_memtable_async(bool eos) {
                             if (seg) {
                                 _tablet->add_in_writing_data_size(_opt.txn_id, seg->data_size());
                             }
-                            if (eos) {
-                                LOG(ERROR) << "LXH: eos submit replicate token before";
+                            if (!eos) {
+                                LOG(ERROR) << "LXH: neos submit replicate token before";
                                 sleep(5);
-                                LOG(ERROR) << "LXH: eos submit replicate token after";
+                                LOG(ERROR) << "LXH: neos submit replicate token after";
                             } else {
-                                LOG(ERROR) << "LXH: submit replicate token after";
+                                LOG(ERROR) << "LXH: eos submit replicate token after";
                             }
                             if (_opt.immutable_tablet_size > 0 &&
                                 _tablet->data_size() + _tablet->in_writing_data_size() > _opt.immutable_tablet_size) {
