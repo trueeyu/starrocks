@@ -54,6 +54,7 @@ public:
     ~MemtableFlushTask() override = default;
 
     void run() override {
+        LOG(ERROR) << "LXH: MEM TASK start: " << _eos;
         _flush_token->_stats.queueing_memtable_num--;
         _flush_token->_stats.pending_time_ns += MonotonicNanos() - _create_time_ns;
         std::unique_ptr<SegmentPB> segment = nullptr;
@@ -79,6 +80,7 @@ public:
         }
 
         if (_cb) {
+            LOG(ERROR) << "LXH: MEM TASK callback: " << _eos;
             _cb(std::move(segment), _eos, flush_data_size);
         }
     }
