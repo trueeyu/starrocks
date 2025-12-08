@@ -589,6 +589,7 @@ void LocalTabletsChannel::_flush_stale_memtables() {
             }
             // has write means active writer
             ++total_active_writer;
+            need_flush = true;
             if (need_flush) {
                 VLOG(2) << "Flush stale memtable tablet_id: " << tablet_id << " txn_id: " << _txn_id
                         << " partition_id: " << writer->partition_id() << " is_immutable: " << writer->is_immutable()
