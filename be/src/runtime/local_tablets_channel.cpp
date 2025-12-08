@@ -566,7 +566,8 @@ void LocalTabletsChannel::_flush_stale_memtables() {
     for (auto& [tablet_id, writer] : _delta_writers) {
         bool need_flush = false;
         auto last_write_ts = writer->last_write_ts();
-        if (last_write_ts > 0) {
+        if (last_write_ts >= 0) {
+            /*
             if (_has_immutable_partition(writer->partition_id())) {
                 if (high_mem_usage) {
                     // immutable tablet flush stale memtable immediately when high mem usage
@@ -587,6 +588,7 @@ void LocalTabletsChannel::_flush_stale_memtables() {
                     need_flush = true;
                 }
             }
+            */
             // has write means active writer
             ++total_active_writer;
             need_flush = true;
