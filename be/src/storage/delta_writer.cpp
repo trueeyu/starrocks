@@ -477,7 +477,7 @@ Status DeltaWriter::write(const Chunk& chunk, const uint32_t* indexes, uint32_t 
         st = _flush_memtable();
         RETURN_IF_ERROR(_reset_mem_table());
     } else if (full) {
-        LOG(ERROR) << "LXH: flush async 1";
+        LOG(ERROR) << "LXH: flush async 1: " << _mem_table->write_buffer_rows();
         st = flush_memtable_async();
         LOG(ERROR) << "LXH: flush async 2";
         ADD_COUNTER_RELAXED(_stats.memtable_full_count, 1);
