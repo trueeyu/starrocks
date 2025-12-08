@@ -52,6 +52,7 @@ int AsyncDeltaWriter::_execute(void* meta, bthread::TaskIterator<AsyncDeltaWrite
             st = writer->write(*iter->chunk, iter->indexes, 0, iter->indexes_size);
         }
 
+        LOG(ERROR) << "LXH: after write: " << iter->flush_after_write << "," << iter->commit_after_write;
         if (iter->flush_after_write) {
             flush_after_write = true;
             continue;
