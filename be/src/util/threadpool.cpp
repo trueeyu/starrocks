@@ -429,6 +429,7 @@ Status ThreadPool::do_submit(std::shared_ptr<Runnable> r, ThreadPoolToken* token
     // Of course, we never create more than _max_threads threads no matter what.
     int threads_from_this_submit = token->is_active() && token->mode() == ExecutionMode::SERIAL ? 0 : 1;
     if (_thread_pool_name == "memtable_flush") {
+        LOG(ERROR) << "LXH: min_threads: " << _min_threads;
         LOG(ERROR) << "LXH: thread_from_this_submit: " << token->is_active() << ":" << (token->mode() == ExecutionMode::SERIAL) << ":" << threads_from_this_submit;
     }
     int inactive_threads = _num_threads + _num_threads_pending_start - _active_threads;
