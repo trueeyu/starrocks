@@ -298,6 +298,8 @@ public:
 
     void bind_cpus(const CpuUtil::CpuIds& cpuids, const std::vector<CpuUtil::CpuIds>& borrowed_cpuids);
 
+    void set_thread_pool_name(const std::string& name) { _thread_pool_name = name; }
+
 private:
     friend class ThreadPoolBuilder;
     friend class ThreadPoolToken;
@@ -438,6 +440,8 @@ private:
 
     ThreadPool(const ThreadPool&) = delete;
     const ThreadPool& operator=(const ThreadPool&) = delete;
+
+    std::string _thread_pool_name;
 };
 
 // Entry point for token-based task submission and blocking for a particular

@@ -225,10 +225,12 @@ Status SegmentFlushExecutor::init(const std::vector<DataDir*>& data_dirs) {
     int data_dir_num = static_cast<int>(data_dirs.size());
     int min_threads = std::max<int>(1, config::flush_thread_num_per_store);
     int max_threads = std::max(data_dir_num * min_threads, min_threads);
-    return ThreadPoolBuilder("segment_flush")
+    Status st = ThreadPoolBuilder("segment_flush")
             .set_min_threads(min_threads)
             .set_max_threads(max_threads)
             .build(&_flush_pool);
+    _flush_pool->set_thread_pool_name("segment_flush");
+    return st;
 }
 
 Status SegmentFlushExecutor::update_max_threads(int max_threads) {
