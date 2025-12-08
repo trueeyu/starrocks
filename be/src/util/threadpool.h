@@ -321,13 +321,13 @@ private:
     Status init();
 
     // Dispatcher responsible for dequeueing and executing the tasks
-    void dispatch_thread();
+    void dispatch_thread(int num);
 
     // Create new thread.
     //
     // REQUIRES: caller has incremented '_num_threads_pending_start' ahead of this call.
     // NOTE: For performance reasons, _lock should not be held.
-    Status create_thread();
+    Status create_thread(int num);
 
     // Aborts if the current thread is a member of this thread pool.
     void check_not_pool_thread_unlocked();

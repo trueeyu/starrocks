@@ -582,7 +582,7 @@ void ThreadPool::bind_cpus(const CpuUtil::CpuIds& cpuids, const std::vector<CpuU
     }
 }
 
-void ThreadPool::dispatch_thread() {
+void ThreadPool::dispatch_thread(int num) {
     std::unique_lock l(_lock);
     auto current_thread = Thread::current_thread();
     InsertOrDie(&_threads, current_thread);
@@ -599,6 +599,9 @@ void ThreadPool::dispatch_thread() {
     _bind_cpus_inlock(current_thread, _num_threads - 1, _cpuids, _borrowed_cpuids);
 
     while (true) {
+        if (_thread_pool_name == "memtable_flush") {
+            LOG(ERROR) << "LXH: thread: " << num;
+        }
         // Note: Status::Aborted() is used to indicate normal shutdown.
         if (!_pool_status.ok()) {
             VLOG(2) << "DispatchThread exiting: " << _pool_status.to_string();
@@ -747,8 +750,8 @@ void ThreadPool::dispatch_thread() {
     current_thread->set_idle(true);
 }
 
-Status ThreadPool::create_thread() {
-    return Thread::create("thread pool", _name, &ThreadPool::dispatch_thread, this, nullptr);
+Status ThreadPool::create_thread(int num) {
+    return Thread::create("thread pool", _name, &ThreadPool::dispatch_thread, this, num, nullptr);
 }
 
 void ThreadPool::check_not_pool_thread_unlocked() {
