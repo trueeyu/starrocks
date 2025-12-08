@@ -107,9 +107,13 @@ Status FlushToken::submit(std::unique_ptr<MemTable> memtable, bool eos,
     SCOPED_THREAD_LOCAL_MEM_SETTER(nullptr, false);
     auto task = std::make_shared<MemtableFlushTask>(this, std::move(memtable), eos, std::move(cb));
     _stats.queueing_memtable_num++;
-    LOG(ERROR) << "LXH: BEFORE FLUSH MEMTABLE: " << eos << ":" << memtable->write_buffer_rows();
+    if (memtable != nullptr) {
+        LOG(ERROR) << "LXH: BEFORE FLUSH MEMTABLE: " << eos << ":" << memtable->write_buffer_rows();
+    } else {
+        LOG(ERROR) << "LXH: BEFORE FLUSH MEMTABLE: " << eos;
+    }
     Status st = _flush_token->submit(std::move(task));
-    LOG(ERROR) << "LXH: AFTER FLUSH MEMTABLE: "<< eos << ":" << memtable->write_buffer_rows();
+    LOG(ERROR) << "LXH: AFTER FLUSH MEMTABLE: "<< eos;
     return st;
 }
 
