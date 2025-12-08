@@ -581,6 +581,11 @@ Status DeltaWriter::flush_memtable_async(bool eos) {
             // Although there maybe no data, but we still need send eos to seconary replica
             if ((_mem_table != nullptr && _mem_table->get_result_chunk() != nullptr) || eos) {
                 auto replicate_token = _replicate_token.get();
+                if (eos) {
+                    LOG(ERROR) << "LXH: eos chunk before";
+                    sleep(10);
+                    LOG(ERROR) << "LXH: eos chunk after";
+                }
                 return _flush_token->submit(
                         std::move(_mem_table), eos,
                         [replicate_token, this](SegmentPBPtr seg, bool eos, int64_t flush_data_size) {
