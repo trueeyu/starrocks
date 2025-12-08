@@ -49,7 +49,9 @@ int AsyncDeltaWriter::_execute(void* meta, bthread::TaskIterator<AsyncDeltaWrite
             continue;
         }
         if (iter->chunk != nullptr && iter->indexes_size > 0) {
+            LOG(ERROR) << "LXH: write chunk before";
             st = writer->write(*iter->chunk, iter->indexes, 0, iter->indexes_size);
+            LOG(ERROR) << "LXH: write chunk after";
         }
 
         LOG(ERROR) << "LXH: after write: " << iter->flush_after_write << "," << iter->commit_after_write;
