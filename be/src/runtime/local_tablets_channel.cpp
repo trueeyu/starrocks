@@ -115,6 +115,7 @@ DeltaWriterOptions LocalTabletsChannel::_build_delta_writer_options(const PTable
     options.column_to_expr_value = &(_column_to_expr_value);
     options.merge_condition = params.merge_condition();
     options.partial_update_mode = params.partial_update_mode();
+    LOG(ERROR) << "LXH: IMUTABLE_TABLET_SIZE: " << params.immutable_tablet_size();
     options.immutable_tablet_size = params.immutable_tablet_size();
 
     if (params.is_replicated_storage()) {
