@@ -42,12 +42,12 @@ public:
     ~SegmentReplicateTask() override = default;
 
     void run() override {
-        if (_eos) {
-            LOG(ERROR) << "LXH: eos Replicate Task before sleep";
-            sleep(3);
-            LOG(ERROR) << "LXH: eos Replicate Task after sleep";
-        } else {
+        if (!_eos) {
             LOG(ERROR) << "LXH: no Replicate Task before sleep";
+            sleep(3);
+            LOG(ERROR) << "LXH: no Replicate Task after sleep";
+        } else {
+            LOG(ERROR) << "LXH: eos Replicate Task before sleep";
         }
         auto& stat = _replicate_token->_stat;
         stat.num_pending_tasks.fetch_add(-1, std::memory_order_relaxed);
