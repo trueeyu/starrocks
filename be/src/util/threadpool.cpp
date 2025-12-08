@@ -284,7 +284,7 @@ Status ThreadPool::init() {
     _pool_status = Status::OK();
     _num_threads_pending_start = _min_threads;
     for (int i = 0; i < _min_threads; i++) {
-        Status status = create_thread();
+        Status status = create_thread(i);
         if (!status.ok()) {
             shutdown();
             return status;
@@ -478,7 +478,7 @@ Status ThreadPool::do_submit(std::shared_ptr<Runnable> r, ThreadPoolToken* token
     unique_lock.unlock();
 
     if (need_a_thread) {
-        Status status = create_thread();
+        Status status = create_thread(100);
         if (!status.ok()) {
             unique_lock.lock();
             _num_threads_pending_start--;
