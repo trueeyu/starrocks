@@ -585,6 +585,7 @@ Status DeltaWriter::flush_memtable_async(bool eos) {
                             if (seg) {
                                 _tablet->add_in_writing_data_size(_opt.txn_id, seg->data_size());
                             }
+                            LOG(ERROR) << "LXH: submit replicate token: " << _opt.immutable_tablet_size;
                             if (_opt.immutable_tablet_size > 0 &&
                                 _tablet->data_size() + _tablet->in_writing_data_size() > _opt.immutable_tablet_size) {
                                 _is_immutable.store(true, std::memory_order_relaxed);
