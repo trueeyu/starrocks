@@ -595,6 +595,7 @@ Status DeltaWriter::flush_memtable_async(bool eos) {
                                     << ", tablet_data_size=" << _tablet->data_size()
                                     << ", in_writing_data_size=" << _tablet->in_writing_data_size()
                                     << ", is_immutable=" << _is_immutable.load(std::memory_order_relaxed);
+                            LOG(ERROR) << "LXH: submit replicate token: " << eos;
                             auto st = replicate_token->submit(std::move(seg), eos);
                             if (!st.ok()) {
                                 LOG(WARNING) << "Failed to submit sync tablet " << _tablet->tablet_id()
