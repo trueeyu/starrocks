@@ -219,6 +219,7 @@ void LoadChannelMgr::_open(LoadChannelOpenContext open_context) {
 
 void LoadChannelMgr::add_chunk(const PTabletWriterAddChunkRequest& request, PTabletWriterAddBatchResult* response) {
     VLOG(2) << "Current memory usage=" << _mem_tracker->consumption() << " limit=" << _mem_tracker->limit();
+    LOG(ERROR) << "LXH: LoadChannelMgr: add_chunk: " << request.eos();
     UniqueId load_id(request.id());
     auto channel = _find_load_channel(load_id);
     if (channel != nullptr) {
@@ -230,6 +231,7 @@ void LoadChannelMgr::add_chunk(const PTabletWriterAddChunkRequest& request, PTab
 }
 
 void LoadChannelMgr::add_chunks(const PTabletWriterAddChunksRequest& request, PTabletWriterAddBatchResult* response) {
+    LOG(ERROR) << "LXH: LoadChannelMgr: add_chunks: " << request.requests_size();
     VLOG(2) << "Current memory usage=" << _mem_tracker->consumption() << " limit=" << _mem_tracker->limit();
     UniqueId load_id(request.id());
     auto channel = _find_load_channel(load_id);
