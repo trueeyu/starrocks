@@ -64,17 +64,18 @@ public:
     // Run the task if release() is not called which will flush the segment, and respond the brpc
     // BackendInternalServiceImpl<T>::tablet_writer_add_segment.
     void run() override {
-        /*
-        LOG(ERROR) << "LXH: Before sleep";
-        sleep(5);
-        LOG(ERROR) << "LXH: Fater sleep";
-        */
         if (_request->has_eos() && _request->eos()) {
-            LOG(ERROR) << "LXH: eos segment flush";
+            if (_request->has_segment()) {
+                LOG(ERROR) << "LXH: eos segment flush: " << _request->segment().num_rows();
+            } else {
+                LOG(ERROR) << "LXH: eos segment flush: ";
+            }
         } else {
-            LOG(ERROR) << "LXH: no segment flush before";
-            sleep(3);
-            LOG(ERROR) << "LXH: no segment flush after";
+            if (_request->has_segment()) {
+                LOG(ERROR) << "LXH: no eos segment flush: " << _request->segment().num_rows();
+            } else {
+                LOG(ERROR) << "LXH: no eos segment flush: ";
+            }
         }
         auto& stat = _flush_token->_stat;
         stat.num_pending_tasks.fetch_add(-1, std::memory_order_relaxed);
