@@ -158,6 +158,13 @@ void AsyncDeltaWriter::flush() {
 }
 
 void AsyncDeltaWriter::write_segment(const AsyncDeltaWriterSegmentRequest& req) {
+    if (req.request->eos()) {
+        if (_eos) {
+            LOG(FATAL) << "LXH FF";
+        } else {
+            _eos = true;
+        }
+    }
     auto st = _writer->segment_flush_token()->submit(_writer.get(), req.cntl, req.request, req.response, req.done);
     if (!st.ok()) {
         LOG(WARNING) << "Failed to submit write segment, err=" << st;
