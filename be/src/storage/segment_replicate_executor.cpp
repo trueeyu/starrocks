@@ -162,6 +162,7 @@ void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, boo
     _closure->ref();
     _closure->reset();
     if (eos) {
+        LOG(ERROR) << "LXH: SET EOS TIMEOUT 1";
         _closure->cntl.set_timeout_ms(1);
     } else {
         _closure->cntl.set_timeout_ms(_opt->timeout_ms);
