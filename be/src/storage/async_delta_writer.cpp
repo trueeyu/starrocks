@@ -68,12 +68,14 @@ int AsyncDeltaWriter::_execute(void* meta, bthread::TaskIterator<AsyncDeltaWrite
                 iter->write_cb->run(st, nullptr, &failed_info);
                 continue;
             }
+            LOG(ERROR) << "LXH: writer commit before";
             if (st = writer->commit(); !st.ok()) {
                 LOG(WARNING) << "Fail to write or commit. txn_id: " << writer->txn_id()
                              << " tablet_id: " << writer->tablet()->tablet_id() << ": " << st;
                 iter->write_cb->run(st, nullptr, &failed_info);
                 continue;
             }
+            LOG(ERROR) << "LXH: writer commit after";
             CommittedRowsetInfo info{.tablet = writer->tablet(),
                                      .rowset = writer->committed_rowset(),
                                      .rowset_writer = writer->committed_rowset_writer(),

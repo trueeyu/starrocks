@@ -114,7 +114,6 @@ public:
             st = _writer->close();
             if (st.ok()) {
                 LOG(ERROR) << "LXH: commit before";
-                sleep(20);
                 st = _writer->commit();
                 LOG(ERROR) << "LXH: commit after";
             }
@@ -200,7 +199,13 @@ Status SegmentFlushToken::submit(DeltaWriter* writer, brpc::Controller* cntl,
     }
 
     auto task = std::make_shared<SegmentFlushTask>(this, writer, cntl, request, response, done);
+    if (request->has_eos() && request->eos()) {
+        LOG(ERROR) << "LXH: eos segment flush before";
+        sleep(20);
+        LOG(ERROR) << "LXH: eos segment flush after";
+    }
     auto submit_st = _flush_token->submit(task);
+    LOG(ERROR) << "LXH: submit segment flush task: " << submit_st;
     if (submit_st.ok()) {
         _stat.num_pending_tasks.fetch_add(1, std::memory_order_relaxed);
         closure_guard.release();
