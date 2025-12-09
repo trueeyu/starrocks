@@ -260,12 +260,14 @@ void LoadChannelMgr::cancel(brpc::Controller* cntl, const PTabletWriterCancelReq
     ClosureGuard done_guard(done);
     UniqueId load_id(request.id());
     if (request.has_tablet_id()) {
+        LOG(ERROR) << "LXH: LoadChannelMgr: cancel 1: " << request.tablet_id();
         auto channel = _find_load_channel(load_id);
         if (channel != nullptr) {
             channel->abort(TabletsChannelKey(request.id(), request.sink_id(), request.index_id()),
                            {request.tablet_id()}, request.reason());
         }
     } else if (request.tablet_ids_size() > 0) {
+        LOG(ERROR) << "LXH: LoadChannelMgr: cancel 2: " << request.tablet_ids_size();
         auto channel = _find_load_channel(load_id);
         if (channel != nullptr) {
             std::vector<int64_t> tablet_ids;
@@ -276,6 +278,7 @@ void LoadChannelMgr::cancel(brpc::Controller* cntl, const PTabletWriterCancelReq
                            request.reason());
         }
     } else {
+        LOG(ERROR) << "LXH: LoadChannelMgr: cancel 3: " << load_id;
         if (auto channel = remove_load_channel(load_id); channel != nullptr) {
             channel->cancel(request.reason());
             channel->abort();
