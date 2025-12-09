@@ -43,11 +43,9 @@ public:
 
     void run() override {
         if (!_eos) {
-            LOG(ERROR) << "LXH: no Replicate Task before sleep";
-            sleep(3);
-            LOG(ERROR) << "LXH: no Replicate Task after sleep";
+            LOG(ERROR) << "LXH: no Replicate Task sleep";
         } else {
-            LOG(ERROR) << "LXH: eos Replicate Task before sleep";
+            LOG(ERROR) << "LXH: eos Replicate Task sleep";
         }
         auto& stat = _replicate_token->_stat;
         stat.num_pending_tasks.fetch_add(-1, std::memory_order_relaxed);

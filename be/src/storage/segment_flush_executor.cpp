@@ -113,7 +113,10 @@ public:
         if (st.ok() && eos) {
             st = _writer->close();
             if (st.ok()) {
+                LOG(ERROR) << "LXH: commit before";
+                sleep(20);
                 st = _writer->commit();
+                LOG(ERROR) << "LXH: commit after";
             }
         }
 

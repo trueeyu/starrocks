@@ -836,6 +836,7 @@ void DeltaWriter::cancel(const Status& st) {
 }
 
 void DeltaWriter::abort(bool with_log) {
+    LOG(ERROR) << "LXH: delta writer abort";
     _set_state(kAborted, Status::Cancelled("aborted by others"));
     _with_rollback_log = with_log;
     if (_flush_token != nullptr) {
