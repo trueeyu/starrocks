@@ -127,15 +127,20 @@ Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, b
     }
 
     // 2. wait pre request's result
+    LOG(ERROR) << "LXH: W1";
     RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
 
     // 3. send segment sync request
     _send_request(segment, data, eos);
 
     // 4. wait if eos=true
+    LOG(ERROR) << "LXH: W2";
+    RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
+    /*
     if (eos || _mem_tracker->any_limit_exceeded()) {
         RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
     }
+    */
 
     VLOG(2) << "Asynced tablet " << _opt->tablet_id << " segment id "
             << (segment == nullptr ? -1 : segment->segment_id()) << " eos " << eos << " to [" << _host << ":" << _port
@@ -184,6 +189,7 @@ void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, boo
 Status ReplicateChannel::_wait_response(std::vector<std::unique_ptr<PTabletInfo>>* replicate_tablet_infos,
                                         std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos) {
     if (_closure->join()) {
+        LOG(ERROR) << "LXH: WAIT RESP";
         Status status;
         _mem_tracker->release_without_root(_closure->request_size);
         if (_closure->cntl.Failed()) {
@@ -208,6 +214,8 @@ Status ReplicateChannel::_wait_response(std::vector<std::unique_ptr<PTabletInfo>
             failed_tablet_infos->emplace_back(std::make_unique<PTabletInfo>());
             failed_tablet_infos->back()->Swap(_closure->result.mutable_failed_tablet_vec(i));
         }
+    } else {
+        LOG(ERROR) << "LXH: NO WAIT";
     }
 
     return Status::OK();
