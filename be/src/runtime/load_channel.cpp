@@ -245,6 +245,11 @@ void LoadChannel::add_chunks(const PTabletWriterAddChunksRequest& req, PTabletWr
             RETURN_RESPONSE_IF_ERROR(_deserialize_chunk(pchunk, *chunk, &uncompressed_buffer), response);
         }
         _add_chunk(chunk.get(), &watch, request, response);
+        if (chunk != nullptr) {
+            LOG(ERROR) << "LXH: REQUEST: " << i << ":" << request.has_chunk() << ":" << request.eos() << ":" << chunk->num_rows();
+        } else {
+            LOG(ERROR) << "LXH: REQUEST: " << i << ":" << request.has_chunk() << ":" << request.eos();
+        }
 
         if (response->status().status_code() != TStatusCode::OK) {
             LOG(WARNING) << "tablet writer add chunk, id=" << print_id(request.id())
