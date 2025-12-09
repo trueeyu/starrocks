@@ -73,11 +73,9 @@ public:
         } else {
             if (_request->has_segment()) {
                 LOG(ERROR) << "LXH: no eos segment flush before: " << _request->segment().num_rows();
-                sleep(10);
                 LOG(ERROR) << "LXH: no eos segment flush after: " << _request->segment().num_rows();
             } else {
                 LOG(ERROR) << "LXH: no eos segment flush before: ";
-                sleep(10);
                 LOG(ERROR) << "LXH: no eos segment flush after: ";
             }
         }
@@ -203,13 +201,6 @@ Status SegmentFlushToken::submit(DeltaWriter* writer, brpc::Controller* cntl,
     }
 
     auto task = std::make_shared<SegmentFlushTask>(this, writer, cntl, request, response, done);
-    /*
-    if (request->has_eos() && request->eos()) {
-        LOG(ERROR) << "LXH: eos segment flush before";
-        sleep(20);
-        LOG(ERROR) << "LXH: eos segment flush after";
-    }
-    */
     auto submit_st = _flush_token->submit(task);
     LOG(ERROR) << "LXH: submit segment flush task: " << submit_st;
     if (submit_st.ok()) {
