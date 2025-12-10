@@ -151,16 +151,14 @@ Status LoadChannelMgr::init(MemTracker* mem_tracker) {
 
 void LoadChannelMgr::open(brpc::Controller* cntl, const PTabletWriterOpenRequest& request,
                           PTabletWriterOpenResult* response, google::protobuf::Closure* done) {
+    UniqueId load_id(request.id());
+    LOG(ERROR) << "LXH: open: " << print_id(load_id);
     LoadChannelOpenContext open_context;
     open_context.cntl = cntl;
     open_context.request = &request;
     open_context.response = response;
     open_context.done = done;
     open_context.receive_rpc_time_ns = MonotonicNanos();
-    if (!config::enable_load_channel_rpc_async) {
-        _open(open_context);
-        return;
-    }
     auto task = std::make_shared<ChannelOpenTask>(this, std::move(open_context));
     Status status = _async_rpc_pool->submit(task);
     if (!status.ok()) {
@@ -218,7 +216,7 @@ void LoadChannelMgr::_open(LoadChannelOpenContext open_context) {
 }
 
 void LoadChannelMgr::add_chunk(const PTabletWriterAddChunkRequest& request, PTabletWriterAddBatchResult* response) {
-    VLOG(2) << "Current memory usage=" << _mem_tracker->consumption() << " limit=" << _mem_tracker->limit();
+    LOG(ERROR) << "LXH: add_chunk";
     UniqueId load_id(request.id());
     auto channel = _find_load_channel(load_id);
     if (channel != nullptr) {
@@ -230,8 +228,8 @@ void LoadChannelMgr::add_chunk(const PTabletWriterAddChunkRequest& request, PTab
 }
 
 void LoadChannelMgr::add_chunks(const PTabletWriterAddChunksRequest& request, PTabletWriterAddBatchResult* response) {
-    VLOG(2) << "Current memory usage=" << _mem_tracker->consumption() << " limit=" << _mem_tracker->limit();
     UniqueId load_id(request.id());
+    LOG(ERROR) << "LXH: add_chunks: " << print_id(load_id);
     auto channel = _find_load_channel(load_id);
     if (channel != nullptr) {
         channel->add_chunks(request, response);
@@ -245,6 +243,7 @@ void LoadChannelMgr::add_segment(brpc::Controller* cntl, const PTabletWriterAddS
                                  PTabletWriterAddSegmentResult* response, google::protobuf::Closure* done) {
     ClosureGuard closure_guard(done);
     UniqueId load_id(request->id());
+    LOG(ERROR) << "LXH: add_segment: " << print_id(load_id);
     auto channel = _find_load_channel(load_id);
     if (channel != nullptr) {
         channel->add_segment(cntl, request, response, done);
@@ -259,6 +258,7 @@ void LoadChannelMgr::cancel(brpc::Controller* cntl, const PTabletWriterCancelReq
                             PTabletWriterCancelResult* response, google::protobuf::Closure* done) {
     ClosureGuard done_guard(done);
     UniqueId load_id(request.id());
+    LOG(ERROR) << "LXH: cancel: " << print_id(load_id);
     if (request.has_tablet_id()) {
         auto channel = _find_load_channel(load_id);
         if (channel != nullptr) {
