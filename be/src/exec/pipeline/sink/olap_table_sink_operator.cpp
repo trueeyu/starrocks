@@ -49,6 +49,7 @@ bool OlapTableSinkOperator::is_finished() const {
 }
 
 bool OlapTableSinkOperator::pending_finish() const {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish";
     // sink's open not finish, we need check util finish
     if (!_is_open_done) {
         if (!_sink->is_open_done()) {
@@ -130,6 +131,7 @@ bool OlapTableSinkOperator::need_input() const {
 }
 
 Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk";
     if (!_is_open_done) {
         _is_open_done = true;
         // we can be here cause _sink->is_open_done() return true

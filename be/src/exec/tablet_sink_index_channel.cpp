@@ -729,15 +729,8 @@ Status NodeChannel::_send_request(bool eos, bool finished) {
             }
             auto closure = _add_batch_closures[_current_request_index];
             serialize_to_iobuf<PTabletWriterAddChunksRequest>(request, &closure->cntl.request_attachment());
-            FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_add_chunks,
-                                       TABLET_WRITER_ADD_CHUNKS_FP_ACTION(_node_info->host, closure, request));
             res.value()->tablet_writer_add_chunks_via_http(&closure->cntl, nullptr, &closure->result, closure);
-            VLOG(2) << "NodeChannel::_send_request() issue a http rpc, request size = "
-                    << closure->cntl.request_attachment().size();
         } else {
-            FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_add_chunks,
-                                       TABLET_WRITER_ADD_CHUNKS_FP_ACTION(
-                                               _node_info->host, _add_batch_closures[_current_request_index], request));
             _stub->tablet_writer_add_chunks(&_add_batch_closures[_current_request_index]->cntl, &request,
                                             &_add_batch_closures[_current_request_index]->result,
                                             _add_batch_closures[_current_request_index]);
@@ -759,8 +752,6 @@ Status NodeChannel::_send_request(bool eos, bool finished) {
             FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_add_chunks,
                                        TABLET_WRITER_ADD_CHUNKS_FP_ACTION(_node_info->host, closure, request));
             res.value()->tablet_writer_add_chunk_via_http(&closure->cntl, nullptr, &closure->result, closure);
-            VLOG(2) << "NodeChannel::_send_request() issue a http rpc, request size = "
-                    << closure->cntl.request_attachment().size();
         } else {
 #ifndef BE_TEST
             FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_add_chunks,

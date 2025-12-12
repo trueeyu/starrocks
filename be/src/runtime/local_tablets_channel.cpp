@@ -213,7 +213,7 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     close_channel = false;
     MonotonicStopWatch watch;
     watch.start();
-    std::shared_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
+    std::shared_lock lk(_rw_mtx);
 
     if (UNLIKELY(!request.has_sender_id())) {
         response->mutable_status()->set_status_code(TStatusCode::INVALID_ARGUMENT);
