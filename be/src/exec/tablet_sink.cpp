@@ -147,6 +147,7 @@ Status OlapTableSink::init(const TDataSink& t_sink, RuntimeState* state) {
     if (table_sink.__isset.ignore_out_of_partition) {
         _ignore_out_of_partition = table_sink.ignore_out_of_partition;
     }
+    LOG(ERROR) << "LXH: enable_automatic_partition: " << _vectorized_partition->enable_automatic_partition();
     _enable_automatic_partition = _vectorized_partition->enable_automatic_partition();
     if (_enable_automatic_partition) {
         _automatic_partition_token =
