@@ -79,6 +79,7 @@ bool OlapTableSinkOperator::pending_finish() const {
     }
 
     if (!_sink->is_close_done()) {
+        LOG(ERROR) << "LXH: OlapTableSinkOperator try_close";
         auto st = _sink->try_close(_fragment_ctx->runtime_state());
         if (!st.ok()) {
             _fragment_ctx->cancel(st);
