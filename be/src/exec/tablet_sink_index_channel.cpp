@@ -1112,8 +1112,6 @@ void NodeChannel::_cancel(int64_t index_id, const Status& err_st) {
     closure->ref();
     closure->cntl.set_timeout_ms(_rpc_timeout_ms);
     SET_IGNORE_OVERCROWDED(closure->cntl, load);
-    FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_cancel,
-                               TABLET_WRITER_CANCEL_FP_ACTION(_node_info->host, closure, closure->cntl, request));
     _stub->tablet_writer_cancel(&closure->cntl, &request, &closure->result, closure);
     request.release_id();
 }
