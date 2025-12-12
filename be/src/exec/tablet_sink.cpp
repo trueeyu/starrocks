@@ -676,6 +676,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
             // _has_automatic_partition is true means last send_chunk already create partition in nonblocking mode
             // we don't need to create again since it will resend last chunk
             if (_enable_automatic_partition && !_has_automatic_partition) {
+                LOG(ERROR) << "LXH: auto create partition";
                 _partition_not_exist_row_values.clear();
 
                 RETURN_IF_ERROR(_vectorized_partition->find_tablets(chunk, &_partitions, &_record_hashes,
@@ -692,6 +693,8 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                         }
                         _is_automatic_partition_running.store(false, std::memory_order_release);
                     }));
+
+                    LOG(ERROR) << "LXH: automatic partition token submit: " << nonblocking;
 
                     if (nonblocking) {
                         _has_automatic_partition = true;
