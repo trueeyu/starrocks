@@ -49,6 +49,7 @@ bool OlapTableSinkOperator::is_finished() const {
 }
 
 bool OlapTableSinkOperator::pending_finish() const {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish";
     // sink's open not finish, we need check util finish
     if (!_is_open_done) {
         if (!_sink->is_open_done()) {
@@ -95,6 +96,7 @@ bool OlapTableSinkOperator::pending_finish() const {
 }
 
 Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_cancelled";
     _is_cancelled = true;
     auto final_status = state->fragment_ctx()->final_status();
     std::string reason = "Cancelled by pipeline engine, reason: " + final_status.to_string();
@@ -102,6 +104,7 @@ Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
 }
 
 Status OlapTableSinkOperator::set_finishing(RuntimeState* state) {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_finishing";
     _is_finished = true;
 
     if (_num_sinkers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
@@ -130,6 +133,7 @@ bool OlapTableSinkOperator::need_input() const {
 }
 
 Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk";
     if (!_is_open_done) {
         _is_open_done = true;
         // we can be here cause _sink->is_open_done() return true
