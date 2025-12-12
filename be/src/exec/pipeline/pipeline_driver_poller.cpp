@@ -110,6 +110,7 @@ void PipelineDriverPoller::run_internal() {
                     remove_blocked_driver(_local_blocked_drivers, driver_it);
                     ready_drivers.emplace_back(driver);
                 } else if (driver->pending_finish()) {
+                    LOG(ERROR) << "LXH: pooller pending finishing";
                     if (driver->is_still_pending_finish()) {
                         ++driver_it;
                     } else {
