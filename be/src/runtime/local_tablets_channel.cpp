@@ -32,10 +32,8 @@
 #include "gutil/strings/join.h"
 #include "runtime/descriptors.h"
 #include "runtime/exec_env.h"
-#include "runtime/global_dict/types.h"
 #include "runtime/global_dict/types_fwd_decl.h"
 #include "runtime/load_channel.h"
-#include "runtime/load_fail_point.h"
 #include "runtime/mem_pool.h"
 #include "runtime/mem_tracker.h"
 #include "runtime/tablets_channel.h"
@@ -48,10 +46,8 @@
 #include "storage/tablet_manager.h"
 #include "storage/txn_manager.h"
 #include "util/brpc_stub_cache.h"
-#include "util/compression/block_compression.h"
 #include "util/disposable_closure.h"
 #include "util/failpoint/fail_point.h"
-#include "util/faststring.h"
 #include "util/starrocks_metrics.h"
 #include "util/stopwatch.hpp"
 
@@ -145,15 +141,13 @@ Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTablet
                                  std::shared_ptr<OlapTableSchemaParam> schema, bool is_incremental) {
     SCOPED_TIMER(_open_timer);
     COUNTER_UPDATE(_open_counter, 1);
-    std::unique_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
+    std::unique_lock lk(_rw_mtx);
     _txn_id = params.txn_id();
     _index_id = params.index_id();
     _schema = schema;
     _tuple_desc = _schema->tuple_desc();
     _node_id = params.node_id();
-#ifndef BE_TEST
     _table_metrics = StarRocksMetrics::instance()->table_metrics(_schema->table_id());
-#endif
 
     _senders = std::vector<Sender>(params.num_senders());
     if (is_incremental) {
@@ -907,7 +901,7 @@ StatusOr<std::shared_ptr<LocalTabletsChannel::WriteContext>> LocalTabletsChannel
 
 Status LocalTabletsChannel::incremental_open(const PTabletWriterOpenRequest& params, PTabletWriterOpenResult* result,
                                              std::shared_ptr<OlapTableSchemaParam> schema) {
-    std::unique_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
+    std::unique_lock lk(_rw_mtx);
     std::vector<SlotDescriptor*>* index_slots = nullptr;
     int32_t schema_hash = 0;
     for (auto& index : _schema->indexes()) {

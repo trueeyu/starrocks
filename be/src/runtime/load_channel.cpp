@@ -125,7 +125,6 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
     ClosureGuard done_guard(open_context.done);
 
     _last_updated_time.store(time(nullptr), std::memory_order_relaxed);
-    bool is_lake_tablet = request.has_is_lake_tablet() && request.is_lake_tablet();
 
     Status st = Status::OK();
     TabletsChannelKey key(request.id(), request.sink_id(), request.index_id());
@@ -143,16 +142,7 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
         }
         auto it = _tablets_channels.find(key);
         if (it == _tablets_channels.end()) {
-            if (is_lake_tablet) {
-#ifdef __APPLE__
-                channel = nullptr;
-                st = Status::NotSupported("lake tablet is not supported on MacOS");
-#else
-                channel = new_lake_tablets_channel(this, _lake_tablet_mgr, key, _mem_tracker.get(), _profile);
-#endif
-            } else {
-                channel = new_local_tablets_channel(this, key, _mem_tracker.get(), _profile);
-            }
+            channel = new_local_tablets_channel(this, key, _mem_tracker.get(), _profile);
             if (st.ok()) {
                 if (st = channel->open(request, response, _schema, request.is_incremental()); st.ok()) {
                     _tablets_channels.insert({key, std::move(channel)});
