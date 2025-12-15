@@ -49,9 +49,9 @@ bool OlapTableSinkOperator::is_finished() const {
 }
 
 bool OlapTableSinkOperator::pending_finish() const {
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish";
     // sink's open not finish, we need check util finish
     if (!_is_open_done) {
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish 1";
         if (!_sink->is_open_done()) {
             return true;
         }
@@ -67,6 +67,7 @@ bool OlapTableSinkOperator::pending_finish() const {
     // last chunk trigger automatic partition creation
     // we need handle it before close sink
     if (!_is_cancelled && _automatic_partition_chunk) {
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish 2";
         if (_sink->is_full()) {
             return true;
         }
@@ -79,7 +80,7 @@ bool OlapTableSinkOperator::pending_finish() const {
     }
 
     if (!_sink->is_close_done()) {
-        LOG(ERROR) << "LXH: OlapTableSinkOperator try_close";
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish 3";
         auto st = _sink->try_close(_fragment_ctx->runtime_state());
         if (!st.ok()) {
             _fragment_ctx->cancel(st);
@@ -88,6 +89,7 @@ bool OlapTableSinkOperator::pending_finish() const {
         return true;
     }
 
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish 4";
     auto st = _sink->close(_fragment_ctx->runtime_state(), Status::OK());
     if (!st.ok()) {
         _fragment_ctx->cancel(st);
