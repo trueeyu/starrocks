@@ -331,6 +331,7 @@ Status OlapTableSink::prepare(RuntimeState* state) {
 
 Status OlapTableSink::_init_node_channels(RuntimeState* state, IndexIdToTabletBEMap& index_id_to_tablet_be_map) {
     const auto& partitions = _vectorized_partition->get_partitions();
+    LOG(ERROR) << "LXH: INIT_NODE_CHANNELS: " << _schema->indexes().size();
     for (int i = 0; i < _schema->indexes().size(); ++i) {
         // collect all tablets belong to this rollup
         std::vector<PTabletWithPartition> tablets;
