@@ -143,7 +143,7 @@ LocalTabletsChannel::~LocalTabletsChannel() {
 
 Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTabletWriterOpenResult* result,
                                  std::shared_ptr<OlapTableSchemaParam> schema, bool is_incremental) {
-    LOG(ERROR) << "LXH: LocalTabletsChannel::open";
+    LOG(ERROR) << "LXH: LocalTabletsChannel::open: " << schema->db_id() << ":" << schema->table_id();
 
     SCOPED_TIMER(_open_timer);
     COUNTER_UPDATE(_open_counter, 1);
