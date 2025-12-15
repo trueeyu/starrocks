@@ -176,6 +176,7 @@ Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTablet
     RETURN_IF_ERROR(_open_all_writers(params));
 
     for (auto& [id, writer] : _delta_writers) {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::open_tablet_id: " << id;
         if (writer->is_immutable()) {
             result->add_immutable_tablet_ids(id);
             result->add_immutable_partition_ids(writer->partition_id());
