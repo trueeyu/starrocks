@@ -143,6 +143,8 @@ LocalTabletsChannel::~LocalTabletsChannel() {
 
 Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTabletWriterOpenResult* result,
                                  std::shared_ptr<OlapTableSchemaParam> schema, bool is_incremental) {
+    LOG(ERROR) << "LXH: LocalTabletsChannel::open";
+
     SCOPED_TIMER(_open_timer);
     COUNTER_UPDATE(_open_counter, 1);
     std::unique_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
@@ -151,9 +153,7 @@ Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTablet
     _schema = schema;
     _tuple_desc = _schema->tuple_desc();
     _node_id = params.node_id();
-#ifndef BE_TEST
     _table_metrics = StarRocksMetrics::instance()->table_metrics(_schema->table_id());
-#endif
 
     _senders = std::vector<Sender>(params.num_senders());
     if (is_incremental) {
