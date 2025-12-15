@@ -1242,7 +1242,9 @@ IndexChannel::~IndexChannel() {
 }
 
 Status IndexChannel::init(RuntimeState* state, const std::vector<PTabletWithPartition>& tablets, bool is_incremental) {
+    LOG(ERROR) << "LXH: " << is_incremental;
     for (const auto& tablet : tablets) {
+        LOG(ERROR) << "LXH: tablet id: " << tablet.tablet_id();
         auto* location = _parent->_location->find_tablet(tablet.tablet_id());
         if (location == nullptr) {
             auto msg = fmt::format("Not found tablet: {}", tablet.tablet_id());
