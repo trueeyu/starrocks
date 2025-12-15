@@ -98,6 +98,7 @@ Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
     _is_cancelled = true;
     auto final_status = state->fragment_ctx()->final_status();
     std::string reason = "Cancelled by pipeline engine, reason: " + final_status.to_string();
+    LOG(WARNING) << "LXH: OlapTableSinkOperator::set_cancelled: " << reason;
     return _sink->close(state, Status::Cancelled(reason));
 }
 
@@ -108,6 +109,7 @@ Status OlapTableSinkOperator::set_finishing(RuntimeState* state) {
         _fragment_ctx->workgroup()->executors()->driver_executor()->report_audit_statistics(state->query_ctx(),
                                                                                             state->fragment_ctx());
     }
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_finishing: " << _is_open_done << ":" << (_automatic_partition_chunk != nullptr);
     if (_is_open_done && !_automatic_partition_chunk) {
         // sink's open already finish, we can try_close
         return _sink->try_close(state);
