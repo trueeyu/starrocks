@@ -105,6 +105,8 @@ Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
 Status OlapTableSinkOperator::set_finishing(RuntimeState* state) {
     _is_finished = true;
 
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_finishing: " << state->is_cancelled();
+
     if (_num_sinkers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
         _fragment_ctx->workgroup()->executors()->driver_executor()->report_audit_statistics(state->query_ctx(),
                                                                                             state->fragment_ctx());
