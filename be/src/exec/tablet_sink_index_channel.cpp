@@ -167,6 +167,7 @@ void NodeChannel::try_open() {
 
 void NodeChannel::_open(int64_t index_id, RefCountClosure<PTabletWriterOpenResult>* open_closure,
                         std::vector<PTabletWithPartition>& tablets, bool incremental_open) {
+    LOG(ERROR) << "LXH: Open: " << incremental_open;
     PTabletWriterOpenRequest request;
     request.set_merge_condition(_parent->_merge_condition);
     request.set_encryption_meta(_parent->_encryption_meta);
@@ -241,31 +242,7 @@ void NodeChannel::_open(int64_t index_id, RefCountClosure<PTabletWriterOpenResul
     open_closure->cntl.set_timeout_ms(std::min(_rpc_timeout_ms, config::tablet_writer_open_rpc_timeout_sec * 1000));
     SET_IGNORE_OVERCROWDED(open_closure->cntl, load);
 
-    if (request.ByteSizeLong() > _parent->_rpc_http_min_size) {
-        TNetworkAddress brpc_addr;
-        brpc_addr.hostname = _node_info->host;
-        brpc_addr.port = _node_info->brpc_port;
-        open_closure->cntl.http_request().set_content_type("application/proto");
-        auto res = HttpBrpcStubCache::getInstance()->get_http_stub(brpc_addr);
-        if (!res.ok()) {
-            LOG(ERROR) << res.status().message();
-            return;
-        }
-        FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_open,
-                                   TABLET_WRITER_OPEN_FP_ACTION(_node_info->host, open_closure, request));
-        res.value()->tablet_writer_open(&open_closure->cntl, &request, &open_closure->result, open_closure);
-        VLOG(2) << "NodeChannel::_open() issue a http rpc, request size = " << request.ByteSizeLong();
-    } else {
-#ifndef BE_TEST
-        FAIL_POINT_TRIGGER_EXECUTE(load_tablet_writer_open,
-                                   TABLET_WRITER_OPEN_FP_ACTION(_node_info->host, open_closure, request));
-        _stub->tablet_writer_open(&open_closure->cntl, &request, &open_closure->result, open_closure);
-#else
-        std::pair<PTabletWriterOpenRequest*, RefCountClosure<PTabletWriterOpenResult>*> rpc_pair{&request,
-                                                                                                 open_closure};
-        TEST_SYNC_POINT_CALLBACK("NodeChannel::rpc::open_send", &rpc_pair);
-#endif
-    }
+    _stub->tablet_writer_open(&open_closure->cntl, &request, &open_closure->result, open_closure);
     request.release_id();
     request.release_schema();
 
@@ -1242,9 +1219,7 @@ IndexChannel::~IndexChannel() {
 }
 
 Status IndexChannel::init(RuntimeState* state, const std::vector<PTabletWithPartition>& tablets, bool is_incremental) {
-    LOG(ERROR) << "LXH: " << is_incremental;
     for (const auto& tablet : tablets) {
-        LOG(ERROR) << "LXH: tablet id: " << tablet.tablet_id();
         auto* location = _parent->_location->find_tablet(tablet.tablet_id());
         if (location == nullptr) {
             auto msg = fmt::format("Not found tablet: {}", tablet.tablet_id());
