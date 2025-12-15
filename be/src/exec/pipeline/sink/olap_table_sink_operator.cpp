@@ -86,7 +86,6 @@ bool OlapTableSinkOperator::pending_finish() const {
         return true;
     }
 
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::pending_finish 4";
     auto st = _sink->close(_fragment_ctx->runtime_state(), Status::OK());
     if (!st.ok()) {
         _fragment_ctx->cancel(st);
@@ -96,7 +95,6 @@ bool OlapTableSinkOperator::pending_finish() const {
 }
 
 Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_cancelled";
     _is_cancelled = true;
     auto final_status = state->fragment_ctx()->final_status();
     std::string reason = "Cancelled by pipeline engine, reason: " + final_status.to_string();
@@ -104,7 +102,6 @@ Status OlapTableSinkOperator::set_cancelled(RuntimeState* state) {
 }
 
 Status OlapTableSinkOperator::set_finishing(RuntimeState* state) {
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::set_finishing";
     _is_finished = true;
 
     if (_num_sinkers.fetch_sub(1, std::memory_order_acq_rel) == 1) {
