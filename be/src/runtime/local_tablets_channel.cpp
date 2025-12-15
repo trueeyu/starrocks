@@ -776,6 +776,7 @@ Status LocalTabletsChannel::_open_all_writers(const PTabletWriterOpenRequest& pa
     tablet_ids.reserve(params.tablets_size());
     std::vector<int64_t> failed_tablet_ids;
     for (const PTabletWithPartition& tablet : params.tablets()) {
+        LOG(ERROR) << "LXH: open_all_writer: " << tablet.tablet_id();
         DeltaWriterOptions options = _build_delta_writer_options(params, tablet, schema_hash, index_slots);
 
         auto res = AsyncDeltaWriter::open(options, _mem_tracker);
