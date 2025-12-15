@@ -1807,4 +1807,8 @@ CONF_mInt64(max_batch_num_per_fetch_operator, "8");
 CONF_mInt64(max_chunk_num_per_fetch_batch, "8");
 CONF_mBool(enable_fetch_local_pass_through, "true");
 CONF_mInt64(max_lookup_batch_request, "8");
+// lxh_mode=1: cancel
+// lxh_mode=2: increment open
+// lxh_mode=3: eos
+CONF_mInt64(lxh_mode, "1");
 } // namespace starrocks::config
