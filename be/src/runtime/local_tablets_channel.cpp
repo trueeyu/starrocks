@@ -540,6 +540,7 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     COUNTER_UPDATE(_wait_replica_timer, wait_replica_ns);
 
     // remove tablets channel and load channel after all things done
+    LOG(ERROR) << "LXH: LocalTabletsChannel: " << close_channel;
     if (close_channel) {
         _load_channel->remove_tablets_channel(_key);
     }
