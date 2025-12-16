@@ -134,15 +134,16 @@ bool OlapTableSinkOperator::need_input() const {
 }
 
 Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << state->db();
-    if (config::lxh_mode == 1) {
-        return Status::InternalError("OlapTableSinkOperator::push_chunk");
-    }
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << state->db() << ":" << _is_open_done;
+
     if (!_is_open_done) {
         _is_open_done = true;
         // we can be here cause _sink->is_open_done() return true
         // so that open_wait() will not block
         RETURN_IF_ERROR(_sink->open_wait());
+    }
+    if (config::lxh_mode == 1) {
+        return Status::InternalError("OlapTableSinkOperator::push_chunk");
     }
 
     // previous push_chunk() trigger automatic partition creation
