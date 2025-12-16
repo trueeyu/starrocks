@@ -694,12 +694,13 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                 if (_partition_not_exist_row_values.size() > 0 && !_partition_not_exist_row_values[0].empty()) {
                     _is_automatic_partition_running.store(true, std::memory_order_release);
                     RETURN_IF_ERROR(_automatic_partition_token->submit_func([this] {
+                        LOG(ERROR) << "LXH: LocalTabletsChannel: submit_func:";
                         this->_automatic_partition_status = this->_automatic_create_partition();
                         if (!this->_automatic_partition_status.ok()) {
-                            LOG(WARNING) << "LXH: LocalTabletsChannel: Failed to automatic create partition, err="
+                            LOG(ERROR) << "LXH: LocalTabletsChannel: Failed to automatic create partition, err="
                                          << this->_automatic_partition_status;
                         } else {
-                            LOG(WARNING) << "LXH: LocalTabletsChannel: SUccess to automatic create partition, err="
+                            LOG(ERROR) << "LXH: LocalTabletsChannel: SUccess to automatic create partition, err="
                                          << this->_automatic_partition_status;
                         }
                         _is_automatic_partition_running.store(false, std::memory_order_release);
