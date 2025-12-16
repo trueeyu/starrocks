@@ -144,7 +144,16 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
     }
 
     // previous push_chunk() trigger automatic partition creation
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << (_automatic_partition_chunk != nullptr);
+    if (config::lxh_mode == 1) {
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk 1: " << (_automatic_partition_chunk != nullptr);
+        return Status::InternalError("OlapTableSinkOperator::push_chunk");
+    } else if (config::lxh_mode == 2) {
+        sleep(1);
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk 2: " << (_automatic_partition_chunk != nullptr);
+    } else if (config::lxh_mode == 3) {
+        sleep(2);
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk 3: " << (_automatic_partition_chunk != nullptr);
+    }
     if (_automatic_partition_chunk) {
         // resend previous chunk before send new chunk
         auto st = _sink->send_chunk_nonblocking(state, _automatic_partition_chunk.get());
@@ -162,9 +171,6 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
 
     // send_chunk_nonblocking() will return EAGAIN to avoid block
     auto st = _sink->send_chunk_nonblocking(state, chunk.get());
-    if (config::lxh_mode == 1) {
-        return Status::InternalError("OlapTableSinkOperator::push_chunk");
-    }
     if (st.is_eagain()) {
         // temporarily save the chunk, wait for the partition to be created and send again
         _automatic_partition_chunk = chunk;
