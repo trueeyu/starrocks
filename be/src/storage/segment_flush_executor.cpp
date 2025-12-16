@@ -97,9 +97,11 @@ public:
         }
 
         bool eos = _request->eos();
+        LOG(ERROR) << "LXH: async_writer: eos: " << _request->tablet_id() << ":" << st << ":" << eos;
         if (st.ok() && eos) {
             st = _writer->close();
             if (st.ok()) {
+                LOG(ERROR) << "LXH: async_writer: commont: " << _request->tablet_id() << ":" << eos;
                 st = _writer->commit();
             }
         }
