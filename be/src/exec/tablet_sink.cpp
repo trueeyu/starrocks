@@ -451,10 +451,12 @@ Status OlapTableSink::_automatic_create_partition() {
             VLOG(2) << "load_id=" << print_id(_load_id) << ", txn_id: " << std::to_string(_txn_id)
                     << " automatic partition rpc retry " << retry_times;
         }
+        LOG(ERROR) << "LXH: LocalTabletsChannel: before rpc";
         RETURN_IF_ERROR(ThriftRpcHelper::rpc<FrontendServiceClient>(
                 master_addr.hostname, master_addr.port,
                 [&request, &result](FrontendServiceConnection& client) { client->createPartition(result, request); },
                 timeout_ms));
+        LOG(ERROR) << "LXH: LocalTabletsChannel: after rpc";
     } while (result.status.status_code == TStatusCode::SERVICE_UNAVAILABLE &&
              butil::gettimeofday_s() - start_ts < timeout_ms / 1000);
 
