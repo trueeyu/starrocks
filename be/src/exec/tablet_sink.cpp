@@ -684,6 +684,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                                                                     &_validate_selection, &invalid_row_indexs, _txn_id,
                                                                     &_partition_not_exist_row_values));
 
+                LOG(ERROR) << "LXH: values: " << _partition_not_exist_row_values.size() << ", " << _partition_not_exist_row_values[0].empty();
                 if (_partition_not_exist_row_values.size() > 0 && !_partition_not_exist_row_values[0].empty()) {
                     _is_automatic_partition_running.store(true, std::memory_order_release);
                     RETURN_IF_ERROR(_automatic_partition_token->submit_func([this] {
@@ -710,6 +711,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                     }
                 }
             } else {
+                LOG(ERROR) << "LXH: no automatic partition";
                 RETURN_IF_ERROR(this->_automatic_partition_status);
                 RETURN_IF_ERROR(_vectorized_partition->find_tablets(chunk, &_partitions, &_record_hashes,
                                                                     &_validate_selection, &invalid_row_indexs, _txn_id,
