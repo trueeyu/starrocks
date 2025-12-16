@@ -743,6 +743,7 @@ Status DeltaWriter::commit() {
     }
     auto flush_ts = watch.elapsed_time();
 
+    LOG(ERROR) << "LXH: LocalTabletsChannel: rowset builder: " << _opt.tablet_id;
     if (auto res = _rowset_writer->build(); res.ok()) {
         _cur_rowset = std::move(res).value();
     } else {
