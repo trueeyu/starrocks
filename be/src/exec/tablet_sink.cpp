@@ -96,6 +96,7 @@ Status OlapTableSink::init(const TDataSink& t_sink, RuntimeState* state) {
     _load_id.set_lo(table_sink.load_id.lo);
     _txn_id = table_sink.txn_id;
     _sink_id = t_sink.__isset.sink_id ? t_sink.sink_id : 0;
+    LOG(ERROR) << "LXH: LocalTabletsChannel: sink_id: " << _sink_id;
     _txn_trace_parent = table_sink.txn_trace_parent;
     _span = Tracer::Instance().start_trace_or_add_span("olap_table_sink", _txn_trace_parent);
     _num_repicas = table_sink.num_replicas;
