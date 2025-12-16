@@ -225,7 +225,6 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
         LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
     } else {
         LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.eos();
-        sleep(3);
     }
     bool& close_channel = *close_channel_ptr;
     close_channel = false;

@@ -97,7 +97,9 @@ public:
         }
 
         bool eos = _request->eos();
-        LOG(ERROR) << "LXH: LocalTabletsChannel: eos: " << _request->tablet_id() << ":" << st << ":" << eos;
+        LOG(ERROR) << "LXH: LocalTabletsChannel: eos_start: " << _request->tablet_id() << ":" << st << ":" << eos;
+        sleep(3);
+        LOG(ERROR) << "LXH: LocalTabletsChannel: eos_end: " << _request->tablet_id() << ":" << st << ":" << eos;
         if (st.ok() && eos) {
             st = _writer->close();
             if (st.ok()) {
