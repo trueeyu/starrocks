@@ -426,6 +426,7 @@ bool OlapTableSink::is_full() {
 }
 
 Status OlapTableSink::_automatic_create_partition() {
+    LOG(ERROR) << "LXH: automic create partition";
     TCreatePartitionRequest request;
     TCreatePartitionResult result;
     request.__set_txn_id(_txn_id);
