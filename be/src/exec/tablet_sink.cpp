@@ -680,14 +680,14 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
             // _has_automatic_partition is true means last send_chunk already create partition in nonblocking mode
             // we don't need to create again since it will resend last chunk
             if (_enable_automatic_partition && !_has_automatic_partition) {
-                LOG(ERROR) << "LXH: auto create partition";
+                LOG(ERROR) << "LXH: LocalTabletsChannel: auto create partition";
                 _partition_not_exist_row_values.clear();
 
                 RETURN_IF_ERROR(_vectorized_partition->find_tablets(chunk, &_partitions, &_record_hashes,
                                                                     &_validate_selection, &invalid_row_indexs, _txn_id,
                                                                     &_partition_not_exist_row_values));
 
-                LOG(ERROR) << "LXH: values: " << _partition_not_exist_row_values.size();
+                LOG(ERROR) << "LXH: LocalTabletsChannel: values: " << _partition_not_exist_row_values.size();
                 if (_partition_not_exist_row_values.size() > 0) {
                     LOG(ERROR) << "LXH: partition not exist: " << _partition_not_exist_row_values[0].empty();
                 }
@@ -696,7 +696,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                     RETURN_IF_ERROR(_automatic_partition_token->submit_func([this] {
                         this->_automatic_partition_status = this->_automatic_create_partition();
                         if (!this->_automatic_partition_status.ok()) {
-                            LOG(WARNING) << "Failed to automatic create partition, err="
+                            LOG(WARNING) << "LXH: LocalTabletsChannel: Failed to automatic create partition, err="
                                          << this->_automatic_partition_status;
                         }
                         _is_automatic_partition_running.store(false, std::memory_order_release);
