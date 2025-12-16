@@ -103,6 +103,8 @@ public:
             if (st.ok()) {
                 LOG(ERROR) << "LXH: LocalTabletsChannel: commont: " << _request->tablet_id() << ":" << eos;
                 st = _writer->commit();
+            } else {
+                LOG(ERROR) << "LXH: LocalTabletsChannel: close: " << _request->tablet_id() << ":" << st;
             }
         }
 
