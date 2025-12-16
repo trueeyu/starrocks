@@ -142,9 +142,6 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
         // so that open_wait() will not block
         RETURN_IF_ERROR(_sink->open_wait());
     }
-    if (config::lxh_mode == 1) {
-        return Status::InternalError("OlapTableSinkOperator::push_chunk");
-    }
 
     // previous push_chunk() trigger automatic partition creation
     if (_automatic_partition_chunk) {
@@ -154,6 +151,10 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
         if (!st.ok()) {
             return st;
         }
+    }
+    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << (_automatic_partition_chunk != nullptr);
+    if (config::lxh_mode == 1) {
+        return Status::InternalError("OlapTableSinkOperator::push_chunk");
     }
 
     uint16_t num_rows = chunk->num_rows();
