@@ -143,16 +143,7 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
         }
         auto it = _tablets_channels.find(key);
         if (it == _tablets_channels.end()) {
-            if (is_lake_tablet) {
-#ifdef __APPLE__
-                channel = nullptr;
-                st = Status::NotSupported("lake tablet is not supported on MacOS");
-#else
-                channel = new_lake_tablets_channel(this, _lake_tablet_mgr, key, _mem_tracker.get(), _profile);
-#endif
-            } else {
-                channel = new_local_tablets_channel(this, key, _mem_tracker.get(), _profile);
-            }
+            channel = new_local_tablets_channel(this, key, _mem_tracker.get(), _profile);
             if (st.ok()) {
                 if (st = channel->open(request, response, _schema, request.is_incremental()); st.ok()) {
                     _tablets_channels.insert({key, std::move(channel)});
@@ -307,10 +298,13 @@ void LoadChannel::cancel(const std::string& reason) {
 void LoadChannel::abort() {
     _span->AddEvent("cancel");
     auto scoped = trace::Scope(_span);
-    std::lock_guard l(_lock);
-    for (auto& it : _tablets_channels) {
-        it.second->abort();
+    {
+        std::lock_guard l(_lock);
+        for (auto& it : _tablets_channels) {
+            it.second->abort();
+        }
     }
+    sleep(15);
 }
 
 void LoadChannel::abort(const TabletsChannelKey& key, const std::vector<int64_t>& tablet_ids,

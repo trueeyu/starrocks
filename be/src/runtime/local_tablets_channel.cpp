@@ -524,11 +524,9 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
             wait_memtable_flush_time_us);
     StarRocksMetrics::instance()->load_channel_add_chunks_wait_writer_duration_us.increment(wait_writer_ns / 1000);
     StarRocksMetrics::instance()->load_channel_add_chunks_wait_replica_duration_us.increment(wait_replica_ns / 1000);
-#ifndef BE_TEST
     _table_metrics->load_rows.increment(total_row_num);
     size_t chunk_size = chunk != nullptr ? chunk->bytes_usage() : 0;
     _table_metrics->load_bytes.increment(chunk_size);
-#endif
 
     COUNTER_UPDATE(_add_chunk_counter, 1);
     COUNTER_UPDATE(_add_chunk_timer, watch.elapsed_time());
@@ -542,7 +540,7 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     // remove tablets channel and load channel after all things done
     LOG(ERROR) << "LXH: LocalTabletsChannel: " << close_channel;
     if (close_channel) {
-        sleep(2);
+        //sleep(2); // LXH stuck
         _load_channel->remove_tablets_channel(_key);
         LOG(ERROR) << "LXH: LocalTabletsChannel remove finish: ";
     }
