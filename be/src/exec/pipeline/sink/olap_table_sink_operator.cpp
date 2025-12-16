@@ -147,14 +147,17 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
     if (_automatic_partition_chunk) {
         // resend previous chunk before send new chunk
         auto st = _sink->send_chunk_nonblocking(state, _automatic_partition_chunk.get());
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk before sleep";
+        sleep(3);
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk after sleep";
+        LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << (_automatic_partition_chunk != nullptr);
+        if (config::lxh_mode == 1) {
+            return Status::InternalError("OlapTableSinkOperator::push_chunk");
+        }
         _automatic_partition_chunk.reset();
         if (!st.ok()) {
             return st;
         }
-    }
-    LOG(ERROR) << "LXH: OlapTableSinkOperator::push_chunk: " << (_automatic_partition_chunk != nullptr);
-    if (config::lxh_mode == 1) {
-        return Status::InternalError("OlapTableSinkOperator::push_chunk");
     }
 
     uint16_t num_rows = chunk->num_rows();
