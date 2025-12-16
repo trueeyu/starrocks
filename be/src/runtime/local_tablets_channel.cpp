@@ -192,7 +192,7 @@ Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTablet
 
 void LocalTabletsChannel::add_segment(brpc::Controller* cntl, const PTabletWriterAddSegmentRequest* request,
                                       PTabletWriterAddSegmentResult* response, google::protobuf::Closure* done) const {
-    LOG(ERROR) << "LXH: LocalTabletsChannel::add_segment: " << request->tablet_id();
+    LOG(ERROR) << "LXH: LocalTabletsChannel::add_segment: " << request->tablet_id() << ":" << request->eos();
     std::shared_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
     ClosureGuard closure_guard(done);
     auto it = _delta_writers.find(request->tablet_id());
