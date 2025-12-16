@@ -103,6 +103,7 @@ void FragmentContext::count_down_execution_group(size_t val) {
 
     finish();
     auto status = final_status();
+    LOG(ERROR) << "LXH: report statue: " << status.to_string();
     _workgroup->executors()->driver_executor()->report_exec_state(query_ctx, this, status, true, true);
 
     if (_report_when_finish) {
