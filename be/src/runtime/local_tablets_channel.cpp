@@ -225,6 +225,7 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
         LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
     } else {
         LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.eos();
+        sleep(3);
     }
     bool& close_channel = *close_channel_ptr;
     close_channel = false;
@@ -542,7 +543,6 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     // remove tablets channel and load channel after all things done
     LOG(ERROR) << "LXH: LocalTabletsChannel: " << close_channel;
     if (close_channel) {
-        sleep(6);
         _load_channel->remove_tablets_channel(_key);
     }
 }
