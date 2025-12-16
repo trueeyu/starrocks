@@ -192,7 +192,7 @@ Status TabletSinkSender::try_close(RuntimeState* state) {
     Status err_st = Status::OK();
     bool intolerable_failure = false;
     for (auto& index_channel : _channels) {
-        LOG(ERROR) << "LXH: " << index_channel->has_incremental_node_channel();
+        LOG(ERROR) << "LXH: try close: " << index_channel->has_incremental_node_channel();
         if (index_channel->has_incremental_node_channel()) {
             // try to finish initial node channel and wait it done
             // This is added for automatic partition. We need to ensure that
