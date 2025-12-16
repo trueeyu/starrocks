@@ -427,7 +427,7 @@ bool OlapTableSink::is_full() {
 }
 
 Status OlapTableSink::_automatic_create_partition() {
-    LOG(ERROR) << "LXH: automic create partition";
+    LOG(ERROR) << "LXH: LocalTabletsChannel: automic create partition";
     TCreatePartitionRequest request;
     TCreatePartitionResult result;
     request.__set_txn_id(_txn_id);
@@ -458,7 +458,7 @@ Status OlapTableSink::_automatic_create_partition() {
     } while (result.status.status_code == TStatusCode::SERVICE_UNAVAILABLE &&
              butil::gettimeofday_s() - start_ts < timeout_ms / 1000);
 
-    LOG(INFO) << "load_id=" << print_id(_load_id) << ", txn_id: " << std::to_string(_txn_id)
+    LOG(ERROR) << "LXH: LocalTabletsChannel: load_id=" << print_id(_load_id) << ", txn_id: " << std::to_string(_txn_id)
               << " automatic partition rpc end response " << result;
     if (result.status.status_code == TStatusCode::OK) {
         // add new created partitions
@@ -471,7 +471,9 @@ Status OlapTableSink::_automatic_create_partition() {
         _nodes_info->add_nodes(result.nodes);
 
         // incremental open node channel
+        LOG(ERROR) << "LXH: LocalTabletsChannel: incremental open node channel start";
         RETURN_IF_ERROR(_incremental_open_node_channel(result.partitions));
+        LOG(ERROR) << "LXH: LocalTabletsChannel: incremental open node channel end";
     }
 
     return Status(result.status);
