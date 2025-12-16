@@ -704,6 +704,7 @@ Status DeltaWriter::_reset_mem_table() {
 }
 
 Status DeltaWriter::commit() {
+    LOG(ERROR) << "DeltaWriter::commit(): " << _opt.tablet_id;
     Span span;
     if (_opt.parent_span) {
         span = Tracer::Instance().add_span("delta_writer_commit", _opt.parent_span);
