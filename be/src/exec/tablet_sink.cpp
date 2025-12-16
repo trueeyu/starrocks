@@ -671,6 +671,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
             // automatic bucket
             std::set<int64_t> immutable_partition_ids;
             if (_tablet_sink_sender->get_immutable_partition_ids(&immutable_partition_ids)) {
+                LOG(ERROR) << "LXH: update partition";
                 RETURN_IF_ERROR(_update_immutable_partition(immutable_partition_ids));
             }
 
