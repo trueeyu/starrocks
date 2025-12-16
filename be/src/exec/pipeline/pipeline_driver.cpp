@@ -548,6 +548,11 @@ void PipelineDriver::report_exec_state_if_necessary() {
         return;
     }
 
+    if (config::lxh_mode == 1 && _state != FINISH) {
+        LOG(ERROR) << "LXH: before report state: ";
+        sleep(5);
+        LOG(ERROR) << "LXH: after report state: ";
+    }
     _fragment_ctx->report_exec_state_if_necessary();
 }
 
