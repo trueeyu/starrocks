@@ -162,7 +162,7 @@ void AsyncDeltaWriter::write_segment(const AsyncDeltaWriterSegmentRequest& req) 
 }
 
 void AsyncDeltaWriter::commit(AsyncDeltaWriterCallback* cb) {
-    LOG(ERROR) << "LXH: async_writer: commit" << _writer->tablet()->tablet_id();
+    LOG(ERROR) << "LXH: LocalTabletsChannel: commit" << _writer->tablet()->tablet_id();
     DCHECK(cb != nullptr);
     Task task;
     task.chunk = nullptr;
