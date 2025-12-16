@@ -103,8 +103,15 @@ void FragmentContext::count_down_execution_group(size_t val) {
 
     finish();
     auto status = final_status();
-    LOG(ERROR) << "LXH: report statue: " << status.to_string();
-    _workgroup->executors()->driver_executor()->report_exec_state(query_ctx, this, status, true, true);
+    LOG(ERROR) << "LXH: report status: " << status.to_string();
+    if (config::lxh_mode == 1 && status.is_internal_error()) {
+        LOG(ERROR) << "LXH: before report test";
+        sleep(5);
+        _workgroup->executors()->driver_executor()->report_exec_state(query_ctx, this, status, true, true);
+        LOG(ERROR) << "LXH: after report test";
+    } else {
+        _workgroup->executors()->driver_executor()->report_exec_state(query_ctx, this, status, true, true);
+    }
 
     if (_report_when_finish) {
         /// TODO: report fragment finish to BE coordinator
