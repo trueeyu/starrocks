@@ -224,7 +224,7 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     if (request.tablet_ids_size() != 0) {
         LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
     } else {
-        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: ";
+        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.eos();
     }
     bool& close_channel = *close_channel_ptr;
     close_channel = false;
@@ -387,7 +387,9 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
 
     // NOTE: Must close sender *AFTER* the write requests submitted, otherwise a delta writer commit request may
     // be executed ahead of the write requests submitted by other senders.
+    LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk_eos: " << request.eos();
     if (request.eos() && _close_sender(request.partition_ids().data(), request.partition_ids_size()) == 0) {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk_close_channel: ";
         close_channel = true;
         _commit_tablets(request, context);
     }
