@@ -98,6 +98,7 @@ int AsyncDeltaWriter::_execute(void* meta, bthread::TaskIterator<AsyncDeltaWrite
 
 StatusOr<std::unique_ptr<AsyncDeltaWriter>> AsyncDeltaWriter::open(const DeltaWriterOptions& opt,
                                                                    MemTracker* mem_tracker) {
+    LOG(ERROR) << "LXH: async_writer: open: " << opt.tablet_id;
     auto res = DeltaWriter::open(opt, mem_tracker);
     if (!res.ok()) {
         return res.status();
@@ -123,6 +124,7 @@ Status AsyncDeltaWriter::_init() {
 }
 
 void AsyncDeltaWriter::write(const AsyncDeltaWriterRequest& req, AsyncDeltaWriterCallback* cb) {
+    LOG(ERROR) << "LXH: async_writer: write: " << _writer->tablet()->tablet_id();
     DCHECK(cb != nullptr);
     Task task;
     task.chunk = req.chunk;
@@ -139,6 +141,7 @@ void AsyncDeltaWriter::write(const AsyncDeltaWriterRequest& req, AsyncDeltaWrite
 }
 
 void AsyncDeltaWriter::flush() {
+    LOG(ERROR) << "LXH: async_writer: flush: " << _writer->tablet()->tablet_id();
     Task task;
     task.chunk = nullptr;
     task.indexes = nullptr;
@@ -151,6 +154,7 @@ void AsyncDeltaWriter::flush() {
 }
 
 void AsyncDeltaWriter::write_segment(const AsyncDeltaWriterSegmentRequest& req) {
+    LOG(ERROR) << "LXH: async_writer: write_segment: " << _writer->tablet()->tablet_id();
     auto st = _writer->segment_flush_token()->submit(_writer.get(), req.cntl, req.request, req.response, req.done);
     if (!st.ok()) {
         LOG(WARNING) << "Failed to submit write segment, err=" << st;
@@ -158,6 +162,7 @@ void AsyncDeltaWriter::write_segment(const AsyncDeltaWriterSegmentRequest& req) 
 }
 
 void AsyncDeltaWriter::commit(AsyncDeltaWriterCallback* cb) {
+    LOG(ERROR) << "LXH: async_writer: commit" << _writer->tablet()->tablet_id();
     DCHECK(cb != nullptr);
     Task task;
     task.chunk = nullptr;
@@ -174,10 +179,12 @@ void AsyncDeltaWriter::commit(AsyncDeltaWriterCallback* cb) {
 }
 
 void AsyncDeltaWriter::cancel(const Status& st) {
+    LOG(ERROR) << "LXH: async_writer: cancel" << _writer->tablet()->tablet_id();
     _writer->cancel(st);
 }
 
 void AsyncDeltaWriter::abort(bool with_log) {
+    LOG(ERROR) << "LXH: async_writer: abort" << _writer->tablet()->tablet_id();
     Task task;
     task.abort = true;
     task.abort_with_log = with_log;
@@ -192,6 +199,7 @@ void AsyncDeltaWriter::abort(bool with_log) {
 }
 
 void AsyncDeltaWriter::_close() {
+    LOG(ERROR) << "LXH: async_writer: close" << _writer->tablet()->tablet_id();
     bool value = _closed.load(std::memory_order_acquire);
     if (value) {
         return;
