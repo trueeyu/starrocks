@@ -745,9 +745,10 @@ Status DeltaWriter::commit() {
 
     LOG(ERROR) << "LXH: LocalTabletsChannel: rowset builder: " << _opt.tablet_id;
     if (auto res = _rowset_writer->build(); res.ok()) {
+        LOG(WARNING) << "LXH: LocalTabletsChannel: build success. tablet_id: " << _opt.tablet_id << " err: " << res.status();
         _cur_rowset = std::move(res).value();
     } else {
-        LOG(WARNING) << "Failed to build rowset. tablet_id: " << _opt.tablet_id << " err: " << res.status();
+        LOG(WARNING) << "LXH: LocalTabletsChannel: Failed to build rowset. tablet_id: " << _opt.tablet_id << " err: " << res.status();
         _set_state(kAborted, res.status());
         return res.status();
     }
