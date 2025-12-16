@@ -249,6 +249,7 @@ Status TabletSinkSender::try_close(RuntimeState* state) {
 
         } else {
             index_channel->for_each_node_channel([&index_channel, &err_st, &intolerable_failure](NodeChannel* ch) {
+                LOG(ERROR) << "LXH: close channel: " << index_channel->is_failed_channel(ch);
                 if (!index_channel->is_failed_channel(ch)) {
                     auto st = ch->try_close();
                     if (!st.ok()) {
