@@ -143,7 +143,11 @@ LocalTabletsChannel::~LocalTabletsChannel() {
 
 Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTabletWriterOpenResult* result,
                                  std::shared_ptr<OlapTableSchemaParam> schema, bool is_incremental) {
-    LOG(ERROR) << "LXH: LocalTabletsChannel::open: " << schema->db_id() << ":" << schema->table_id();
+    if (params.tablets_size() > 0) {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::open: " << params.tablets(0).tablet_id();
+    } else {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::open: ";
+    }
 
     SCOPED_TIMER(_open_timer);
     COUNTER_UPDATE(_open_counter, 1);
@@ -188,6 +192,7 @@ Status LocalTabletsChannel::open(const PTabletWriterOpenRequest& params, PTablet
 
 void LocalTabletsChannel::add_segment(brpc::Controller* cntl, const PTabletWriterAddSegmentRequest* request,
                                       PTabletWriterAddSegmentResult* response, google::protobuf::Closure* done) const {
+    LOG(ERROR) << "LXH: LocalTabletsChannel::add_segment: " << request->tablet_id();
     std::shared_lock<bthreads::BThreadSharedMutex> lk(_rw_mtx);
     ClosureGuard closure_guard(done);
     auto it = _delta_writers.find(request->tablet_id());
@@ -216,6 +221,11 @@ static bool is_delta_writer_finished(const AsyncDeltaWriter* delta_writer) {
 
 void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkRequest& request,
                                     PTabletWriterAddBatchResult* response, bool* close_channel_ptr) {
+    if (request.tablet_ids_size() != 0) {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
+    } else {
+        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: ";
+    }
     bool& close_channel = *close_channel_ptr;
     close_channel = false;
     MonotonicStopWatch watch;
