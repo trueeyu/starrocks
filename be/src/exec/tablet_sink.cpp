@@ -689,7 +689,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
 
                 LOG(ERROR) << "LXH: LocalTabletsChannel: values: " << _partition_not_exist_row_values.size();
                 if (_partition_not_exist_row_values.size() > 0) {
-                    LOG(ERROR) << "LXH: partition not exist: " << _partition_not_exist_row_values[0].empty();
+                    LOG(ERROR) << "LXH: LocalTabletsChannel: partition not exist: " << _partition_not_exist_row_values[0].empty();
                 }
                 if (_partition_not_exist_row_values.size() > 0 && !_partition_not_exist_row_values[0].empty()) {
                     _is_automatic_partition_running.store(true, std::memory_order_release);
@@ -698,11 +698,14 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
                         if (!this->_automatic_partition_status.ok()) {
                             LOG(WARNING) << "LXH: LocalTabletsChannel: Failed to automatic create partition, err="
                                          << this->_automatic_partition_status;
+                        } else {
+                            LOG(WARNING) << "LXH: LocalTabletsChannel: SUccess to automatic create partition, err="
+                                         << this->_automatic_partition_status;
                         }
                         _is_automatic_partition_running.store(false, std::memory_order_release);
                     }));
 
-                    LOG(ERROR) << "LXH: automatic partition token submit: " << nonblocking;
+                    LOG(ERROR) << "LXH: LocalTabletsChannel: automatic partition token submit: " << nonblocking;
 
                     if (nonblocking) {
                         _has_automatic_partition = true;
