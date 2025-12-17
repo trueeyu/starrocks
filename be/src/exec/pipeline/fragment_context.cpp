@@ -106,7 +106,7 @@ void FragmentContext::count_down_execution_group(size_t val) {
     LOG(ERROR) << "LXH: report status: " << status.to_string();
     if (config::lxh_mode == 1 && status.is_internal_error()) {
         LOG(ERROR) << "LXH: before report test";
-        sleep(4);
+        sleep(15);
         _workgroup->executors()->driver_executor()->report_exec_state(query_ctx, this, status, true, true);
         LOG(ERROR) << "LXH: after report test";
     } else {

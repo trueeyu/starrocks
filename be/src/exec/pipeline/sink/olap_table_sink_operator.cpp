@@ -151,7 +151,7 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
         sleep(5);
         LOG(ERROR) << "LXH: LocalTabletsChannel::push_chunk 2: " << (_automatic_partition_chunk != nullptr);
     } else if (config::lxh_mode == 3) {
-        sleep(6);
+        sleep(5);
         LOG(ERROR) << "LXH: LocalTabletsChannel::push_chunk 3: " << (_automatic_partition_chunk != nullptr);
     }
     if (_automatic_partition_chunk) {
