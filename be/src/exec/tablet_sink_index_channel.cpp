@@ -241,6 +241,11 @@ void NodeChannel::_open(int64_t index_id, RefCountClosure<PTabletWriterOpenResul
     open_closure->cntl.set_timeout_ms(std::min(_rpc_timeout_ms, config::tablet_writer_open_rpc_timeout_sec * 1000));
     SET_IGNORE_OVERCROWDED(open_closure->cntl, load);
 
+    if (config::lxh_mode == 1) {
+        request.set_is_vectorized(false);
+    } else {
+        request.set_is_vectorized(true);
+    }
     _stub->tablet_writer_open(&open_closure->cntl, &request, &open_closure->result, open_closure);
     request.release_id();
     request.release_schema();

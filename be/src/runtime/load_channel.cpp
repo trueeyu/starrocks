@@ -125,7 +125,6 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
     ClosureGuard done_guard(open_context.done);
 
     _last_updated_time.store(time(nullptr), std::memory_order_relaxed);
-    bool is_lake_tablet = request.has_is_lake_tablet() && request.is_lake_tablet();
 
     Status st = Status::OK();
     TabletsChannelKey key(request.id(), request.sink_id(), request.index_id());
