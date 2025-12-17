@@ -317,6 +317,7 @@ void LoadChannel::abort(const TabletsChannelKey& key, const std::vector<int64_t>
 void LoadChannel::remove_tablets_channel(const TabletsChannelKey& key) {
     std::unique_lock l(_lock);
     _tablets_channels.erase(key);
+    LOG(ERROR) << "LXH: LocalTabletsChannel: " << key << ":" << _tablets_channels.size();
     if (_tablets_channels.empty()) {
         l.unlock();
         _closed.store(true);
