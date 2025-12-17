@@ -62,11 +62,13 @@ void BackendInternalServiceImpl<T>::tablet_writer_open(google::protobuf::RpcCont
                                                        google::protobuf::Closure* done) {
     VLOG_RPC << "tablet writer open, id=" << print_id(request->id()) << ", index_id=" << request->index_id()
              << ", txn_id: " << request->txn_id();
+    /*
     if (!request->is_vectorized()) {
         LOG(ERROR) << "LXH: LocalTabletsChannel before sleep";
         sleep(20);
         LOG(ERROR) << "LXH: LocalTabletsChannel after sleep";
     }
+    */
     PInternalServiceImplBase<T>::_exec_env->load_channel_mgr()->open(static_cast<brpc::Controller*>(cntl_base),
                                                                      *request, response, done);
 }
