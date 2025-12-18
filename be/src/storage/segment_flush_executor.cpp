@@ -65,7 +65,7 @@ public:
     // BackendInternalServiceImpl<T>::tablet_writer_add_segment.
     void run() override {
         LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: start";
-        //sleep(4);
+        sleep(2);
         //sleep(100);
         auto& stat = _flush_token->_stat;
         stat.num_pending_tasks.fetch_add(-1, std::memory_order_relaxed);
