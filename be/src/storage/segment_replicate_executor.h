@@ -43,7 +43,7 @@ public:
 
     Status async_segment(SegmentPB* segment, butil::IOBuf& data, bool eos,
                          std::vector<std::unique_ptr<PTabletInfo>>* replicate_tablet_infos,
-                         std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos);
+                         std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos, int i);
 
     void cancel(const Status& status);
 
@@ -58,7 +58,7 @@ public:
 
 private:
     Status _init();
-    void _send_request(SegmentPB* segment, butil::IOBuf& data, bool eos);
+    void _send_request(SegmentPB* segment, butil::IOBuf& data, bool eos, int i);
     Status _wait_response(std::vector<std::unique_ptr<PTabletInfo>>* replicate_tablet_infos,
                           std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos);
 

@@ -108,7 +108,7 @@ Status ReplicateChannel::_init() {
 
 Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, bool eos,
                                        std::vector<std::unique_ptr<PTabletInfo>>* replicate_tablet_infos,
-                                       std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos) {
+                                       std::vector<std::unique_ptr<PTabletInfo>>* failed_tablet_infos, int i) {
     RETURN_IF_ERROR(get_status());
 
     VLOG(2) << "Async tablet " << _opt->tablet_id << " segment id " << (segment == nullptr ? -1 : segment->segment_id())
@@ -129,7 +129,7 @@ Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, b
     //RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
 
     // 3. send segment sync request
-    _send_request(segment, data, eos);
+    _send_request(segment, data, eos, i);
 
     // 4. wait if eos=true
     if (eos || _mem_tracker->any_limit_exceeded()) {
@@ -146,7 +146,7 @@ Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, b
     return get_status();
 }
 
-void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, bool eos) {
+void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, bool eos, int i) {
     PTabletWriterAddSegmentRequest request;
     request.set_allocated_id(const_cast<starrocks::PUniqueId*>(&_opt->load_id));
     request.set_tablet_id(_opt->tablet_id);
@@ -162,7 +162,9 @@ void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, boo
     _closure->ref();
     _closure->reset();
     //_closure->cntl.set_timeout_ms(_opt->timeout_ms);
-    _closure->cntl.set_timeout_ms(500);
+    if (i == 0) {
+        _closure->cntl.set_timeout_ms(500);
+    }
     SET_IGNORE_OVERCROWDED(_closure->cntl, load);
 
     if (segment != nullptr) {
@@ -378,19 +380,21 @@ void ReplicateToken::_sync_segment(std::unique_ptr<SegmentPB> segment, bool eos)
     }
 
     // 2. send segment to secondary replica
+    int tmp_i = 0;
+    LOG(ERROR) << "LXH_CORE: SegmentReplicateTask start: _sync_segment: " << (void*)this;
     for (const auto& [_, channel] : _replicate_channels) {
         auto st = Status::OK();
         if (_failed_node_id.count(channel->node_id()) == 0) {
-            st = channel->async_segment(segment.get(), data, eos, &_replicated_tablet_infos, &_failed_tablet_infos);
+            st = channel->async_segment(segment.get(), data, eos, &_replicated_tablet_infos, &_failed_tablet_infos, tmp_i);
             if (!st.ok()) {
-                LOG(WARNING) << "Failed to sync segment " << channel->debug_string() << " err " << st;
+                LOG(WARNING) << "LXH_CORE: Failed to sync segment " << channel->debug_string() << " err " << st;
                 channel->cancel(st);
                 _failed_node_id.insert(channel->node_id());
             }
         }
 
         if (_failed_node_id.size() > _max_fail_replica_num) {
-            LOG(WARNING) << "Failed to sync segment err " << st << " by " << debug_string() << " fail_num "
+            LOG(WARNING) << "LXH_CORE: Failed to sync segment err " << st << " by " << debug_string() << " fail_num "
                          << _failed_node_id.size() << " max_fail_num " << _max_fail_replica_num;
             for (const auto& [_, channel] : _replicate_channels) {
                 if (_failed_node_id.count(channel->node_id()) == 0) {
@@ -398,6 +402,11 @@ void ReplicateToken::_sync_segment(std::unique_ptr<SegmentPB> segment, bool eos)
                 }
             }
             return set_status(st);
+        }
+        if (tmp_i == 0) {
+            tmp_i = 1;
+        } else {
+            tmp_i = 0;
         }
     }
 }
