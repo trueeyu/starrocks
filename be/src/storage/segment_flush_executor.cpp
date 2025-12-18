@@ -194,6 +194,7 @@ Status SegmentFlushToken::submit(DeltaWriter* writer, brpc::Controller* cntl,
 
     auto task = std::make_shared<SegmentFlushTask>(this, writer, cntl, request, response, done);
     auto submit_st = _flush_token->submit(task);
+    LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: submit: " << submit_st.to_string();
     if (submit_st.ok()) {
         _stat.num_pending_tasks.fetch_add(1, std::memory_order_relaxed);
         closure_guard.release();

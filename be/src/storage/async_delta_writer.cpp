@@ -154,7 +154,7 @@ void AsyncDeltaWriter::flush() {
 }
 
 void AsyncDeltaWriter::write_segment(const AsyncDeltaWriterSegmentRequest& req) {
-    LOG(ERROR) << "LXH: LocalTabletsChannel: write_segment: " << _writer->tablet()->tablet_id() << ":" << req.request->eos();
+    LOG(ERROR) << "LXH_CORE: write_segment: " << _writer->tablet()->tablet_id() << ":" << req.request->eos();
     auto st = _writer->segment_flush_token()->submit(_writer.get(), req.cntl, req.request, req.response, req.done);
     if (!st.ok()) {
         LOG(WARNING) << "Failed to submit write segment, err=" << st;
