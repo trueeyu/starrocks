@@ -381,16 +381,19 @@ void ReplicateToken::_sync_segment(std::unique_ptr<SegmentPB> segment, bool eos)
 
     // 2. send segment to secondary replica
     int tmp_i = 0;
-    LOG(ERROR) << "LXH_CORE: SegmentReplicateTask start: _sync_segment: " << (void*)this;
+    LOG(ERROR) << "LXH_CORE: SegmentReplicateTask start: _sync_segment: " << (void*)this << ":" << _replicate_channels.size();
     for (const auto& [_, channel] : _replicate_channels) {
         auto st = Status::OK();
         if (_failed_node_id.count(channel->node_id()) == 0) {
+            LOG(ERROR) << "LXH_CORE: SegmentReplicateTask test send: " << tmp_i;
             st = channel->async_segment(segment.get(), data, eos, &_replicated_tablet_infos, &_failed_tablet_infos, tmp_i);
             if (!st.ok()) {
                 LOG(WARNING) << "LXH_CORE: Failed to sync segment " << channel->debug_string() << " err " << st;
                 channel->cancel(st);
                 _failed_node_id.insert(channel->node_id());
             }
+        } else {
+            LOG(ERROR) << "LXH_CORE: SegmentReplicateTask test send: " << tmp_i;
         }
 
         if (_failed_node_id.size() > _max_fail_replica_num) {
