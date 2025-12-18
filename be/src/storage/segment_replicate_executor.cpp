@@ -154,7 +154,8 @@ void ReplicateChannel::_send_request(SegmentPB* segment, butil::IOBuf& data, boo
 
     _closure->ref();
     _closure->reset();
-    _closure->cntl.set_timeout_ms(_opt->timeout_ms);
+    //_closure->cntl.set_timeout_ms(_opt->timeout_ms);
+    _closure->cntl.set_timeout_ms(500);
     SET_IGNORE_OVERCROWDED(_closure->cntl, load);
 
     if (segment != nullptr) {
