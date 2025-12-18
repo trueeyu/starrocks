@@ -133,7 +133,10 @@ Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, b
 
     // 4. wait if eos=true
     if (eos || _mem_tracker->any_limit_exceeded()) {
-        RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
+        LOG(ERROR) << "LXH_CORE: asnyc_segment start: eos_wait_response: ";
+        auto tmp_st2 = _wait_response(replicate_tablet_infos, failed_tablet_infos);
+        LOG(ERROR) << "LXH_CORE: asnyc_segment end: eos_wait_response: " << tmp_st2.to_string();
+        RETURN_IF_ERROR(tmp_st2);
     }
 
     VLOG(2) << "Asynced tablet " << _opt->tablet_id << " segment id "
