@@ -70,6 +70,7 @@ bool OlapTableSinkOperator::pending_finish() const {
             return true;
         }
         auto st = _sink->send_chunk_nonblocking(_fragment_ctx->runtime_state(), _automatic_partition_chunk.get());
+        LOG(ERROR) << "LXH_CORE: send return status: " << st.to_string();
         _automatic_partition_chunk.reset();
         if (!st.ok()) {
             _fragment_ctx->cancel(st);
@@ -157,6 +158,7 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
     if (_automatic_partition_chunk) {
         // resend previous chunk before send new chunk
         auto st = _sink->send_chunk_nonblocking(state, _automatic_partition_chunk.get());
+        LOG(ERROR) << "LXH_CORE: send return status: " << st.to_string();
 
         _automatic_partition_chunk.reset();
         if (!st.ok()) {
@@ -171,6 +173,7 @@ Status OlapTableSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& ch
 
     // send_chunk_nonblocking() will return EAGAIN to avoid block
     auto st = _sink->send_chunk_nonblocking(state, chunk.get());
+    LOG(ERROR) << "LXH_CORE: send return status: " << st.to_string();
     if (st.is_eagain()) {
         // temporarily save the chunk, wait for the partition to be created and send again
         _automatic_partition_chunk = chunk;
