@@ -52,6 +52,7 @@ Status TabletSinkSender::send_chunk(const OlapTableSchemaParam* schema,
         return Status::OK();
     }
     _tablet_ids.resize(num_rows);
+    LOG(ERROR) << "LXH_CORE: send chunk xxx: " << num_rows;
     if (num_rows > selection_size) {
         size_t index_size = partitions[validate_select_idx[0]]->indexes.size();
         for (size_t i = 0; i < index_size; ++i) {
