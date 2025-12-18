@@ -585,7 +585,7 @@ Status DeltaWriter::flush_memtable_async(bool eos) {
                                 _tablet->data_size() + _tablet->in_writing_data_size() > _opt.immutable_tablet_size) {
                                 _is_immutable.store(true, std::memory_order_relaxed);
                             }
-                            VLOG(2) << "LXH_CORE: flush memtable, tablet=" << _tablet->tablet_id() << ", txn=" << _opt.txn_id
+                            LOG(ERROR) << "LXH_CORE: flush memtable, tablet=" << _tablet->tablet_id() << ", txn=" << _opt.txn_id
                                     << " _immutable_tablet_size=" << _opt.immutable_tablet_size
                                     << ", segment_size=" << (seg ? seg->data_size() : 0)
                                     << ", tablet_data_size=" << _tablet->data_size()
