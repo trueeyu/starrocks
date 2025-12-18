@@ -421,6 +421,7 @@ Status DeltaWriter::_check_partial_update_with_sort_key(const Chunk& chunk) {
 }
 
 Status DeltaWriter::write(const Chunk& chunk, const uint32_t* indexes, uint32_t from, uint32_t size) {
+    LOG(ERROR) << "LXH_CORE: Delta writer: " << size;
     SCOPED_THREAD_LOCAL_MEM_SETTER(_mem_tracker, false);
     RETURN_IF_ERROR(_check_partial_update_with_sort_key(chunk));
     ADD_COUNTER_RELAXED(_stats.write_count, 1);
@@ -526,6 +527,7 @@ Status DeltaWriter::write_segment(const SegmentPB& segment_pb, butil::IOBuf& dat
 }
 
 Status DeltaWriter::close() {
+    LOG(ERROR) << "LXH_CORE: Delta writer close: ";
     SCOPED_THREAD_LOCAL_MEM_SETTER(_mem_tracker, false);
     int64_t start_time = MonotonicNanos();
     DeferOp defer([&]() { ADD_COUNTER_RELAXED(_stats.close_time_ns, MonotonicNanos() - start_time); });
