@@ -161,6 +161,8 @@ private:
     std::vector<int64_t> _replica_node_ids;
 
     SegmentReplicateStat _stat;
+
+    atomic_bool _first_send{true};
 };
 
 class SegmentReplicateExecutor {

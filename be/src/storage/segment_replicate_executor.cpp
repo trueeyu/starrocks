@@ -390,6 +390,12 @@ void ReplicateToken::_sync_segment(std::unique_ptr<SegmentPB> segment, bool eos)
         auto st = Status::OK();
         if (_failed_node_id.count(channel->node_id()) == 0) {
             LOG(ERROR) << "LXH_CORE: SegmentReplicateTask test send: " << tmp_i;
+            if (_first_send) {
+                tmp_i = 0;
+                _first_send = false;
+            } else {
+                tmp_i = 1;
+            }
             st = channel->async_segment(segment.get(), data, eos, &_replicated_tablet_infos, &_failed_tablet_infos, tmp_i);
             if (!st.ok()) {
                 LOG(WARNING) << "LXH_CORE: Failed to sync segment " << channel->debug_string() << " err " << st;
