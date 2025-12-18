@@ -189,7 +189,7 @@ void BackendInternalServiceImpl<T>::tablet_writer_add_segment(google::protobuf::
                                                               const PTabletWriterAddSegmentRequest* request,
                                                               PTabletWriterAddSegmentResult* response,
                                                               google::protobuf::Closure* done) {
-    VLOG_RPC << "tablet writer add segment, id=" << print_id(request->id()) << ", txn_id: " << request->txn_id()
+    LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: tablet writer add segment, id=" << print_id(request->id()) << ", txn_id: " << request->txn_id()
              << ", index_id=" << request->index_id() << ", tablet_id=" << request->tablet_id()
              << ", eos=" << request->eos();
     PInternalServiceImplBase<T>::_exec_env->load_channel_mgr()->add_segment(static_cast<brpc::Controller*>(controller),

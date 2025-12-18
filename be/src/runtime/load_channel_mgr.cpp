@@ -230,7 +230,6 @@ void LoadChannelMgr::add_chunk(const PTabletWriterAddChunkRequest& request, PTab
 }
 
 void LoadChannelMgr::add_chunks(const PTabletWriterAddChunksRequest& request, PTabletWriterAddBatchResult* response) {
-    VLOG(2) << "Current memory usage=" << _mem_tracker->consumption() << " limit=" << _mem_tracker->limit();
     UniqueId load_id(request.id());
     auto channel = _find_load_channel(load_id);
     if (channel != nullptr) {
@@ -324,11 +323,7 @@ void LoadChannelMgr::load_diagnose(brpc::Controller* cntl, const PLoadDiagnoseRe
 }
 
 void* LoadChannelMgr::load_channel_clean_bg_worker(void* arg) {
-#ifndef BE_TEST
     uint64_t interval = 60;
-#else
-    uint64_t interval = 1;
-#endif
     auto mgr = static_cast<LoadChannelMgr*>(arg);
     while (!bthread_stopped(bthread_self())) {
         if (bthread_usleep(interval * 1000 * 1000) == 0) {
