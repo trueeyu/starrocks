@@ -624,6 +624,7 @@ Status OlapTableSink::send_chunk_nonblocking(RuntimeState* state, Chunk* chunk) 
 }
 
 Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblocking) {
+    LOG(ERROR) << "LXH: OlapTableSink: send_chunk_nonblocking=" << chunk->num_rows();
     SCOPED_TIMER(_profile->total_time_counter());
     DCHECK(chunk->num_rows() > 0);
     size_t num_rows = chunk->num_rows();
