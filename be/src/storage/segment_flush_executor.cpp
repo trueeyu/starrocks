@@ -64,7 +64,8 @@ public:
     // Run the task if release() is not called which will flush the segment, and respond the brpc
     // BackendInternalServiceImpl<T>::tablet_writer_add_segment.
     void run() override {
-        LOG(ERROR) << "LXH: LocalTabletsChannel: start";
+        LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: start";
+        sleep(2);
         //sleep(100);
         auto& stat = _flush_token->_stat;
         stat.num_pending_tasks.fetch_add(-1, std::memory_order_relaxed);
@@ -121,7 +122,7 @@ public:
         } else {
             _send_success_response(eos, st);
         }
-        LOG(ERROR) << "LXH: LocalTabletsChannel: end";
+        LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: end";
     }
 
     // Release the task which means it should not be run and respond to the brpc.
