@@ -122,8 +122,9 @@ Status ReplicateChannel::async_segment(SegmentPB* segment, butil::IOBuf& data, b
     }
 
     // 2. wait pre request's result
+    LOG(ERROR) << "LXH_CORE: asnyc_segment start: _wait_response: ";
     Status tmp_st = _wait_response(replicate_tablet_infos, failed_tablet_infos);
-    LOG(ERROR) << "LXH_CORE: asnyc_segment: _wait_response: " << tmp_st.to_string();
+    LOG(ERROR) << "LXH_CORE: asnyc_segment end: _wait_response: " << tmp_st.to_string();
     RETURN_IF_ERROR(tmp_st);
     //RETURN_IF_ERROR(_wait_response(replicate_tablet_infos, failed_tablet_infos));
 
