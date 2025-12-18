@@ -189,6 +189,7 @@ void LoadChannel::_add_chunk(Chunk* chunk, const MonotonicStopWatch* watch, cons
 }
 
 void LoadChannel::add_chunk(const PTabletWriterAddChunkRequest& request, PTabletWriterAddBatchResult* response) {
+    LOG(ERROR) << "LXH_CORE: add_chunk";
     faststring uncompressed_buffer;
     Chunk chunk;
     if (request.has_chunk()) {
@@ -204,6 +205,7 @@ void LoadChannel::add_chunk(const PTabletWriterAddChunkRequest& request, PTablet
 
 void LoadChannel::add_chunks(const PTabletWriterAddChunksRequest& req, PTabletWriterAddBatchResult* response) {
     // only support repeated chunks
+    LOG(ERROR) << "LXH_CORE: " << "add_chunks" << ":" << req.requests_size();
     if (!req.is_repeated_chunk() || !config::enable_load_colocate_mv) {
         response->mutable_status()->set_status_code(TStatusCode::INTERNAL_ERROR);
         response->mutable_status()->add_error_msgs("server not support repeated chunk");

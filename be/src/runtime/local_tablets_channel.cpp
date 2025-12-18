@@ -222,9 +222,9 @@ static bool is_delta_writer_finished(const AsyncDeltaWriter* delta_writer) {
 void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkRequest& request,
                                     PTabletWriterAddBatchResult* response, bool* close_channel_ptr) {
     if (request.tablet_ids_size() != 0) {
-        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
+        LOG(ERROR) << "LXH_CORE: LocalTabletsChannel::add_chunk: " << request.tablet_ids()[0];
     } else {
-        LOG(ERROR) << "LXH: LocalTabletsChannel::add_chunk: " << request.eos();
+        LOG(ERROR) << "LXH_CORE: LocalTabletsChannel::add_chunk: " << request.eos();
     }
     bool& close_channel = *close_channel_ptr;
     close_channel = false;
