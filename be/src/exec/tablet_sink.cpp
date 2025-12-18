@@ -677,7 +677,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
             // automatic bucket
             std::set<int64_t> immutable_partition_ids;
             if (_tablet_sink_sender->get_immutable_partition_ids(&immutable_partition_ids)) {
-                LOG(ERROR) << "LXH: update partition";
+                LOG(ERROR) << "LXH_CORE: update partition";
                 RETURN_IF_ERROR(_update_immutable_partition(immutable_partition_ids));
             }
 
@@ -685,7 +685,7 @@ Status OlapTableSink::_send_chunk(RuntimeState* state, Chunk* chunk, bool nonblo
             // _has_automatic_partition is true means last send_chunk already create partition in nonblocking mode
             // we don't need to create again since it will resend last chunk
             if (_enable_automatic_partition && !_has_automatic_partition) {
-                LOG(ERROR) << "LXH: LocalTabletsChannel: auto create partition";
+                LOG(ERROR) << "LXH_CORE: LocalTabletsChannel: auto create partition";
                 _partition_not_exist_row_values.clear();
 
                 RETURN_IF_ERROR(_vectorized_partition->find_tablets(chunk, &_partitions, &_record_hashes,
