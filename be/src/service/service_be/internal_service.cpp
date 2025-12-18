@@ -99,6 +99,7 @@ void BackendInternalServiceImpl<T>::tablet_writer_add_chunks(google::protobuf::R
                                                              const PTabletWriterAddChunksRequest* request,
                                                              PTabletWriterAddBatchResult* response,
                                                              google::protobuf::Closure* done) {
+    LOG(ERROR) << "LXH_CORE: Service::add_chunks";
     ClosureGuard closure_guard(done);
     PInternalServiceImplBase<T>::_exec_env->load_channel_mgr()->add_chunks(*request, response);
 }
