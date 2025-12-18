@@ -162,7 +162,7 @@ private:
 
     SegmentReplicateStat _stat;
 
-    atomic_bool _first_send{true};
+    std::atomic_bool _first_send{true};
 };
 
 class SegmentReplicateExecutor {
