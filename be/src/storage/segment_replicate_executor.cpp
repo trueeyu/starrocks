@@ -410,11 +410,13 @@ void ReplicateToken::_sync_segment(std::unique_ptr<SegmentPB> segment, bool eos)
             }
             return set_status(st);
         }
+        /*
         if (tmp_i == 0) {
             tmp_i = 1;
         } else {
             tmp_i = 0;
         }
+        */
     }
 }
 
