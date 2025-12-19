@@ -144,8 +144,12 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
         if (it == _tablets_channels.end()) {
             channel = new_local_tablets_channel(this, key, _mem_tracker.get(), _profile);
             if (st.ok()) {
+                LOG(ERROR) << "LXH_CORE: before open";
                 if (st = channel->open(request, response, _schema, request.is_incremental()); st.ok()) {
+                    LOG(ERROR) << "LXH_CORE: after open success";
                     _tablets_channels.insert({key, std::move(channel)});
+                } else {
+                    LOG(ERROR) << "LXH_CORE: after open failed";
                 }
             }
             COUNTER_UPDATE(_index_num, 1);
