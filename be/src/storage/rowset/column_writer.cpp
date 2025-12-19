@@ -161,6 +161,8 @@ public:
             _encode_buf.resize(bitshuffle::compress_lz4_bound(_null_map.size(), sizeof(uint8_t), 0));
             LOG(ERROR) << "LXH: Null_map_size after: " << _null_map.size();
             size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
+            void* const c0Buffer = malloc(c0SizeBound);
+            LZ4F_compressFrame(c0Buffer, c0SizeBound, NULL, 0, NULL);
             LOG(ERROR) << "LXH: c0SizeBound: " << c0SizeBound;
             _null_map.resize(0);
             int64_t r = bitshuffle::compress_lz4(_null_map.data(), _encode_buf.data(), _null_map.size(),
