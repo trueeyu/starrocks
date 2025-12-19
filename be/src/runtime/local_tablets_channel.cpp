@@ -541,8 +541,8 @@ void LocalTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkReq
     LOG(ERROR) << "LXH: LocalTabletsChannel: " << close_channel;
     if (close_channel) {
         //sleep(2); // LXH stuck
+        LOG(ERROR) << "LXH_CORE: LocalTabletsChannel start remove: ";
         _load_channel->remove_tablets_channel(_key);
-        LOG(ERROR) << "LXH: LocalTabletsChannel remove finish: ";
     }
 }
 

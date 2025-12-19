@@ -297,11 +297,8 @@ Status NodeChannel::_open_wait(RefCountClosure<PTabletWriterOpenResult>* open_cl
     if (open_closure == nullptr) {
         return _err_st;
     }
-#ifndef BE_TEST
     open_closure->join();
-#else
-    TEST_SYNC_POINT_CALLBACK("NodeChannel::rpc::open_join", open_closure);
-#endif
+
     if (open_closure->cntl.Failed()) {
         _cancelled = true;
         _err_st = Status::InternalError(open_closure->cntl.ErrorText());

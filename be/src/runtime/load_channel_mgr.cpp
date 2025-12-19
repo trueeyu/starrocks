@@ -327,7 +327,7 @@ void* LoadChannelMgr::load_channel_clean_bg_worker(void* arg) {
     auto mgr = static_cast<LoadChannelMgr*>(arg);
     while (!bthread_stopped(bthread_self())) {
         if (bthread_usleep(interval * 1000 * 1000) == 0) {
-            mgr->_start_load_channels_clean();
+            //mgr->_start_load_channels_clean();
         }
     }
     return nullptr;
