@@ -159,10 +159,11 @@ public:
             memset(_null_map.data() + old_size, 0, _null_map.size() - old_size);
             _encode_buf.resize(bitshuffle::compress_lz4_bound(_null_map.size(), sizeof(uint8_t), 0));
             LOG(ERROR) << "LXH: Null_map_size after: " << _null_map.size();
+            _null_map.resize(0);
             int64_t r = bitshuffle::compress_lz4(_null_map.data(), _encode_buf.data(), _null_map.size(),
                                                  sizeof(uint8_t), 0);
             if (r < 0) {
-                LOG(ERROR) << "bitshuffle compress failed: " << bitshuffle_error_msg(r);
+                LOG(ERROR) << "LXH: bitshuffle compress failed: " << bitshuffle_error_msg(r);
                 return {};
             }
             // before build(), update buffer length to the actual compressed size
