@@ -302,6 +302,7 @@ Status SegmentWriter::finalize(uint64_t* segment_file_size, uint64_t* index_size
 }
 
 Status SegmentWriter::finalize_columns(uint64_t* index_size) {
+    LOG(ERROR) << "LXH: finalize_columns: " << _num_rows << ":" << _has_key;
     if (_has_key || _num_rows == 0) {
         // _num_rows == 0 && !_has_key means this segment not contains key columns
         _num_rows = _num_rows_written;

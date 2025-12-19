@@ -151,6 +151,7 @@ public:
     ALWAYS_INLINE void set_has_null(bool has_null) { _has_null = has_null; }
 
     OwnedSlice finish() {
+        LOG(ERROR) << "LXH: " << _null_encoding;
         if (_null_encoding == NullEncodingPB::BITSHUFFLE_NULL) {
             size_t old_size = _null_map.size();
             _null_map.resize(ALIGN_UP(_null_map.size(), 8u));
