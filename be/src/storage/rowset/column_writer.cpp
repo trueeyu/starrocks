@@ -154,10 +154,11 @@ public:
         LOG(ERROR) << "LXH: " << _null_encoding;
         if (_null_encoding == NullEncodingPB::BITSHUFFLE_NULL) {
             size_t old_size = _null_map.size();
+            LOG(ERROR) << "LXH: Null_map_size before: " << _null_map.size();
             _null_map.resize(ALIGN_UP(_null_map.size(), 8u));
             memset(_null_map.data() + old_size, 0, _null_map.size() - old_size);
             _encode_buf.resize(bitshuffle::compress_lz4_bound(_null_map.size(), sizeof(uint8_t), 0));
-            LOG(ERROR) << "LXH: Null_map_size: " << _null_map.size();
+            LOG(ERROR) << "LXH: Null_map_size after: " << _null_map.size();
             int64_t r = bitshuffle::compress_lz4(_null_map.data(), _encode_buf.data(), _null_map.size(),
                                                  sizeof(uint8_t), 0);
             if (r < 0) {
