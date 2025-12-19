@@ -42,6 +42,7 @@
 #include "gutil/strings/substitute.h"
 #include "simd/simd.h"
 #include "storage/index/inverted/inverted_index_option.h"
+#include "util/compression/compression_context.h"
 #ifndef __APPLE__
 #include "storage/index/inverted/inverted_plugin_factory.h"
 #endif
@@ -159,6 +160,8 @@ public:
             memset(_null_map.data() + old_size, 0, _null_map.size() - old_size);
             _encode_buf.resize(bitshuffle::compress_lz4_bound(_null_map.size(), sizeof(uint8_t), 0));
             LOG(ERROR) << "LXH: Null_map_size after: " << _null_map.size();
+            size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
+            LOG(ERROR) << "LXH: c0SizeBound: " << c0SizeBound;
             _null_map.resize(0);
             int64_t r = bitshuffle::compress_lz4(_null_map.data(), _encode_buf.data(), _null_map.size(),
                                                  sizeof(uint8_t), 0);
