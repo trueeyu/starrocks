@@ -150,7 +150,9 @@ void LoadChannel::open(const LoadChannelOpenContext& open_context) {
             }
             COUNTER_UPDATE(_index_num, 1);
         } else if (request.is_incremental()) {
+            LOG(ERROR) << "LXH_CORE: before increment open";
             st = it->second->incremental_open(request, response, _schema);
+            LOG(ERROR) << "LXH_CORE: after increment open: " << st;
         }
     }
     LOG_IF(WARNING, !st.ok()) << "Fail to open index " << key << " of load " << _load_id << ": " << st.to_string();
