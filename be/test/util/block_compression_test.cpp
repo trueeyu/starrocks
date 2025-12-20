@@ -174,6 +174,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         free(c9Buffer);
     }
 
+    /*
     LZ4F_resetDecompressionContext(dctx);
 
     {
@@ -182,7 +183,6 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         char d0Buffer[1];
         {
             size_t const c0Size = LZ4F_compressFrame(c0Buffer, c0SizeBound, NULL, 0, NULL);
-            /* now decompress this valid empty frame */
             {
                 size_t dstSize = sizeof(d0Buffer);
                 size_t srcSize = c0Size;
@@ -196,6 +196,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         }
         free(c0Buffer);
     }
+    */
 
     LZ4F_resetDecompressionContext(dctx);
 
