@@ -98,6 +98,12 @@ TEST_F(BlockCompressionTest, lxh_test) {
     st = codec->compress(str, &compressed_slice);
     ASSERT_OK(st);
     std::cout << "compressed size: " << compressed_slice.size << std::endl;
+
+    std::string uncompressed;
+    uncompressed.resize(5000);
+    Slice uncompressed_slice(uncompressed);
+    st = codec->decompress(compressed_slice, &uncompressed_slice);
+    std::cout << "decompress: " << st;
 }
 
 void test_single_slice(CompressionTypePB type) {
