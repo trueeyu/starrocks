@@ -158,6 +158,27 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         }
         free(c9Buffer);
     }
+
+    LZ4F_resetDecompressionContext(dctx);
+
+    {
+        size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
+        void* const c0Buffer = malloc(c0SizeBound);
+        char d0Buffer[1];
+        {
+            size_t const c0Size = LZ4F_compressFrame(c0Buffer, c0SizeBound, NULL, 0, NULL);
+            /* now decompress this valid empty frame */
+            {
+                size_t dstSize = sizeof(d0Buffer);
+                size_t srcSize = c0Size;
+                size_t const d0Size = LZ4F_decompress(dctx, d0Buffer, &dstSize, c0Buffer, &srcSize, NULL);
+                std::cout << "decompress: " << LZ4F_getErrorName(d0Size) << ":" << dstSize << std::endl;
+            }
+        }
+        free(c0Buffer);
+    }
+
+    LZ4F_freeDecompressionContext(dctx);
 }
 
 TEST_F(BlockCompressionTest, lxh_test) {
