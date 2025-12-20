@@ -70,7 +70,8 @@ public:
     ~BlockCompressionTest() override = default;
 
     Slice compress();
-    void decompress(Slice src_slice);
+    void decompress_fail(Slice src_slice);
+    void decompress_0(Slice src_slice);
 
     ObjectPool _pool;
 };
@@ -103,7 +104,7 @@ Slice BlockCompressionTest::compress() {
     return dst_slice;
 }
 
-void BlockCompressionTest::decompress(Slice src_slice) {
+void BlockCompressionTest::decompress_fail(Slice src_slice) {
     const BlockCompressionCodec* codec = nullptr;
     EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
 
@@ -116,16 +117,24 @@ void BlockCompressionTest::decompress(Slice src_slice) {
     std::cout << "decompress: " << st << ":" << dst_slice.size << std::endl;
 }
 
+void BlockCompressionTest::decompress_0(Slice src_slice) {
+    const BlockCompressionCodec* codec = nullptr;
+    EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
+
+    size_t src_size = codec->max_compressed_len(0);
+    const char* src_buf = (const char*)malloc(src_size);
+    char dst_buf[1];
+    Slice input(src_buf, src_size);
+    Slice output(dst_buf, sizeof(dst_buf));
+    Status st = codec->decompress(input, &output);
+    std::cout << "decompress: " << st << ":" << output.size << std::endl;
+}
+
 TEST_F(BlockCompressionTest, lxh_test) {
     Slice compressed_slice = compress();
-    decompress(compressed_slice);
+    decompress_fail(compressed_slice);
+    decompress_0(compressed_slice);
     /*
-    std::string uncompressed;
-    uncompressed.resize(5000);
-    Slice uncompressed_slice(uncompressed);
-    Status st = codec1->decompress(compressed_slice, &uncompressed_slice);
-    std::cout << "decompress: " << st << std::endl;
-
     const BlockCompressionCodec* codec2 = nullptr;
     st = get_block_compression_codec(LZ4_FRAME, &codec2);
     ASSERT_TRUE(st.ok());
