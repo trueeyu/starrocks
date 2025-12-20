@@ -82,6 +82,8 @@ StatusOr<int64_t> CompressedInputStream::read(void* data, int64_t size) {
         RETURN_IF_ERROR(_decompressor->decompress((uint8_t*)compressed_data.data, compressed_data.size,
                                                   &input_bytes_read, output, output_len, &output_bytes_written,
                                                   &_stream_end));
+        LOG(ERROR) << "INPUT_BYTES: " << input_bytes_read;
+        LOG(ERROR) << "OUTPUT_BYTES: " << output_bytes_written;
         if (UNLIKELY(output_bytes_written == 0 && input_bytes_read == 0 && st.is_end_of_file())) {
             return Status::InternalError(strings::Substitute("Failed to decompress. input_len:$0, output_len:$0",
                                                              compressed_data.size, output_len));
