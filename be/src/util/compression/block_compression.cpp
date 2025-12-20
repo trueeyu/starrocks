@@ -483,6 +483,7 @@ private:
         if (!status.ok()) {
             return status;
         }
+        std::cout << "CTX: " << (void*)ref.value()->ctx << std::endl;
         compression::LZ4FDecompressContext* context = ref.value().get();
         LZ4F_decompressionContext_t ctx = context->ctx;
 
