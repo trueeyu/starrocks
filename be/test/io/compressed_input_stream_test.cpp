@@ -63,11 +63,20 @@ protected:
         std::string own_buff(t.read_buff_len, '\0');
         decompressed_data.reserve(t.data.size);
 
-        ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
+        //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
+        //decompressed_data.append(own_buff.data(), nread);
+
+        ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), 2048));
+        LOG(ERROR) << "read size: " << nread;
+        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 2048));
+        LOG(ERROR) << "read size: " << nread;
+
+        /*
         while (nread > 0) {
             decompressed_data.append(own_buff.data(), nread);
             ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), own_buff.size()));
         }
+        */
         ASSERT_EQ(t.data, decompressed_data);
     }
 
