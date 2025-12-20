@@ -174,11 +174,11 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         free(c9Buffer);
     }
 
-    /*
     LZ4F_resetDecompressionContext(dctx);
 
     {
         size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
+        LOG(ERROR) << "REAL_SIZE: " << c0SizeBound << std::endl;
         void* const c0Buffer = malloc(c0SizeBound);
         char d0Buffer[1];
         {
@@ -196,7 +196,6 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         }
         free(c0Buffer);
     }
-    */
 
     LZ4F_resetDecompressionContext(dctx);
 
