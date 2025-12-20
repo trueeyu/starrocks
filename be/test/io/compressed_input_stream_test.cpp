@@ -102,7 +102,7 @@ protected:
         auto large = LZ4F_compress_to_file(STR_100);
         */
 
-        auto f = std::make_shared<CompressedInputStream>(large, LZ4F_decompressor(), 90);
+        auto f = std::make_shared<CompressedInputStream>(large, LZ4F_decompressor(), 9);
         std::string decompressed_data;
         std::string own_buff(128 * 1024, '\0');
         decompressed_data.reserve(t.data.size);
@@ -110,7 +110,7 @@ protected:
         //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
         //decompressed_data.append(own_buff.data(), nread);
         int64_t nread = 0;
-        auto ret = f->read(own_buff.data(), 90);
+        auto ret = f->read(own_buff.data(), 5);
         LOG(ERROR) << "read size: " << ret.value();
         //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         //LOG(ERROR) << "read size: " << nread;

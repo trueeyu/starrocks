@@ -325,6 +325,7 @@ Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, s
     size_t src_size = input_len;
     size_t ret = 1;
     *input_bytes_read = 0;
+    LOG(ERROR) << "INPUT_LENGTH: " << input_len;
 
     if (_expect_dec_buf_size == -1) {
         // init expected decompress buf size, and check if output_len is large
