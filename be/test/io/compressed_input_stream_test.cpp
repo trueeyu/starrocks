@@ -59,6 +59,21 @@ protected:
         return std::shared_ptr<StreamCompression>(dec.release());
     }
 
+    void printStringAsHex(const std::string& str) {
+        // 遍历字符串中的每个字符
+        for (char c : str) {
+            // 1. 转换为unsigned char，避免符号扩展
+            // 2. std::hex：启用十六进制输出
+            // 3. std::setw(2)：每个十六进制占2位
+            // 4. std::setfill('0')：不足2位时补0（比如0x0a而不是0xa）
+            std::cout << std::hex << std::setw(2) << std::setfill('0')
+                      << static_cast<unsigned int>(static_cast<unsigned char>(c))
+                      << " "; // 加空格分隔，提升可读性
+        }
+        // 恢复默认输出格式（避免后续输出受hex影响）
+        std::cout << std::dec << std::endl;
+    }
+
     void test_lz4f_cases(const TestCase& t) {
         //const std::string STR_9 = random_string(9);
         //auto small = LZ4F_compress_to_file(STR_9);
@@ -76,6 +91,7 @@ protected:
         }
 
         std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9Size);
+        printStringAsHex(compressed_data);
 
         auto large = std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
 
