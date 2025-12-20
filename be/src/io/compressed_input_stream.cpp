@@ -59,6 +59,7 @@ StatusOr<int64_t> CompressedInputStream::read(void* data, int64_t size) {
         InputStream* f = _source_stream.get();
         size_t hint_size = _decompressor->get_compressed_block_size();
         _decompressor->set_compressed_block_size(0);
+        LOG(ERROR) << "HIT_SIZE: " << hint_size;
         Status st = _compressed_buff.read_with_hint_size(f, hint_size);
 
         if (!st.ok() && !st.is_end_of_file()) {
