@@ -299,6 +299,23 @@ Status Lz4FrameStreamCompression::init() {
     return Status::OK();
 }
 
+
+void printStringAsHex(const std::string& str) {
+    // 遍历字符串中的每个字符
+    for (char c : str) {
+        // 1. 转换为unsigned char，避免符号扩展
+        // 2. std::hex：启用十六进制输出
+        // 3. std::setw(2)：每个十六进制占2位
+        // 4. std::setfill('0')：不足2位时补0（比如0x0a而不是0xa）
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<unsigned int>(static_cast<unsigned char>(c))
+                  << " "; // 加空格分隔，提升可读性
+    }
+    // 恢复默认输出格式（避免后续输出受hex影响）
+    std::cout << std::dec << std::endl;
+}
+
+
 Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, size_t* input_bytes_read,
                                              uint8_t* output, size_t output_len, size_t* output_bytes_written,
                                              bool* stream_end) {
@@ -349,6 +366,8 @@ Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, s
     // decompress
     size_t dst_size = output_len;
     LOG(ERROR) << "REAL decompress before: " << src_size << ":" << dst_size;
+    std::string tmp_str((char*)src, src_size);
+    printStringAsHex(tmp_str);
     ret = LZ4F_decompress(ctx, (void*)output, &dst_size, (void*)src, &src_size,
                           /* LZ4F_decompressOptions_t */ nullptr);
     LOG(ERROR) << "REAL decompress after: " << src_size << ":" << dst_size;
