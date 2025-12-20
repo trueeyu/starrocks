@@ -141,6 +141,21 @@ void BlockCompressionTest::decompress_0(Slice src_slice) {
     std::cout << "decompress: " << st << ":" << output.size << std::endl;
 }
 
+void printStringAsHex(const std::string& str) {
+    // 遍历字符串中的每个字符
+    for (char c : str) {
+        // 1. 转换为unsigned char，避免符号扩展
+        // 2. std::hex：启用十六进制输出
+        // 3. std::setw(2)：每个十六进制占2位
+        // 4. std::setfill('0')：不足2位时补0（比如0x0a而不是0xa）
+        std::cout << std::hex << std::setw(2) << std::setfill('0')
+                  << static_cast<unsigned int>(static_cast<unsigned char>(c))
+                  << " "; // 加空格分隔，提升可读性
+    }
+    // 恢复默认输出格式（避免后续输出受hex影响）
+    std::cout << std::dec << std::endl;
+}
+
 TEST_F(BlockCompressionTest, lxh_test2) {
     LZ4F_dctx* dctx;
     unsigned ret = LZ4F_isError(LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION));
@@ -165,7 +180,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                 size_t srcSize = 17;
                 LOG(ERROR) << "real decompress before: " << srcSize << ":" << dstSize << std::endl;
                 std::string tmp_str((char*)c9Buffer, srcSize);
-                LOG(ERROR) << "TMP_STR: " << tmp_str;
+                printStringAsHex(tmp_str);
                 size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
                 LOG(ERROR) << "real decompress after: " << srcSize << ":" << dstSize << std::endl;
                 if (LZ4F_isError(d9Size)) {
