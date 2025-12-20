@@ -60,13 +60,30 @@ protected:
     }
 
     void test_lz4f_cases(const TestCase& t) {
-        const std::string STR_9 = random_string(9);
-        auto small = LZ4F_compress_to_file(STR_9);
+        //const std::string STR_9 = random_string(9);
+        //auto small = LZ4F_compress_to_file(STR_9);
+        const char s9Buffer[9] = {0};
+        char d9Buffer[sizeof(s9Buffer)];
+        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
+        void* const c9Buffer = malloc(c9SizeBound);
+        /* First compress a valid frame */
+        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        pref.frameInfo.contentSize = sizeof(s9Buffer);
+        {
+            size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
+            std::cout << "compressFrame: " << c9Size << std::endl;
+        }
 
+        std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9SizeBound);
+
+        auto large = std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
+
+        /*
         std::string STR_100;
         STR_100.resize(9);
         STR_100.data()[0] = '\0';
         auto large = LZ4F_compress_to_file(STR_100);
+        */
 
         auto f = std::make_shared<CompressedInputStream>(large, LZ4F_decompressor(), 9);
         std::string decompressed_data;
