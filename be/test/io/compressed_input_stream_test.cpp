@@ -23,6 +23,7 @@
 #include "io_test_base.h"
 #include "testutil/assert.h"
 #include "util/compression/block_compression.h"
+#include "util/compression/compression_context_pool_singletons.h"
 #include "util/compression/stream_compression.h"
 namespace starrocks::io {
 
@@ -77,6 +78,7 @@ protected:
         ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         LOG(ERROR) << "read size: " << nread;
         f.reset();
+        LOG(ERROR) << "TT: " << compression::getLZ4F_DCtx().value()->ctx->frameRemainingSize;
 
         auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
         ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
