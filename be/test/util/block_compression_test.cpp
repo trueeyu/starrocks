@@ -40,8 +40,8 @@
 #include <iostream>
 #include <thread>
 
-#include "gen_cpp/segment.pb.h"
 #include "common/object_pool.h"
+#include "gen_cpp/segment.pb.h"
 #include "runtime/mem_pool.h"
 #include "testutil/assert.h"
 #include "util/compression/compression_context_pool_singletons.h"
@@ -128,6 +128,36 @@ void BlockCompressionTest::decompress_0(Slice src_slice) {
     Slice output(dst_buf, sizeof(dst_buf));
     Status st = codec->decompress(input, &output);
     std::cout << "decompress: " << st << ":" << output.size << std::endl;
+}
+
+TEST_F(BlockCompressionTest, lxh_test2) {
+    LZ4F_dctx* dctx;
+    unsigned ret = LZ4F_isError(LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION));
+    std::cout << "decompress: " << ret << std::endl;
+
+    /* first session */
+    {
+        const char s9Buffer[9] = {0};
+        char d9Buffer[sizeof(s9Buffer)];
+        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
+        void* const c9Buffer = malloc(c9SizeBound);
+        /* First compress a valid frame */
+        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        pref.frameInfo.contentSize = sizeof(s9Buffer);
+        {
+            size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
+            std::cout << "compressFrame: " << c9Size << std::endl;
+            assert(c9Size > 15);
+            /* decompress it, but do not complete the process - state not terminated correctly */
+            {
+                size_t dstSize = sizeof(d9Buffer);
+                size_t srcSize = 15;
+                size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
+                std::cout << "decompress: " << d9Size << ":" << dstSize << std::endl;
+            }
+        }
+        free(c9Buffer);
+    }
 }
 
 TEST_F(BlockCompressionTest, lxh_test) {
