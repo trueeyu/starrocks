@@ -76,9 +76,10 @@ protected:
         LOG(ERROR) << "read size: " << nread;
         ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         LOG(ERROR) << "read size: " << nread;
+        f.reset();
 
         auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
-        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
+        ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
         LOG(ERROR) << "read size: " << nread;
 
         /*

@@ -62,7 +62,7 @@ StatusOr<int64_t> CompressedInputStream::read(void* data, int64_t size) {
         LOG(ERROR) << "HIT_SIZE: " << hint_size;
         Status st = _compressed_buff.read_with_hint_size(f, hint_size);
 
-        LOG(ERROR) << "Status: " << st;
+        //LOG(ERROR) << "Status: " << st;
         if (!st.ok() && !st.is_end_of_file()) {
             return st;
         } else if (st.is_end_of_file() && _stream_end) {
@@ -74,7 +74,7 @@ StatusOr<int64_t> CompressedInputStream::read(void* data, int64_t size) {
         size_t input_bytes_read = 0;
         size_t output_bytes_written = 0;
 
-        LOG(ERROR) << "COMPRESS_SIZE: " << compressed_data.size;
+        //LOG(ERROR) << "COMPRESS_SIZE: " << compressed_data.size;
         // NOTE(yanz): input data size could be 0 because for some block compression algorithm.
         // codec will decompress a block into buffer, and then copy buffer into output later(if output buffer is not large enough)
         // so sometimes input data size is 0, but there is still some data in buffer.
@@ -83,8 +83,8 @@ StatusOr<int64_t> CompressedInputStream::read(void* data, int64_t size) {
         RETURN_IF_ERROR(_decompressor->decompress((uint8_t*)compressed_data.data, compressed_data.size,
                                                   &input_bytes_read, output, output_len, &output_bytes_written,
                                                   &_stream_end));
-        LOG(ERROR) << "INPUT_BYTES: " << input_bytes_read << ":" << _stream_end;
-        LOG(ERROR) << "OUTPUT_BYTES: " << output_bytes_written;
+        //LOG(ERROR) << "INPUT_BYTES: " << input_bytes_read << ":" << _stream_end;
+        //LOG(ERROR) << "OUTPUT_BYTES: " << output_bytes_written;
         if (UNLIKELY(output_bytes_written == 0 && input_bytes_read == 0 && st.is_end_of_file())) {
             return Status::InternalError(strings::Substitute("Failed to decompress. input_len:$0, output_len:$0",
                                                              compressed_data.size, output_len));
