@@ -137,10 +137,6 @@ TEST_F(BlockCompressionTest, lxh_test2) {
     unsigned ret = LZ4F_isError(LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION));
     std::cout << "decompress: " << ret << std::endl;
 
-    for (int i = 0; i < 20; i++) {
-        std::cout << "i: " << i << ":" << LZ4F_getErrorName(i) << std::endl;
-    }
-
     /* first session */
     {
         const char s9Buffer[9] = {0};
@@ -160,9 +156,9 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                 size_t srcSize = 15;
                 size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
                 if (LZ4F_isError(d9Size)) {
-                    std::cout << "decompress: " << d9Size << ":" << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
+                    std::cout << "decompress_1: " << d9Size << ":" << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
                 } else {
-                    std::cout << "decompress success: ";
+                    std::cout << "decompress_1 success: " << std::endl;
                 }
             }
         }
@@ -182,7 +178,11 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                 size_t dstSize = sizeof(d0Buffer);
                 size_t srcSize = c0Size;
                 size_t const d0Size = LZ4F_decompress(dctx, d0Buffer, &dstSize, c0Buffer, &srcSize, NULL);
-                std::cout << "decompress: " << LZ4F_getErrorName(d0Size) << ":" << dstSize << std::endl;
+                if (LZ4F_isError(d0Size)) {
+                    std::cout << "decompress_2: " << LZ4F_getErrorName(d0Size) << ":" << dstSize << std::endl;
+                } else {
+                    std::cout << "decompress_2 success: " << std::endl;
+                }
             }
         }
         free(c0Buffer);
