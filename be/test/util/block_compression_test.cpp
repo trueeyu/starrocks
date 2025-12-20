@@ -96,6 +96,14 @@ Slice BlockCompressionTest::compress() {
     std::string src_str;
     src_str.resize(9);
     src_str[0] = '\0';
+    src_str[1] = '1';
+    src_str[2] = '2';
+    src_str[3] = '3';
+    src_str[4] = '4';
+    src_str[5] = '5';
+    src_str[6] = '6';
+    src_str[7] = '7';
+    src_str[8] = '8';
     std::string* dst_str = _pool.add(new std::string());
     size_t dst_size = codec->max_compressed_len(9);
     dst_str->resize(dst_size);
