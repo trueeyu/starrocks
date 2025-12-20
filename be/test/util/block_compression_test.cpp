@@ -93,7 +93,9 @@ Slice BlockCompressionTest::compress() {
     const BlockCompressionCodec* codec = nullptr;
     EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
 
-    std::string src_str = "000000000";
+    std::string src_str;
+    src_str.resize(9);
+    src_str[0] = '\0';
     std::string* dst_str = _pool.add(new std::string());
     size_t dst_size = codec->max_compressed_len(9);
     dst_str->resize(dst_size);
