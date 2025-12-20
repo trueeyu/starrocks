@@ -137,6 +137,10 @@ TEST_F(BlockCompressionTest, lxh_test2) {
     unsigned ret = LZ4F_isError(LZ4F_createDecompressionContext(&dctx, LZ4F_VERSION));
     std::cout << "decompress: " << ret << std::endl;
 
+    for (int i = 0; i < 20; i++) {
+        std::cout << "i: " << i << ":" << LZ4F_getErrorName(i) << std::endl;
+    }
+
     /* first session */
     {
         const char s9Buffer[9] = {0};
