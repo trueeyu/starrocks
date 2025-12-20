@@ -177,34 +177,6 @@ TEST_F(BlockCompressionTest, lxh_test2) {
     LZ4F_resetDecompressionContext(dctx);
 
     {
-        const char s9Buffer[9] = {0};
-        char d9Buffer[sizeof(s9Buffer)];
-        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
-        void* const c9Buffer = malloc(c9SizeBound);
-        /* First compress a valid frame */
-        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
-        pref.frameInfo.contentSize = sizeof(s9Buffer);
-        {
-            size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
-            std::cout << "compressFrame: " << c9Size << std::endl;
-            assert(c9Size > 15);
-            /* decompress it, but do not complete the process - state not terminated correctly */
-            {
-                size_t dstSize = sizeof(d9Buffer);
-                size_t srcSize = 32;
-                size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
-                if (LZ4F_isError(d9Size)) {
-                    std::cout << "decompress_1_1: " << d9Size << ":" << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
-                } else {
-                    std::cout << "decompress_1_1 success: " << std::endl;
-                }
-            }
-        }
-    }
-
-    LZ4F_resetDecompressionContext(dctx);
-
-    {
         size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
         void* const c0Buffer = malloc(c0SizeBound);
         char d0Buffer[1];
@@ -248,6 +220,35 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                     std::cout << "decompress_3: " << d9Size << ":" << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
                 } else {
                     std::cout << "decompress_3 success: " << std::endl;
+                }
+            }
+        }
+    }
+
+
+    LZ4F_freeDecompressionContext(dctx);
+
+    {
+        const char s9Buffer[9] = {0};
+        char d9Buffer[sizeof(s9Buffer)];
+        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
+        void* const c9Buffer = malloc(c9SizeBound);
+        /* First compress a valid frame */
+        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        pref.frameInfo.contentSize = sizeof(s9Buffer);
+        {
+            size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
+            std::cout << "compressFrame: " << c9Size << std::endl;
+            assert(c9Size > 15);
+            /* decompress it, but do not complete the process - state not terminated correctly */
+            {
+                size_t dstSize = sizeof(d9Buffer);
+                size_t srcSize = 32;
+                size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
+                if (LZ4F_isError(d9Size)) {
+                    std::cout << "decompress_4: " << d9Size << ":" << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
+                } else {
+                    std::cout << "decompress_4 success: " << std::endl;
                 }
             }
         }
