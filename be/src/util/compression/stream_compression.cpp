@@ -379,7 +379,7 @@ Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, s
         ss << "Decompression error: " << std::string(LZ4F_getErrorName(ret));
         return Status::InternalError(ss.str());
     }
-    return Status::InternalError("LZ4F_decompress should not return error");
+    //return Status::InternalError("LZ4F_decompress should not return error");
 
     // update
     *input_bytes_read += src_size;
