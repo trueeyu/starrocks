@@ -153,7 +153,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                 size_t dstSize = sizeof(d9Buffer);
                 size_t srcSize = 15;
                 size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
-                std::cout << "decompress: " << d9Size << ":" << dstSize << std::endl;
+                std::cout << "decompress: " << LZ4F_getErrorName(d9Size) << ":" << dstSize << std::endl;
             }
         }
         free(c9Buffer);
