@@ -348,14 +348,16 @@ Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, s
 
     // decompress
     size_t dst_size = output_len;
-    LOG(ERROR) << "REAL decompress: " << src_size;
+    LOG(ERROR) << "REAL decompress before: " << src_size << ":" << dst_size;
     ret = LZ4F_decompress(ctx, (void*)output, &dst_size, (void*)src, &src_size,
                           /* LZ4F_decompressOptions_t */ nullptr);
+    LOG(ERROR) << "REAL decompress after: " << src_size << ":" << dst_size;
     if (LZ4F_isError(ret)) {
         std::stringstream ss;
         ss << "Decompression error: " << std::string(LZ4F_getErrorName(ret));
         return Status::InternalError(ss.str());
     }
+    return Status::InternalError("LZ4F_decompress should not return error");
 
     // update
     *input_bytes_read += src_size;
