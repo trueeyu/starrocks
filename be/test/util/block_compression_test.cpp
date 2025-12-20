@@ -107,8 +107,9 @@ Slice BlockCompressionTest::compress() {
     std::string* dst_str = _pool.add(new std::string());
     size_t dst_size = codec->max_compressed_len(9);
     dst_str->resize(dst_size);
+    Slice src_slice(src_str);
     Slice dst_slice(*dst_str);
-    Status st = codec->compress(src_str, &dst_slice);
+    Status st = codec->compress(src_slice, &dst_slice);
     std::cout << "compress: " << st << ":" << dst_slice.size << std::endl;
 
     return dst_slice;
