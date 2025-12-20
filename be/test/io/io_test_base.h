@@ -52,7 +52,7 @@ static std::string random_string(int len) {
     std::string s;
     s.reserve(len);
     for (int i = 0; i < len; i++) {
-        s.push_back('a' + (rand.Next() % ('z' - 'a' + 1)));
+        s.push_back('a' + (rand.Next() % ('e' - 'a' + 1)));
     }
     return s;
 }
