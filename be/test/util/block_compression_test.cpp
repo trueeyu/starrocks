@@ -151,7 +151,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         const char s9Buffer[9] = {0};
         char d9Buffer[sizeof(s9Buffer)];
         size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
-        void* const c9Buffer = malloc(c9SizeBound);
+        void* c9Buffer = malloc(c9SizeBound);
         /* First compress a valid frame */
         LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
         pref.frameInfo.contentSize = sizeof(s9Buffer);
@@ -164,6 +164,8 @@ TEST_F(BlockCompressionTest, lxh_test2) {
                 size_t dstSize = sizeof(d9Buffer);
                 size_t srcSize = 17;
                 LOG(ERROR) << "real decompress before: " << srcSize << ":" << dstSize << std::endl;
+                std::string tmp_str((char*)c9Buffer, srcSize);
+                LOG(ERROR) << "TMP_STR: " << tmp_str;
                 size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
                 LOG(ERROR) << "real decompress after: " << srcSize << ":" << dstSize << std::endl;
                 if (LZ4F_isError(d9Size)) {
