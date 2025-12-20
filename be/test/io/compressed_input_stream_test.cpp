@@ -68,13 +68,14 @@ protected:
         void* const c9Buffer = malloc(c9SizeBound);
         /* First compress a valid frame */
         LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        size_t c9Size;
         pref.frameInfo.contentSize = sizeof(s9Buffer);
         {
-            size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
+            c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
             std::cout << "compressFrame: " << c9Size << std::endl;
         }
 
-        std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9SizeBound);
+        std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9Size);
 
         auto large = std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
 
