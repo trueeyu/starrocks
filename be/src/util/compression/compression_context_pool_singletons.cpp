@@ -178,6 +178,7 @@ Status LZ4F_CCtx_Resetter::operator()(LZ4FCompressContext* context) const noexce
 
 Status LZ4F_DCtx_Resetter::operator()(LZ4FDecompressContext* context) const noexcept {
     context->decompression_count++;
+    std::cout << "reset context: " << (void*)context->ctx << std::endl;
     LZ4F_resetDecompressionContext(context->ctx);
     if (context->decompression_fail == true) {
         context->decompression_fail = false;
