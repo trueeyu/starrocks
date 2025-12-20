@@ -197,7 +197,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
         free(c0Buffer);
     }
 
-    LZ4F_freeDecompressionContext(dctx);
+    LZ4F_resetDecompressionContext(dctx);
 
     {
         const char s9Buffer[9] = {0};
@@ -226,7 +226,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
     }
 
 
-    LZ4F_freeDecompressionContext(dctx);
+    LZ4F_resetDecompressionContext(dctx);
 
     {
         const char s9Buffer[9] = {0};
