@@ -59,6 +59,29 @@ protected:
         return std::shared_ptr<StreamCompression>(dec.release());
     }
 
+    struct TmpS {
+        LZ4F_CustomMem cmem;
+        LZ4F_frameInfo_t frameInfo;
+        U32    version;
+        dStage_t dStage;
+        U64    frameRemainingSize;
+        size_t maxBlockSize;
+        size_t maxBufferSize;
+        BYTE*  tmpIn;
+        size_t tmpInSize;
+        size_t tmpInTarget;
+        BYTE*  tmpOutBuffer;
+        const BYTE* dict;
+        size_t dictSize;
+        BYTE*  tmpOut;
+        size_t tmpOutSize;
+        size_t tmpOutStart;
+        XXH32_state_t xxh;
+        XXH32_state_t blockChecksum;
+        int    skipChecksum;
+        BYTE   header[LZ4F_HEADER_SIZE_MAX];
+    };
+
     void test_lz4f_cases(const TestCase& t) {
         const std::string STR_9 = random_string(9);
         auto small = LZ4F_compress_to_file(STR_9);
@@ -78,7 +101,8 @@ protected:
         ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         LOG(ERROR) << "read size: " << nread;
         f.reset();
-        LOG(ERROR) << "TT: " << compression::getLZ4F_DCtx().value()->ctx->frameRemainingSize;
+        auto* tmp_struct = (TmpS*)(compression::getLZ4F_DCtx().value()->ctx);
+        LOG(ERROR) << "TT: " << tmp_struct->frameRemainingSize;
 
         auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
         ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
