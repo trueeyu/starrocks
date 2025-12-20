@@ -108,8 +108,9 @@ TEST_F(BlockCompressionTest, lxh_test) {
     st = get_block_compression_codec(LZ4_FRAME, &codec2);
     ASSERT_TRUE(st.ok());
     uncompressed.resize(20000);
-    st = codec2->decompress(compressed_slice, &uncompressed_slice);
-    std::cout << "decompress: " << st << ":" << uncompressed_slice.size << std::endl;
+    Slice uncompressed_slice2(uncompressed);
+    st = codec2->decompress(compressed_slice, &uncompressed_slice2);
+    std::cout << "decompress: " << st << ":" << uncompressed_slice2.size << std::endl;
 
     /*
     size_t tmp_len = codec->max_compressed_len(0);
