@@ -41,7 +41,7 @@
 #include <thread>
 
 #include "gen_cpp/segment.pb.h"
-#include "object_pool.h"
+#include "common/object_pool.h"
 #include "runtime/mem_pool.h"
 #include "testutil/assert.h"
 #include "util/compression/compression_context_pool_singletons.h"
