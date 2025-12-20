@@ -66,9 +66,9 @@ protected:
         //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
         //decompressed_data.append(own_buff.data(), nread);
 
-        ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), 2037));
+        ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), 128*1024));
         LOG(ERROR) << "read size: " << nread;
-        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 2048));
+        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 128*1024));
         LOG(ERROR) << "read size: " << nread;
 
         /*
