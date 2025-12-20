@@ -63,7 +63,10 @@ protected:
         const std::string STR_9 = random_string(9);
         auto small = LZ4F_compress_to_file(STR_9);
 
-        auto f = std::make_shared<CompressedInputStream>(LZ4F_compress_to_file(t.data), LZ4F_decompressor(), 40);
+        const std::string STR_100 = random_string(100);
+        auto large = LZ4F_compress_to_file(STR_100);
+
+        auto f = std::make_shared<CompressedInputStream>(large, LZ4F_decompressor(), 40);
         std::string decompressed_data;
         std::string own_buff(128 * 1024, '\0');
         decompressed_data.reserve(t.data.size);
