@@ -82,7 +82,6 @@ static std::string generate_str(size_t len) {
 }
 
 TEST_F(BlockCompressionTest, lxh_test) {
-    StatusOr<compression::LZ4F_CCtx_Pool::Ref> ref = compression::getLZ4F_CCtx();
     const BlockCompressionCodec* codec = nullptr;
     auto st = get_block_compression_codec(LZ4_FRAME, &codec);
     ASSERT_TRUE(st.ok());
@@ -103,11 +102,14 @@ TEST_F(BlockCompressionTest, lxh_test) {
     uncompressed.resize(5000);
     Slice uncompressed_slice(uncompressed);
     st = codec->decompress(compressed_slice, &uncompressed_slice);
-    std::cout << "decompress: " << st;
+    std::cout << "decompress: " << st << std::endl;
 
+    const BlockCompressionCodec* codec2 = nullptr;
+    st = get_block_compression_codec(LZ4_FRAME, &codec2);
+    ASSERT_TRUE(st.ok());
     uncompressed.resize(20000);
-    st = codec->decompress(compressed_slice, &uncompressed_slice);
-    std::cout << "decompress: " << st << ":" << uncompressed_slice.size;
+    st = codec2->decompress(compressed_slice, &uncompressed_slice);
+    std::cout << "decompress: " << st << ":" << uncompressed_slice.size << std::endl;
 
     /*
     size_t tmp_len = codec->max_compressed_len(0);
