@@ -78,8 +78,6 @@ protected:
         ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         LOG(ERROR) << "read size: " << nread;
         f.reset();
-        auto* tmp_struct = (TmpS*)(compression::getLZ4F_DCtx().value()->ctx);
-        LOG(ERROR) << "TT: " << tmp_struct->frameRemainingSize;
 
         auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
         ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
