@@ -59,29 +59,6 @@ protected:
         return std::shared_ptr<StreamCompression>(dec.release());
     }
 
-    struct TmpS {
-        LZ4F_CustomMem cmem;
-        LZ4F_frameInfo_t frameInfo;
-        U32    version;
-        dStage_t dStage;
-        U64    frameRemainingSize;
-        size_t maxBlockSize;
-        size_t maxBufferSize;
-        BYTE*  tmpIn;
-        size_t tmpInSize;
-        size_t tmpInTarget;
-        BYTE*  tmpOutBuffer;
-        const BYTE* dict;
-        size_t dictSize;
-        BYTE*  tmpOut;
-        size_t tmpOutSize;
-        size_t tmpOutStart;
-        XXH32_state_t xxh;
-        XXH32_state_t blockChecksum;
-        int    skipChecksum;
-        BYTE   header[LZ4F_HEADER_SIZE_MAX];
-    };
-
     void test_lz4f_cases(const TestCase& t) {
         const std::string STR_9 = random_string(9);
         auto small = LZ4F_compress_to_file(STR_9);
