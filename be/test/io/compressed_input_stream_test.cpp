@@ -74,17 +74,17 @@ protected:
         //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
         //decompressed_data.append(own_buff.data(), nread);
         int64_t nread = 0;
-        auto ret = f->read(own_buff.data(), 9);
-        LOG(ERROR) << "read size: " << ret;
+        auto ret = f->read(own_buff.data(), 1);
+        LOG(ERROR) << "read size: " << ret.value();
         //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         //LOG(ERROR) << "read size: " << nread;
         //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         //LOG(ERROR) << "read size: " << nread;
         f.reset();
 
-        auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
-        ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
-        LOG(ERROR) << "read size: " << nread;
+        //auto f2 = std::make_shared<CompressedInputStream>(small, LZ4F_decompressor(), 9);
+        //ASSIGN_OR_ABORT(nread, f2->read(own_buff.data(), 9));
+        //LOG(ERROR) << "read size: " << nread;
 
         /*
         while (nread > 0) {
