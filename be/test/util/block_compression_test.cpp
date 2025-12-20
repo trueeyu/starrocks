@@ -71,8 +71,8 @@ public:
 static std::string generate_str(size_t len) {
     static char charset[] =
             "0123456789"
-            "abcdefghijklmnopqrstuvwxyz"
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            "0123456789"
+            "0123445789";
     std::string result;
     result.resize(len);
     for (int i = 0; i < len; ++i) {
