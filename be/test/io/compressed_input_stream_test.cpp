@@ -66,13 +66,13 @@ protected:
         //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
         //decompressed_data.append(own_buff.data(), nread);
         int64_t nread = 0;
-        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 128*1024));
+        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 1024));
         LOG(ERROR) << "read size: " << nread;
 
         while (nread > 0) {
-            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 128*1024));
+            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 1024));
             LOG(ERROR) << "read size: " << nread;
-            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 128*1024));
+            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 1024));
             LOG(ERROR) << "read size: " << nread;
         }
 
