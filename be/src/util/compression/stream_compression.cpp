@@ -357,6 +357,8 @@ Status Lz4FrameStreamCompression::decompress(uint8_t* input, size_t input_len, s
             return Status::InternalError(ss.str());
         }
 
+        LOG(ERROR) << "get frame info: " << src_size << ":" << _expect_dec_buf_size;
+
         *input_bytes_read = src_size;
 
         src += src_size;
