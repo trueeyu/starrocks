@@ -183,7 +183,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
     LZ4F_freeDecompressionContext(dctx);
 }
 
-TEST_F(BlockCompressionTest, lxh_test) {
+TEST_F(BlockCompressionTest, lxh_test1) {
     Slice compressed_slice = compress();
     decompress_fail(compressed_slice);
     decompress_0(compressed_slice);
