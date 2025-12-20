@@ -162,7 +162,7 @@ TEST_F(BlockCompressionTest, lxh_test2) {
             /* decompress it, but do not complete the process - state not terminated correctly */
             {
                 size_t dstSize = sizeof(d9Buffer);
-                size_t srcSize = 15;
+                size_t srcSize = 17;
                 LOG(ERROR) << "real decompress before: " << srcSize << ":" << dstSize << std::endl;
                 size_t const d9Size = LZ4F_decompress(dctx, d9Buffer, &dstSize, c9Buffer, &srcSize, NULL);
                 LOG(ERROR) << "real decompress after: " << srcSize << ":" << dstSize << std::endl;
