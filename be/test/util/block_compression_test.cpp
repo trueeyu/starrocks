@@ -70,6 +70,7 @@ public:
     ~BlockCompressionTest() override = default;
 
     Slice compress();
+    void decompress(Slice src_slice);
 
     ObjectPool _pool;
 };
@@ -97,14 +98,27 @@ Slice BlockCompressionTest::compress() {
     dst_str->resize(dst_size);
     Slice dst_slice(*dst_str);
     Status st = codec->compress(src_str, &dst_slice);
-    std::cout << "compress: " << st << dst_slice.size << std::endl;
+    std::cout << "compress: " << st << ":" << dst_slice.size << std::endl;
 
     return dst_slice;
 }
 
+void BlockCompressionTest::decompress(Slice src_slice) {
+    const BlockCompressionCodec* codec = nullptr;
+    EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
+
+    std::string dst_str;
+    dst_str.resize(9);
+
+    Slice src_slice2(src_slice.data, 15);
+    Slice dst_slice(dst_str);
+    Status st = codec->decompress(src_slice2, &dst_slice);
+    std::cout << "decompress: " << st << ":" << dst_slice.size << std::endl;
+}
+
 TEST_F(BlockCompressionTest, lxh_test) {
     Slice compressed_slice = compress();
-
+    decompress(compressed_slice);
     /*
     std::string uncompressed;
     uncompressed.resize(5000);
