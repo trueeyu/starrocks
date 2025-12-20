@@ -45,7 +45,9 @@ protected:
         size_t max_compressed_len = codec->max_compressed_len(content.size);
         std::string compressed_data(max_compressed_len, '\0');
         Slice buff(compressed_data);
+        LOG(ERROR) << "BEFORE_COMPRESS: " << content.size;;
         CHECK(codec->compress(content, &buff).ok());
+        LOG(ERROR) << "AFTER_COMPRESS: " << buff.size;
         compressed_data.resize(buff.size);
         return std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
     }
