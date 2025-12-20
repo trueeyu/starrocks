@@ -63,7 +63,8 @@ protected:
         const std::string STR_9 = random_string(9);
         auto small = LZ4F_compress_to_file(STR_9);
 
-        std::string STR_100 = random_string(9);
+        std::string STR_100;
+        STR_100.resize(9);
         STR_100.data()[0] = '\0';
         auto large = LZ4F_compress_to_file(STR_100);
 
