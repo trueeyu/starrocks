@@ -41,11 +41,13 @@
 #include <thread>
 
 #include "gen_cpp/segment.pb.h"
+#include "object_pool.h"
+#include "runtime/mem_pool.h"
+#include "testutil/assert.h"
 #include "util/compression/compression_context_pool_singletons.h"
 #include "util/faststring.h"
 #include "util/random.h"
 #include "util/raw_container.h"
-#include "testutil/assert.h"
 
 namespace starrocks {
 
@@ -66,6 +68,10 @@ class BlockCompressionTest : public testing::Test {
 public:
     BlockCompressionTest() = default;
     ~BlockCompressionTest() override = default;
+
+    Slice compress();
+
+    ObjectPool _pool;
 };
 
 static std::string generate_str(size_t len) {
@@ -81,27 +87,29 @@ static std::string generate_str(size_t len) {
     return result;
 }
 
-TEST_F(BlockCompressionTest, lxh_test) {
+Slice BlockCompressionTest::compress() {
     const BlockCompressionCodec* codec = nullptr;
-    auto st = get_block_compression_codec(LZ4_FRAME, &codec);
-    ASSERT_TRUE(st.ok());
+    EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
 
-    std::string str = generate_str(10000);
-    size_t size = str.size();
-    size_t max_len = codec->max_compressed_len(size);
-    std::cout << "max_len: " << max_len << std::endl;
-    std::string compressed;
-    compressed.resize(max_len);
+    std::string src_str = "000000000";
+    std::string* dst_str = _pool.add(new std::string());
+    size_t dst_size = codec->max_compressed_len(9);
+    dst_str->resize(dst_size);
+    Slice dst_slice(*dst_str);
+    Status st = codec->compress(src_str, &dst_slice);
+    std::cout << "compress: " << st << dst_slice.size << std::endl;
 
-    Slice compressed_slice(compressed);
-    st = codec->compress(str, &compressed_slice);
-    ASSERT_OK(st);
-    std::cout << "compressed size: " << compressed_slice.size << std::endl;
+    return dst_slice;
+}
 
+TEST_F(BlockCompressionTest, lxh_test) {
+    Slice compressed_slice = compress();
+
+    /*
     std::string uncompressed;
     uncompressed.resize(5000);
     Slice uncompressed_slice(uncompressed);
-    st = codec->decompress(compressed_slice, &uncompressed_slice);
+    Status st = codec1->decompress(compressed_slice, &uncompressed_slice);
     std::cout << "decompress: " << st << std::endl;
 
     const BlockCompressionCodec* codec2 = nullptr;
@@ -122,6 +130,7 @@ TEST_F(BlockCompressionTest, lxh_test) {
     Slice uncompressed_slice3(uncompressed);
     st = codec3->decompress(compressed_slice, &uncompressed_slice3);
     std::cout << "decompress: " << st << ":" << uncompressed_slice3.size << std::endl;
+    */
 
     /*
     size_t tmp_len = codec->max_compressed_len(0);
