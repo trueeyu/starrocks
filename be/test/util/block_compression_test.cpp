@@ -87,7 +87,7 @@ TEST_F(BlockCompressionTest, lxh_test) {
     auto st = get_block_compression_codec(LZ4_FRAME, &codec);
     ASSERT_TRUE(st.ok());
 
-    std::string str = generate_str(100);
+    std::string str = generate_str(10000);
     size_t size = str.size();
     size_t max_len = codec->max_compressed_len(size);
     std::cout << "max_len: " << max_len << std::endl;
