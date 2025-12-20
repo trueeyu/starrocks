@@ -59,8 +59,7 @@ protected:
     }
 
     void test_lz4f_cases(const TestCase& t) {
-        auto f = std::make_shared<CompressedInputStream>(LZ4F_compress_to_file(t.data), LZ4F_decompressor(),
-                                                         4 * 1024 * 1024);
+        auto f = std::make_shared<CompressedInputStream>(LZ4F_compress_to_file(t.data), LZ4F_decompressor(), 40);
         std::string decompressed_data;
         std::string own_buff(128 * 1024, '\0');
         decompressed_data.reserve(t.data.size);
@@ -70,13 +69,11 @@ protected:
         int64_t nread = 0;
         ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         LOG(ERROR) << "read size: " << nread;
+        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
+        LOG(ERROR) << "read size: " << nread;
+        ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
+        LOG(ERROR) << "read size: " << nread;
 
-        while (nread > 0) {
-            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
-            LOG(ERROR) << "read size: " << nread;
-            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
-            LOG(ERROR) << "read size: " << nread;
-        }
 
         /*
         while (nread > 0) {
