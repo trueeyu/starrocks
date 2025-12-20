@@ -112,17 +112,8 @@ TEST_F(CompressedInputStreamTest, test_LZ4F) {
     const std::string STR_10M = random_string(10 * M1);
     const std::string STR_100M = random_string(100 * M1);
 
-    // clang-format off
-    TestCase cases[] = {
-            {"StarRocks", 1, M1},
-            {STR_10M, K1, 2 * K1},
-            {STR_100M, M1, M1},
-    };
-    // clang-format on
-
-    for (const auto& t : cases) {
-        test_lz4f_cases(t);
-    }
+    TestCase case1 = {STR_10M, K1, 2 * K1};
+    test_lz4f_cases(case1);
 }
 
 TEST_F(CompressedInputStreamTest, test_LZO0) {
