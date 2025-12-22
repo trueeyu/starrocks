@@ -420,6 +420,16 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
     Slice decompressed_slice(src_str);
     Status st = codec->compress(decompressed_slice, &compressed_slice);
     LOG(ERROR) << "compress: " << st << ":" << compressed_slice.size;
+
+    const BlockCompressionCodec* codec2 = nullptr;
+    EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
+    Slice compressed_slice2(compressed_str);
+    compressed_slice2.size = 15;
+    std::string decompressed2;
+    decompressed2.resize(9);
+    Slice decompressed_slice2(decompressed2);
+    st = codec2->decompress(compressed_slice2, &decompressed_slice2);
+    LOG(ERROR) << "decompress: " << st << ":" << decompressed_slice2.size;
 }
 
 //#define LZ4_BENCHMARK
