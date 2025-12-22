@@ -100,6 +100,17 @@ protected:
         //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
         //LOG(ERROR) << "read size: " << nread;
         f.reset();
+
+        const BlockCompressionCodec* codec2 = nullptr;
+        EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
+        std::string compressed_str((char*)c9Buffer, 15);
+        Slice compressed_slice2(compressed_data);
+        compressed_slice2.size = 15;
+        std::string decompressed2;
+        decompressed2.resize(9);
+        Slice decompressed_slice2(decompressed2);
+        Status st = codec2->decompress(compressed_slice2, &decompressed_slice2);
+        std::cout << "decompress: " << st << ":" << decompressed_slice2.size << std::endl;
     }
 
     void read_compressed_file_ctx(CompressionTypePB type, const char* path, std::string& out, const ReadContext& ctx) {
