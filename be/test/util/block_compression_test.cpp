@@ -419,7 +419,7 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
     Slice compressed_slice(compressed_str);
     Slice decompressed_slice(src_str);
     Status st = codec->compress(decompressed_slice, &compressed_slice);
-    LOG(ERROR) << "compress: " << st << ":" << compressed_slice.size;
+    std::cout << "compress: " << st << ":" << compressed_slice.size << std::endl;
 
     const BlockCompressionCodec* codec2 = nullptr;
     EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
@@ -429,7 +429,7 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
     decompressed2.resize(9);
     Slice decompressed_slice2(decompressed2);
     st = codec2->decompress(compressed_slice2, &decompressed_slice2);
-    LOG(ERROR) << "decompress: " << st << ":" << decompressed_slice2.size;
+    std::cout << "decompress: " << st << ":" << decompressed_slice2.size << std::endl;
 }
 
 //#define LZ4_BENCHMARK
