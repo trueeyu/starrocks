@@ -74,7 +74,7 @@ protected:
         }
 
         std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9Size);
-        printStringAsHex(compressed_data);
+        //printStringAsHex(compressed_data);
 
         auto large = std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
 
