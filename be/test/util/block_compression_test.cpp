@@ -424,7 +424,7 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
     const BlockCompressionCodec* codec2 = nullptr;
     EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
     Slice compressed_slice2(compressed_str);
-    compressed_slice2.size = 15;
+    compressed_slice2.size = 20;
     std::string decompressed2;
     decompressed2.resize(9);
     Slice decompressed_slice2(decompressed2);
