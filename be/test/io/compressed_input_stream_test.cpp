@@ -111,7 +111,7 @@ protected:
             const BlockCompressionCodec* codec2 = nullptr;
             EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
             std::string compressed_str((char*)c0Buffer, c0Size);
-            Slice compressed_slice2(compressed_data);
+            Slice compressed_slice2(compressed_str);
             //compressed_slice2.size = 15;
             std::string decompressed2;
             decompressed2.resize(1024);
