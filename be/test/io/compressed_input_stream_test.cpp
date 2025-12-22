@@ -101,16 +101,24 @@ protected:
         //LOG(ERROR) << "read size: " << nread;
         f.reset();
 
-        const BlockCompressionCodec* codec2 = nullptr;
-        EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
-        std::string compressed_str((char*)c9Buffer, 15);
-        Slice compressed_slice2(compressed_data);
-        compressed_slice2.size = 15;
-        std::string decompressed2;
-        decompressed2.resize(9);
-        Slice decompressed_slice2(decompressed2);
-        Status st = codec2->decompress(compressed_slice2, &decompressed_slice2);
-        std::cout << "decompress: " << st << ":" << decompressed_slice2.size << std::endl;
+        {
+            size_t const c0SizeBound = LZ4F_compressFrameBound(0, NULL);
+            LOG(ERROR) << "REAL_SIZE: " << c0SizeBound << std::endl;
+            void* const c0Buffer = malloc(c0SizeBound);
+            char d0Buffer[1];
+            size_t const c0Size = LZ4F_compressFrame(c0Buffer, c0SizeBound, NULL, 0, NULL);
+
+            const BlockCompressionCodec* codec2 = nullptr;
+            EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
+            std::string compressed_str((char*)c0Buffer, c0Size);
+            Slice compressed_slice2(compressed_data);
+            //compressed_slice2.size = 15;
+            std::string decompressed2;
+            decompressed2.resize(1024);
+            Slice decompressed_slice2(decompressed2);
+            Status st = codec2->decompress(compressed_slice2, &decompressed_slice2);
+            std::cout << "decompress: " << st << ":" << decompressed_slice2.size << std::endl;
+        }
     }
 
     void read_compressed_file_ctx(CompressionTypePB type, const char* path, std::string& out, const ReadContext& ctx) {
