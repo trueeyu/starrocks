@@ -48,7 +48,7 @@
 namespace starrocks {
 
 static std::string random_string(int len) {
-    static starrocks::Random rand(20200722);
+    static Random rand(20200722);
     std::string s;
     s.reserve(len * 5);
     for (int i = 0; i < len; i++) {
@@ -79,7 +79,7 @@ static std::string generate_str(size_t len) {
     return result;
 }
 
-void test_single_slice(starrocks::CompressionTypePB type) {
+void test_single_slice(CompressionTypePB type) {
     const BlockCompressionCodec* codec = nullptr;
     auto st = get_block_compression_codec(type, &codec);
     ASSERT_TRUE(st.ok());
@@ -105,10 +105,10 @@ void test_single_slice(starrocks::CompressionTypePB type) {
                 ASSERT_STREQ(orig.c_str(), uncompressed.c_str());
             }
 
-            if (type == starrocks::CompressionTypePB::LZ4) {
+            if (type == CompressionTypePB::LZ4) {
                 Slice uncompressed_slice(uncompressed);
                 const BlockCompressionCodec* lz4_hadoop_codec = nullptr;
-                st = get_block_compression_codec(starrocks::CompressionTypePB::LZ4_HADOOP, &lz4_hadoop_codec);
+                st = get_block_compression_codec(CompressionTypePB::LZ4_HADOOP, &lz4_hadoop_codec);
                 ASSERT_TRUE(st.ok());
                 st = lz4_hadoop_codec->decompress(compressed_slice, &uncompressed_slice);
                 ASSERT_TRUE(st.ok());
@@ -120,8 +120,8 @@ void test_single_slice(starrocks::CompressionTypePB type) {
             // snappy has no return value if given buffer is not enough
             // NOTE: For ZLIB, we even get OK with a insufficient output
             // when uncompressed size is 1
-            if ((type == starrocks::CompressionTypePB::ZLIB && uncompressed.size() > 1) &&
-                type != starrocks::CompressionTypePB::SNAPPY && uncompressed.size() > 0) {
+            if ((type == CompressionTypePB::ZLIB && uncompressed.size() > 1) &&
+                type != CompressionTypePB::SNAPPY && uncompressed.size() > 0) {
                 Slice uncompressed_slice(uncompressed);
                 uncompressed_slice.size -= 1;
                 st = codec->decompress(compressed_slice, &uncompressed_slice);
@@ -129,7 +129,7 @@ void test_single_slice(starrocks::CompressionTypePB type) {
             }
             // corrupt compressed data
             // we use inflate for gzip decompressor, it will return Z_OK for this case
-            if (type != starrocks::CompressionTypePB::SNAPPY && type != starrocks::CompressionTypePB::GZIP) {
+            if (type != CompressionTypePB::SNAPPY && type != CompressionTypePB::GZIP) {
                 Slice uncompressed_slice(uncompressed);
                 compressed_slice.size -= 1;
                 st = codec->decompress(compressed_slice, &uncompressed_slice);
@@ -138,7 +138,7 @@ void test_single_slice(starrocks::CompressionTypePB type) {
             }
         }
         // buffer not enough for compress
-        if (type != starrocks::CompressionTypePB::SNAPPY && size > 0) {
+        if (type != CompressionTypePB::SNAPPY && size > 0) {
             Slice compressed_slice(compressed);
             compressed_slice.size = 1;
             st = codec->compress(orig, &compressed_slice);
@@ -148,16 +148,16 @@ void test_single_slice(starrocks::CompressionTypePB type) {
 }
 
 TEST_F(BlockCompressionTest, single) {
-    test_single_slice(starrocks::CompressionTypePB::ZSTD);
-    test_single_slice(starrocks::CompressionTypePB::SNAPPY);
-    test_single_slice(starrocks::CompressionTypePB::ZLIB);
-    test_single_slice(starrocks::CompressionTypePB::LZ4);
-    test_single_slice(starrocks::CompressionTypePB::LZ4_FRAME);
-    test_single_slice(starrocks::CompressionTypePB::GZIP);
-    test_single_slice(starrocks::CompressionTypePB::LZ4_HADOOP);
+    test_single_slice(CompressionTypePB::ZSTD);
+    test_single_slice(CompressionTypePB::SNAPPY);
+    test_single_slice(CompressionTypePB::ZLIB);
+    test_single_slice(CompressionTypePB::LZ4);
+    test_single_slice(CompressionTypePB::LZ4_FRAME);
+    test_single_slice(CompressionTypePB::GZIP);
+    test_single_slice(CompressionTypePB::LZ4_HADOOP);
 }
 
-void test_multi_slices(starrocks::CompressionTypePB type) {
+void test_multi_slices(CompressionTypePB type) {
     const BlockCompressionCodec* codec = nullptr;
     auto st = get_block_compression_codec(type, &codec);
     ASSERT_TRUE(st.ok());
@@ -195,10 +195,10 @@ void test_multi_slices(starrocks::CompressionTypePB type) {
             ASSERT_STREQ(orig.c_str(), uncompressed.c_str());
         }
 
-        if (type == starrocks::CompressionTypePB::LZ4) {
+        if (type == CompressionTypePB::LZ4) {
             Slice uncompressed_slice(uncompressed);
             const BlockCompressionCodec* lz4_hadoop_codec = nullptr;
-            st = get_block_compression_codec(starrocks::CompressionTypePB::LZ4_HADOOP, &lz4_hadoop_codec);
+            st = get_block_compression_codec(CompressionTypePB::LZ4_HADOOP, &lz4_hadoop_codec);
             ASSERT_TRUE(st.ok());
             st = lz4_hadoop_codec->decompress(compressed_slice, &uncompressed_slice);
             ASSERT_TRUE(st.ok());
@@ -208,7 +208,7 @@ void test_multi_slices(starrocks::CompressionTypePB type) {
     }
 
     // buffer not enough failed
-    if (type != starrocks::CompressionTypePB::SNAPPY) {
+    if (type != CompressionTypePB::SNAPPY) {
         Slice compressed_slice(compressed);
         compressed_slice.size = 10;
         st = codec->compress(orig, &compressed_slice);
@@ -217,12 +217,12 @@ void test_multi_slices(starrocks::CompressionTypePB type) {
 }
 
 TEST_F(BlockCompressionTest, multi) {
-    test_multi_slices(starrocks::CompressionTypePB::SNAPPY);
-    test_multi_slices(starrocks::CompressionTypePB::ZLIB);
-    test_multi_slices(starrocks::CompressionTypePB::LZ4);
-    test_multi_slices(starrocks::CompressionTypePB::LZ4_FRAME);
-    test_multi_slices(starrocks::CompressionTypePB::ZSTD);
-    test_multi_slices(starrocks::CompressionTypePB::GZIP);
+    test_multi_slices(CompressionTypePB::SNAPPY);
+    test_multi_slices(CompressionTypePB::ZLIB);
+    test_multi_slices(CompressionTypePB::LZ4);
+    test_multi_slices(CompressionTypePB::LZ4_FRAME);
+    test_multi_slices(CompressionTypePB::ZSTD);
+    test_multi_slices(CompressionTypePB::GZIP);
 }
 
 TEST_F(BlockCompressionTest, test_issue_10721) {
