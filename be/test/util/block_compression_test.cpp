@@ -414,6 +414,7 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
         src_str[i] = static_cast<char>(i);
     }
     size_t compressed_size = codec->max_compressed_len(src_str.size());
+    std::cout << "compressed_size: " << compressed_size << std::endl;
     std::string compressed_str;
     compressed_str.resize(compressed_size);
     Slice compressed_slice(compressed_str);
