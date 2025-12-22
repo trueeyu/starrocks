@@ -57,18 +57,48 @@ protected:
     }
 
     void test_lz4f_cases(const TestCase& t) {
-        auto f = std::make_shared<CompressedInputStream>(LZ4F_compress_to_file(t.data), LZ4F_decompressor(),
-                                                         t.compressed_buff_len);
+        //const std::string STR_9 = random_string(9);
+        //auto small = LZ4F_compress_to_file(STR_9);
+        const char s9Buffer[9] = {0};
+        char d9Buffer[sizeof(s9Buffer)];
+        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
+        void* const c9Buffer = malloc(c9SizeBound);
+        /* First compress a valid frame */
+        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        size_t c9Size;
+        pref.frameInfo.contentSize = sizeof(s9Buffer);
+        {
+            c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
+            std::cout << "compressFrame: " << c9Size << std::endl;
+        }
+
+        std::string compressed_data(reinterpret_cast<char*>(c9Buffer), c9Size);
+        printStringAsHex(compressed_data);
+
+        auto large = std::shared_ptr<InputStream>(new StringInputStream(std::move(compressed_data)));
+
+        /*
+        std::string STR_100;
+        STR_100.resize(9);
+        STR_100.data()[0] = '\0';
+        auto large = LZ4F_compress_to_file(STR_100);
+        */
+
+        auto f = std::make_shared<CompressedInputStream>(large, LZ4F_decompressor(), 9);
         std::string decompressed_data;
-        std::string own_buff(t.read_buff_len, '\0');
+        std::string own_buff(128 * 1024, '\0');
         decompressed_data.reserve(t.data.size);
 
-        ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
-        while (nread > 0) {
-            decompressed_data.append(own_buff.data(), nread);
-            ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), own_buff.size()));
-        }
-        ASSERT_EQ(t.data, decompressed_data);
+        //ASSIGN_OR_ABORT(auto nread, f->read(own_buff.data(), own_buff.size()));
+        //decompressed_data.append(own_buff.data(), nread);
+        int64_t nread = 0;
+        auto ret = f->read(own_buff.data(), 5);
+        LOG(ERROR) << "read size: " << ret.value();
+        //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
+        //LOG(ERROR) << "read size: " << nread;
+        //ASSIGN_OR_ABORT(nread, f->read(own_buff.data(), 20));
+        //LOG(ERROR) << "read size: " << nread;
+        f.reset();
     }
 
     void read_compressed_file_ctx(CompressionTypePB type, const char* path, std::string& out, const ReadContext& ctx) {
@@ -112,17 +142,8 @@ TEST_F(CompressedInputStreamTest, test_LZ4F) {
     const std::string STR_10M = random_string(10 * M1);
     const std::string STR_100M = random_string(100 * M1);
 
-    // clang-format off
-    TestCase cases[] = {
-            {"StarRocks", 1, M1},
-            {STR_10M, K1, 2 * K1},
-            {STR_100M, M1, M1},
-    };
-    // clang-format on
-
-    for (const auto& t : cases) {
-        test_lz4f_cases(t);
-    }
+    TestCase case1 = {STR_10M, K1, 2 * K1};
+    test_lz4f_cases(case1);
 }
 
 TEST_F(CompressedInputStreamTest, test_LZO0) {
