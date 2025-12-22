@@ -413,17 +413,18 @@ TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
     for (size_t i = 0; i < 9; i++) {
         src_str[i] = static_cast<char>(i);
     }
-    size_t compressed_size = codec->max_compressed_len(src_str.size());
-    std::cout << "compressed_size: " << compressed_size << std::endl;
-    std::string compressed_str;
-    compressed_str.resize(compressed_size);
-    Slice compressed_slice(compressed_str);
-    Slice decompressed_slice(src_str);
-    Status st = codec->compress(decompressed_slice, &compressed_slice);
-    std::cout << "compress: " << st << ":" << compressed_slice.size << std::endl;
+        const char s9Buffer[9] = {0};
+        char d9Buffer[sizeof(s9Buffer)];
+        size_t const c9SizeBound = LZ4F_compressFrameBound(sizeof(s9Buffer), NULL);
+        void* c9Buffer = malloc(c9SizeBound);
+        /* First compress a valid frame */
+        LZ4F_preferences_t pref = LZ4F_INIT_PREFERENCES;
+        pref.frameInfo.contentSize = sizeof(s9Buffer);
+        size_t const c9Size = LZ4F_compressFrame(c9Buffer, c9SizeBound, s9Buffer, sizeof(s9Buffer), &pref);
 
     const BlockCompressionCodec* codec2 = nullptr;
     EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec2));
+    std::string compressed_str((char*)c9Buffer, 15);
     Slice compressed_slice2(compressed_str);
     compressed_slice2.size = 10;
     std::string decompressed2;
