@@ -23,6 +23,7 @@
 #include "io_test_base.h"
 #include "testutil/assert.h"
 #include "util/compression/block_compression.h"
+#include "util/compression/compression_context_pool_singletons.h"
 #include "util/compression/stream_compression.h"
 namespace starrocks::io {
 
