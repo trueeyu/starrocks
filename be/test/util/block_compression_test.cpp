@@ -40,6 +40,7 @@
 #include <thread>
 
 #include "gen_cpp/segment.pb.h"
+#include "testutil/assert.h"
 #include "util/compression/compression_context_pool_singletons.h"
 #include "util/faststring.h"
 #include "util/random.h"
@@ -401,6 +402,24 @@ TEST_F(BlockCompressionTest, test_multi_thread_get_ctx) {
             worker.join();
         }
     }
+}
+
+TEST_F(BlockCompressionTest, test_decompress_empty_frame) {
+    const BlockCompressionCodec* codec = nullptr;
+    EXPECT_OK(get_block_compression_codec(LZ4_FRAME, &codec));
+
+    std::string src_str;
+    src_str.resize(9);
+    for (size_t i = 0; i < 9; i++) {
+        src_str[i] = static_cast<char>(i);
+    }
+    size_t compressed_size = codec->max_compressed_len(src_str.size());
+    std::string compressed_str;
+    compressed_str.resize(compressed_size);
+    Slice compressed_slice(compressed_str);
+    Slice decompressed_slice(src_str);
+    Status st = codec->compress(decompressed_slice, &compressed_slice);
+    LOG(ERROR) << "compress: " << st << ":" << compressed_slice.size;
 }
 
 //#define LZ4_BENCHMARK
