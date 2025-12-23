@@ -419,24 +419,6 @@ public:
         return exec_whitelist(strings::Substitute("ls -al $0", tablet->schema_hash_path()));
     }
 
-    static std::string pk_dump(int64_t tablet_id) {
-        auto tablet = get_tablet(tablet_id);
-        if (!tablet) {
-            return "tablet not found";
-        }
-        if (tablet->updates() == nullptr) {
-            return "non-pk tablet no support set error";
-        }
-        PrimaryKeyDump pkd(tablet.get());
-        auto st = pkd.dump();
-        if (st.ok()) {
-            return "print primary key dump success";
-        } else {
-            LOG(ERROR) << "print primary key dump fail, " << st;
-            return "print primary key dump fail";
-        }
-    }
-
     static void bind(ForeignModule& m) {
         {
             auto& cls = m.klass<TabletBasicInfo>("TabletBasicInfo");
@@ -595,7 +577,6 @@ public:
             REG_STATIC_METHOD(StorageEngineRef, submit_manual_compaction_task_for_partition);
             REG_STATIC_METHOD(StorageEngineRef, submit_manual_compaction_task_for_tablet);
             REG_STATIC_METHOD(StorageEngineRef, get_manual_compaction_status);
-            REG_STATIC_METHOD(StorageEngineRef, pk_dump);
             REG_STATIC_METHOD(StorageEngineRef, ls_tablet_dir);
             REG_STATIC_METHOD(StorageEngineRef, set_error_state);
             REG_STATIC_METHOD(StorageEngineRef, recover_tablet);
