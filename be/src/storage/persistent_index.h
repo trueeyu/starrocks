@@ -610,7 +610,7 @@ public:
 
     // write_shard() must be called serially in the order of key_size and it is caller's duty to guarantee this.
     Status write_shard(size_t key_size, size_t npage_hint, size_t page_size, size_t nbucket,
-                       const std::vector<KVRef>& kvs);
+                       const std::vector<KVRef>& kvs, bool lxh_flag);
 
     Status write_bf();
 

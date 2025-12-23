@@ -636,7 +636,7 @@ Status ImmutableIndexWriter::init(const string& idx_file_path, const EditVersion
 
 // write_shard() must be called serially in the order of key_size and it is caller's duty to guarantee this.
 Status ImmutableIndexWriter::write_shard(size_t key_size, size_t npage_hint, size_t page_size, size_t nbucket,
-                                         const std::vector<KVRef>& kvs) {
+                                         const std::vector<KVRef>& kvs, bool lxh_flag) {
     const bool new_key_length = _nshard == 0 || _cur_key_size != key_size;
     if (_nshard == 0) {
         _cur_key_size = key_size;
@@ -1091,7 +1091,7 @@ public:
         if (nshard > 0) {
             const auto& kv_ref_by_shard = get_kv_refs_by_shard(nshard, size(), with_null);
             for (const auto& kvs : kv_ref_by_shard) {
-                RETURN_IF_ERROR(writer->write_shard(KeySize, npage_hint, page_size, nbucket, kvs));
+                RETURN_IF_ERROR(writer->write_shard(KeySize, npage_hint, page_size, nbucket, kvs, true));
             }
         }
         return Status::OK();
@@ -1536,7 +1536,7 @@ public:
         if (nshard > 0) {
             const auto& kv_ref_by_shard = get_kv_refs_by_shard(nshard, size(), with_null);
             for (const auto& kvs : kv_ref_by_shard) {
-                RETURN_IF_ERROR(writer->write_shard(kKeySizeMagicNum, npage_hint, page_size, nbucket, kvs));
+                RETURN_IF_ERROR(writer->write_shard(kKeySizeMagicNum, npage_hint, page_size, nbucket, kvs, true));
             }
         }
         return Status::OK();
@@ -4637,7 +4637,7 @@ Status PersistentIndex::_merge_compaction_internal(ImmutableIndexWriter* writer,
                         merge_shard_kvs(key_size, l0_kvs_by_shard[shard_idx], l1_kvs, estimate_size_per_shard, kvs));
             }
             // write shard
-            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs));
+            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs, true));
             // clear shard
             l0_kvs_by_shard[shard_idx].clear();
             l0_kvs_by_shard[shard_idx].shrink_to_fit();
@@ -4937,7 +4937,7 @@ StatusOr<EditVersion> PersistentIndex::_major_compaction_impl(
             std::vector<KVRef> empty_l0_kvs;
             RETURN_IF_ERROR(merge_shard_kvs(key_size, empty_l0_kvs, l2_kvs, estimate_size_per_shard, kvs));
             // write shard
-            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs));
+            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs, true));
         }
     }
     RETURN_IF_ERROR(writer->finish());
@@ -5119,7 +5119,7 @@ Status PersistentIndex::test_flush_varlen_to_immutable_index(const std::string& 
         kv_offset += keys[i].size + kIndexValueSize;
     }
     for (const auto& kvs : kv_ref_by_shard) {
-        RETURN_IF_ERROR(writer.write_shard(SliceMutableIndex::kKeySizeMagicNum, npage_hint, page_size, nbucket, kvs));
+        RETURN_IF_ERROR(writer.write_shard(SliceMutableIndex::kKeySizeMagicNum, npage_hint, page_size, nbucket, kvs, true));
     }
     return writer.finish();
 }
