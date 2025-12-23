@@ -75,8 +75,6 @@ public:
 
     // just an estimate value for now
     virtual std::size_t memory_usage() const = 0;
-
-    virtual Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) = 0;
 };
 
 #pragma pack(push)
@@ -956,15 +954,6 @@ public:
             }
         }
         return ret;
-    }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& _map : _maps) {
-            if (_map) {
-                RETURN_IF_ERROR(_map->pk_dump(dump, dump_pb));
-            }
-        }
-        return Status::OK();
     }
 };
 

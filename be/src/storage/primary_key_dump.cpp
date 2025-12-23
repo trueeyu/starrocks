@@ -47,46 +47,6 @@ PrimaryKeyDump::PrimaryKeyDump(const std::string& dump_filepath) {
     _partial_pindex_kvs = std::make_unique<PartialKVsPB>();
 }
 
-Status PrimaryKeyDump::add_pindex_kvs(const std::string_view& key, uint64_t value, PrimaryIndexDumpPB* dump_pb) {
-    // Avoid protobuf exceed memory limit
-    if (_partial_pindex_kvs_bytes + key.size() + sizeof(uint64_t) >= MAX_PROTOBUF_SIZE) {
-        std::string serialized_data;
-        if (_partial_pindex_kvs->SerializeToString(&serialized_data)) {
-            PagePointerPB page;
-            page.set_offset(_dump_wfile->size());
-            RETURN_IF_ERROR(_dump_wfile->append(Slice(serialized_data)));
-            page.set_size(_dump_wfile->size() - page.offset());
-            dump_pb->add_kvs()->CopyFrom(page);
-            _partial_pindex_kvs->Clear();
-            _partial_pindex_kvs_bytes = 0;
-        } else {
-            return Status::InternalError("dump to file, serialize error");
-        }
-    }
-    _partial_pindex_kvs->add_keys(key.data(), key.size());
-    _partial_pindex_kvs->add_values(value);
-    _partial_pindex_kvs_bytes += key.size() + sizeof(uint64_t);
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::finish_pindex_kvs(PrimaryIndexDumpPB* dump_pb) {
-    std::string serialized_data;
-    if (_partial_pindex_kvs_bytes > 0) {
-        if (_partial_pindex_kvs->SerializeToString(&serialized_data)) {
-            PagePointerPB page;
-            page.set_offset(_dump_wfile->size());
-            RETURN_IF_ERROR(_dump_wfile->append(Slice(serialized_data)));
-            page.set_size(_dump_wfile->size() - page.offset());
-            dump_pb->add_kvs()->CopyFrom(page);
-            _partial_pindex_kvs->Clear();
-            _partial_pindex_kvs_bytes = 0;
-        } else {
-            return Status::InternalError("dump to file, serialize error");
-        }
-    }
-    return Status::OK();
-}
-
 class PrimaryKeyChunkDumper {
 public:
     PrimaryKeyChunkDumper(PrimaryKeyColumnPB* pk_column_pb) : _pk_column_pb(pk_column_pb) {}

@@ -70,12 +70,6 @@ public:
     PrimaryKeyDump(const std::string& dump_filepath);
     ~PrimaryKeyDump() = default;
 
-    // Append primary index' kv into dump file
-    Status add_pindex_kvs(const std::string_view& key, uint64_t value, PrimaryIndexDumpPB* dump_pb);
-    Status finish_pindex_kvs(PrimaryIndexDumpPB* dump_pb);
-
-    std::string dump_filepath() const { return _dump_filepath; }
-
     // 2GB
     static const int64_t MAX_PROTOBUF_SIZE = 2147483648;
 
