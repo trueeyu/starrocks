@@ -92,7 +92,6 @@ using starrocks::PagePointer;
 using starrocks::ColumnIteratorOptions;
 using starrocks::PageFooterPB;
 using starrocks::DeltaColumnGroupList;
-using starrocks::PrimaryKeyDump;
 
 DEFINE_string(root_path, "", "storage root path");
 DEFINE_string(operation, "",

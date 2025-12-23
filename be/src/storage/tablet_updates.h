@@ -50,7 +50,6 @@ class Schema;
 class TabletReader;
 class ChunkChanger;
 class SegmentIterator;
-class PrimaryKeyDump;
 
 // save the context when reading from delta column files
 struct GetDeltaColumnContext {

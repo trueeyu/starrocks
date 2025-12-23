@@ -32,7 +32,6 @@ namespace starrocks {
 class Tablet;
 class Schema;
 class Column;
-class PrimaryKeyDump;
 
 class TabletLoader {
 public:
