@@ -169,8 +169,10 @@ struct alignas(kPageSize) LargeIndexPage {
 // the pageid in the following function are all logic pageid in shard
 class ImmutableIndexShard {
 public:
-    ImmutableIndexShard(size_t npage, size_t page_size)
+    ImmutableIndexShard(size_t npage, size_t page_size, bool tmp_flag)
             : _page_size(page_size), _sub_page_num(page_size / kPageSize), _pages(npage * (page_size / kPageSize)) {}
+
+    ImmutableIndexShard() = delete;
 
     size_t npage() const { return _pages.size() / _sub_page_num; }
 
@@ -456,7 +458,7 @@ StatusOr<std::unique_ptr<ImmutableIndexShard>> ImmutableIndexShard::create(size_
                                                                            size_t page_size, size_t nbucket,
                                                                            const std::vector<KVRef>& kv_refs) {
     if (kv_refs.size() == 0) {
-        return std::make_unique<ImmutableIndexShard>(0, page_size);
+        return std::make_unique<ImmutableIndexShard>(0, page_size, true);
     }
     MonotonicStopWatch watch;
     watch.start();
