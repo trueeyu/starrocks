@@ -59,24 +59,6 @@ Status PrimaryKeyDump::init_dump_file() {
     return Status::OK();
 }
 
-Status PrimaryKeyDump::_dump_tablet_meta() {
-    TabletMetaPB meta_pb;
-    _tablet->tablet_meta()->to_meta_pb(&meta_pb);
-    _dump_pb.mutable_tablet_meta()->CopyFrom(meta_pb);
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::_dump_rowset_meta() {
-    auto rowset_map = _tablet->updates()->get_rowset_map();
-    for (const auto& each : (*rowset_map)) {
-        RowsetMetaIdPB rowset_meta_id;
-        rowset_meta_id.set_rowset_id(each.first);
-        rowset_meta_id.mutable_rowset_meta()->CopyFrom(each.second->rowset_meta()->get_meta_pb_without_schema());
-        _dump_pb.add_rowset_metas()->CopyFrom(rowset_meta_id);
-    }
-    return Status::OK();
-}
-
 Status PrimaryKeyDump::add_pindex_kvs(const std::string_view& key, uint64_t value, PrimaryIndexDumpPB* dump_pb) {
     // Avoid protobuf exceed memory limit
     if (_partial_pindex_kvs_bytes + key.size() + sizeof(uint64_t) >= MAX_PROTOBUF_SIZE) {
@@ -114,43 +96,6 @@ Status PrimaryKeyDump::finish_pindex_kvs(PrimaryIndexDumpPB* dump_pb) {
             return Status::InternalError("dump to file, serialize error");
         }
     }
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::_dump_primary_index() {
-    return _tablet->updates()->primary_index_dump(this, _dump_pb.mutable_primary_index());
-}
-
-Status PrimaryKeyDump::_dump_delvec() {
-    RETURN_IF_ERROR(TabletMetaManager::del_vector_iterate(
-            _tablet->data_dir()->get_meta(), _tablet->tablet_id(), 0, UINT32_MAX,
-            [&](uint32_t segment_id, int64_t version, std::string_view value) -> bool {
-                DeleteVectorStatPB delvec_stat;
-                delvec_stat.set_segment_id(segment_id);
-                delvec_stat.set_version(version);
-                DelVectorPtr delvec_ptr = std::make_shared<DelVector>();
-                if (!delvec_ptr->load(version, value.data(), value.size()).ok()) {
-                    return false;
-                }
-                delvec_stat.set_cardinality(delvec_ptr->cardinality());
-                _dump_pb.add_delvec_stats()->CopyFrom(delvec_stat);
-                return true;
-            }));
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::_dump_dcg() {
-    std::map<uint32_t, DeltaColumnGroupList> dcgs;
-    RETURN_IF_ERROR(TabletMetaManager::scan_tablet_delta_column_group_by_segment(_tablet->data_dir()->get_meta(),
-                                                                                 _tablet->tablet_id(), &dcgs));
-    for (const auto& each : dcgs) {
-        DeltaColumnGroupListIdPB dcg_list;
-        dcg_list.set_segment_id(each.first);
-        (void)DeltaColumnGroupListSerializer::serialize_delta_column_group_list(each.second,
-                                                                                dcg_list.mutable_dcg_list());
-        _dump_pb.add_dcg_lists()->CopyFrom(dcg_list);
-    }
-
     return Status::OK();
 }
 
@@ -232,93 +177,6 @@ static std::pair<Schema, std::shared_ptr<TabletSchema>> build_pkey_schema(const 
     Schema pkey_schema = ChunkHelper::convert_schema(tablet_schema, pk_columns);
     auto pkey_tschema = TabletSchema::create(tablet_schema, pk_columns2);
     return {pkey_schema, pkey_tschema};
-}
-
-Status PrimaryKeyDump::_dump_segment_keys() {
-    // 1. generate primary key schema
-    auto tablet_schema = _tablet->tablet_schema();
-    auto schema_pair = build_pkey_schema(tablet_schema);
-    Schema& pkey_schema = schema_pair.first;
-    auto pkey_tschema = schema_pair.second;
-    // 2. scan all rowset
-    auto rowset_map = _tablet->updates()->get_rowset_map();
-    // only hold pkey, so can use larger chunk size
-    OlapReaderStatistics stats;
-    auto chunk_shared_ptr = ChunkHelper::new_chunk(pkey_schema, 4096);
-    auto chunk = chunk_shared_ptr.get();
-    for (auto& rowset : *rowset_map) {
-        RowsetReleaseGuard guard(rowset.second);
-        auto res = rowset.second->get_segment_iterators2(pkey_schema, tablet_schema, nullptr, 0, &stats);
-        if (!res.ok()) {
-            return res.status();
-        }
-        auto& itrs = res.value();
-        RETURN_ERROR_IF_FALSE(itrs.size() == rowset.second->num_segments(), "itrs.size != num_segments");
-        for (size_t i = 0; i < itrs.size(); i++) {
-            auto itr = itrs[i].get();
-            if (itr == nullptr) {
-                continue;
-            }
-            PrimaryKeyColumnPB pk_column_pb;
-            pk_column_pb.set_segment_id(rowset.second->rowset_meta()->get_rowset_seg_id() + i);
-            PrimaryKeyChunkDumper dumper(&pk_column_pb);
-            RETURN_IF_ERROR(dumper.init(pkey_tschema, _tablet->schema_hash_path()));
-            while (true) {
-                chunk->reset();
-                auto st = itr->get_next(chunk);
-                if (st.is_end_of_file()) {
-                    break;
-                } else if (!st.ok()) {
-                    return st;
-                } else {
-                    RETURN_IF_ERROR(dumper.dump_chunk(*chunk));
-                }
-            }
-            RETURN_IF_ERROR(dumper.finalize(_dump_wfile.get()));
-            itr->close();
-            _dump_pb.add_primary_key_column()->CopyFrom(pk_column_pb);
-        }
-    }
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::_dump_rowset_stat() {
-    std::map<uint32_t, std::string> output_rowset_stats;
-    RETURN_IF_ERROR(_tablet->updates()->get_rowset_stats(&output_rowset_stats));
-    for (const auto& each : output_rowset_stats) {
-        RowsetStatIdPB rowset_stat_id;
-        rowset_stat_id.set_rowset_id(each.first);
-        rowset_stat_id.set_rowset_stat(each.second);
-        _dump_pb.add_rowset_stats()->CopyFrom(rowset_stat_id);
-    }
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::_dump_to_file() {
-    std::string serialized_data;
-    if (_dump_pb.SerializeToString(&serialized_data)) {
-        RETURN_IF_ERROR(_dump_wfile->append(Slice(serialized_data)));
-        faststring tail_buf;
-        // Record protobuf size
-        put_fixed64_le(&tail_buf, serialized_data.size());
-        RETURN_IF_ERROR(_dump_wfile->append(Slice(tail_buf)));
-    } else {
-        return Status::InternalError("dump to file, serialize error");
-    }
-    return Status::OK();
-}
-
-Status PrimaryKeyDump::dump() {
-    RETURN_IF_ERROR(init_dump_file());
-    RETURN_IF_ERROR(_dump_tablet_meta());
-    RETURN_IF_ERROR(_dump_rowset_meta());
-    RETURN_IF_ERROR(_dump_rowset_stat());
-    RETURN_IF_ERROR(_dump_delvec());
-    RETURN_IF_ERROR(_dump_dcg());
-    RETURN_IF_ERROR(_dump_segment_keys());
-    RETURN_IF_ERROR(_dump_primary_index());
-    RETURN_IF_ERROR(_dump_to_file());
-    return Status::OK();
 }
 
 Status PrimaryKeyDump::read_deserialize_from_file(const std::string& dump_filepath, PrimaryKeyDumpPB* dump_pb) {

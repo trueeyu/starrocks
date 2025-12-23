@@ -377,8 +377,6 @@ private:
     // pk index major compaction function
     void* _pk_index_major_compaction_thread_callback(void* arg);
 
-    void* _pk_dump_thread_callback(void* arg);
-
 #ifdef USE_STAROS
     // local pk index of SHARED_DATA gc/evict function
     void* _local_pk_index_shared_data_gc_evict_thread_callback(void* arg);

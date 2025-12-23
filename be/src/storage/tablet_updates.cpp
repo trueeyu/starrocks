@@ -2689,30 +2689,6 @@ bool TabletUpdates::check_rowset_id(const RowsetId& rowset_id) const {
     return false;
 }
 
-Status TabletUpdates::generate_pk_dump_if_in_error_state() {
-    if (_error) {
-        // generate pk dump
-        static int64_t last_generate_time = 0;
-        if (UnixSeconds() - last_generate_time > config::pk_dump_interval_seconds) {
-            last_generate_time = UnixSeconds();
-            PrimaryKeyDump pkd(&_tablet);
-            if (pkd.dump_file_exist().ok()) {
-                // dump file already exist, skip it.
-                return Status::OK();
-            }
-            auto st = pkd.dump();
-            if (!st.ok()) {
-                LOG(ERROR) << "tablet " << _tablet.tablet_id() << " generate pk dump fail, st : " << st;
-                return st;
-            } else {
-                LOG(INFO) << "tablet " << _tablet.tablet_id()
-                          << " generate pk dump success, path : " << pkd.dump_filepath();
-            }
-        }
-    }
-    return Status::OK();
-}
-
 void TabletUpdates::remove_expired_versions(int64_t expire_time) {
     if (_error) {
         LOG(WARNING) << strings::Substitute(

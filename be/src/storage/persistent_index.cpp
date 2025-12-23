@@ -234,7 +234,7 @@ Status ImmutableIndexShard::compress_and_write(const CompressionTypePB& compress
                                                size_t* uncompressed_size,
                                                std::vector<int32_t>& compressed_pages_off) const {
     LOG(ERROR) << "LXH: compress and write compression type: " << compression_type <<
-        ":" << _page_size << ":" << _pages.size();
+        ":" << _page_size << ":" << _pages.size() << ":" << _sub_page_num;
     if (compression_type == NO_COMPRESSION) {
         return write(wb);
     }
@@ -2775,7 +2775,7 @@ Status ImmutableIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb
             // skip empty shard
             continue;
         }
-        shard_ptrs[shard_idx] = std::make_unique<ImmutableIndexShard>(shard_info.npage, shard_info.page_size);
+        shard_ptrs[shard_idx] = std::make_unique<ImmutableIndexShard>(shard_info.npage, shard_info.page_size, true);
         RETURN_IF_ERROR(_file->read_at_fully(shard_info.offset, shard_ptrs[shard_idx]->data(), shard_info.bytes));
         RETURN_IF_ERROR(shard_ptrs[shard_idx]->decompress_pages(_compression_type, shard_info.npage,
                                                                 shard_info.uncompressed_size, shard_info.bytes,

@@ -70,8 +70,6 @@ public:
     PrimaryKeyDump(const std::string& dump_filepath);
     ~PrimaryKeyDump() = default;
 
-    Status dump();
-
     Status init_dump_file();
 
     // Append primary index' kv into dump file
@@ -90,16 +88,6 @@ public:
     std::string dump_filepath() const { return _dump_filepath; }
 
     Status dump_file_exist();
-
-private:
-    Status _dump_tablet_meta();
-    Status _dump_rowset_meta();
-    Status _dump_primary_index();
-    Status _dump_delvec();
-    Status _dump_dcg();
-    Status _dump_segment_keys();
-    Status _dump_rowset_stat();
-    Status _dump_to_file();
 
     // 2GB
     static const int64_t MAX_PROTOBUF_SIZE = 2147483648;

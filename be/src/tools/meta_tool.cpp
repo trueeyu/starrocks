@@ -1099,36 +1099,6 @@ int meta_tool_main(int argc, char** argv) {
             return -1;
         }
     } else if (FLAGS_operation == "print_pk_dump") {
-        if (FLAGS_file == "") {
-            std::cout << "no file flag for pk dump file" << std::endl;
-            return -1;
-        }
-        starrocks::PrimaryKeyDumpPB dump_pb;
-        Status st = starrocks::PrimaryKeyDump::read_deserialize_from_file(FLAGS_file, &dump_pb);
-        if (!st.ok()) {
-            std::cout << "print pk dump failed: " << st << std::endl;
-            return -1;
-        }
-        std::cout << "[pk dump] meta: " << dump_pb.Utf8DebugString() << std::endl;
-        st = starrocks::PrimaryKeyDump::deserialize_pkcol_pkindex_from_meta(
-                FLAGS_file, dump_pb,
-                [&](uint32_t segment_id, const starrocks::Chunk& chunk) {
-                    for (int i = 0; i < chunk.num_rows(); i++) {
-                        std::cout << "pk column: " << chunk.debug_row(i) << " segmentid: " << segment_id << std::endl;
-                    }
-                },
-                [&](const std::string& filename, const starrocks::PartialKVsPB& kvs) {
-                    std::cout << " pk index, filename: " << filename << std::endl;
-                    for (int i = 0; i < kvs.keys_size(); i++) {
-                        std::cout << "index key " << starrocks::hexdump(kvs.keys(i).data(), kvs.keys(i).size())
-                                  << " value " << kvs.values(i) << std::endl;
-                    }
-                });
-        if (!st.ok()) {
-            std::cout << "print pk dump failed: " << st << std::endl;
-            return -1;
-        }
-
     } else if (FLAGS_operation == "dump_short_key_index") {
         if (FLAGS_file == "") {
             std::cout << "no file set for dump short key index" << std::endl;

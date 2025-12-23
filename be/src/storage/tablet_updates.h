@@ -361,8 +361,6 @@ public:
         _error_msg = "";
     }
 
-    Status generate_pk_dump_if_in_error_state();
-
     RowsetSharedPtr get_rowset(uint32_t rowset_id);
 
     void check_for_apply() {
