@@ -231,7 +231,8 @@ Status ImmutableIndexShard::write(WritableFile& wb) const {
 Status ImmutableIndexShard::compress_and_write(const CompressionTypePB& compression_type, WritableFile& wb,
                                                size_t* uncompressed_size,
                                                std::vector<int32_t>& compressed_pages_off) const {
-    LOG(ERROR) << "LXH: compress and write compression type: " << compression_type;
+    LOG(ERROR) << "LXH: compress and write compression type: " << compression_type <<
+        ":" << _page_size << ":" << _pages.size();
     if (compression_type == NO_COMPRESSION) {
         return write(wb);
     }
