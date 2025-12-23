@@ -155,8 +155,6 @@ public:
 
     void reset_cancel_major_compaction();
 
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb);
-
     Status get_load_status() { return _status; }
 
     // only for ut

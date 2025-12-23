@@ -351,7 +351,6 @@ public:
 
     Status get_rowset_stats(std::map<uint32_t, std::string>* output_rowset_stats);
 
-    Status primary_index_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb);
     // recover
     Status recover();
 

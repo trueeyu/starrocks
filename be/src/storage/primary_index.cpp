@@ -254,14 +254,6 @@ public:
     std::size_t memory_usage() const final {
         return _map.capacity() * (1 + (sizeof(Key) + 3) / 4 * 4 + sizeof(RowIdPack4));
     }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& kv : _map) {
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(reinterpret_cast<const char*>(&kv.first), sizeof(Key)), kv.second.value, dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
-    }
 };
 
 template <size_t S>
@@ -588,15 +580,6 @@ public:
     }
 
     std::size_t memory_usage() const final { return _map.capacity() * (1 + S * 4 + sizeof(RowIdPack4)); }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& kv : _map) {
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(reinterpret_cast<const char*>(kv.first.v), sizeof(FixSlice<S>)), kv.second.value,
-                    dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
-    }
 }; // namespace starrocks
 
 struct StringHasher1 {
@@ -757,14 +740,6 @@ public:
             ret += size() * 8;
         }
         return ret;
-    }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& kv : _map) {
-            RETURN_IF_ERROR(
-                    dump->add_pindex_kvs(std::string_view(kv.first.data(), kv.first.size()), kv.second, dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
     }
 }; // namespace starrocks
 
@@ -1601,17 +1576,6 @@ void PrimaryIndex::reset_cancel_major_compaction() {
     if (_persistent_index != nullptr) {
         _persistent_index->reset_cancel_major_compaction();
     }
-}
-
-Status PrimaryIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb) {
-    if (_persistent_index != nullptr) {
-        RETURN_IF_ERROR(_persistent_index->pk_dump(dump, dump_pb));
-    } else if (_pkey_to_rssid_rowid != nullptr) {
-        PrimaryIndexDumpPB* level = dump_pb->add_primary_index_levels();
-        level->set_filename("memory primary index");
-        RETURN_IF_ERROR(_pkey_to_rssid_rowid->pk_dump(dump, level));
-    }
-    return Status::OK();
 }
 
 void PrimaryIndex::_calc_memory_usage() {

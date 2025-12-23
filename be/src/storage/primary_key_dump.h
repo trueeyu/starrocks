@@ -70,24 +70,11 @@ public:
     PrimaryKeyDump(const std::string& dump_filepath);
     ~PrimaryKeyDump() = default;
 
-    Status init_dump_file();
-
     // Append primary index' kv into dump file
     Status add_pindex_kvs(const std::string_view& key, uint64_t value, PrimaryIndexDumpPB* dump_pb);
     Status finish_pindex_kvs(PrimaryIndexDumpPB* dump_pb);
 
-    // read PrimaryKeyDumpPB from dump file and deserialize it.
-    static Status read_deserialize_from_file(const std::string& dump_filepath, PrimaryKeyDumpPB* dump_pb);
-
-    // deserialize pk column and pk index from dump file.
-    static Status deserialize_pkcol_pkindex_from_meta(
-            const std::string& dump_filepath, const PrimaryKeyDumpPB& dump_pb,
-            const std::function<void(uint32_t, const Chunk&)>& column_key_func,
-            const std::function<void(const std::string&, const PartialKVsPB&)>& index_kvs_func);
-
     std::string dump_filepath() const { return _dump_filepath; }
-
-    Status dump_file_exist();
 
     // 2GB
     static const int64_t MAX_PROTOBUF_SIZE = 2147483648;

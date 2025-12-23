@@ -47,18 +47,6 @@ PrimaryKeyDump::PrimaryKeyDump(const std::string& dump_filepath) {
     _partial_pindex_kvs = std::make_unique<PartialKVsPB>();
 }
 
-Status PrimaryKeyDump::dump_file_exist() {
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(_dump_filepath));
-    return fs->path_exists(_dump_filepath);
-}
-
-Status PrimaryKeyDump::init_dump_file() {
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(_dump_filepath));
-    WritableFileOptions wblock_opts{.sync_on_close = true, .mode = FileSystem::CREATE_OR_OPEN_WITH_TRUNCATE};
-    ASSIGN_OR_RETURN(_dump_wfile, fs->new_writable_file(wblock_opts, _dump_filepath));
-    return Status::OK();
-}
-
 Status PrimaryKeyDump::add_pindex_kvs(const std::string_view& key, uint64_t value, PrimaryIndexDumpPB* dump_pb) {
     // Avoid protobuf exceed memory limit
     if (_partial_pindex_kvs_bytes + key.size() + sizeof(uint64_t) >= MAX_PROTOBUF_SIZE) {
@@ -177,73 +165,6 @@ static std::pair<Schema, std::shared_ptr<TabletSchema>> build_pkey_schema(const 
     Schema pkey_schema = ChunkHelper::convert_schema(tablet_schema, pk_columns);
     auto pkey_tschema = TabletSchema::create(tablet_schema, pk_columns2);
     return {pkey_schema, pkey_tschema};
-}
-
-Status PrimaryKeyDump::read_deserialize_from_file(const std::string& dump_filepath, PrimaryKeyDumpPB* dump_pb) {
-    std::unique_ptr<RandomAccessFile> rfile;
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(dump_filepath));
-    ASSIGN_OR_RETURN(rfile, fs->new_random_access_file(dump_filepath));
-    ASSIGN_OR_RETURN(int64_t file_size, rfile->get_size());
-    // 1. get protobuf size from tail
-    std::unique_ptr<char[]> tail(new char[8]);
-    Slice tail_slice(tail.get(), 8);
-    RETURN_IF_ERROR(rfile->read_at(file_size - 8, tail_slice.data, 8));
-    uint64_t protobuf_size = decode_fixed64_le((uint8_t*)tail_slice.data);
-    // 2. read and deserialize protobuf
-    std::string buff;
-    raw::stl_string_resize_uninitialized(&buff, protobuf_size);
-    RETURN_IF_ERROR(rfile->read_at_fully(file_size - 8 - protobuf_size, buff.data(), buff.size()));
-    if (dump_pb->ParseFromString(buff)) {
-        return Status::OK();
-    } else {
-        return Status::Corruption("read deserialize from file fail, " + dump_filepath);
-    }
-}
-
-Status PrimaryKeyDump::deserialize_pkcol_pkindex_from_meta(
-        const std::string& dump_filepath, const PrimaryKeyDumpPB& dump_pb,
-        const std::function<void(uint32_t, const Chunk&)>& column_key_func,
-        const std::function<void(const std::string&, const PartialKVsPB&)>& index_kvs_func) {
-    std::unique_ptr<RandomAccessFile> rfile;
-    ASSIGN_OR_RETURN(auto fs, FileSystem::CreateSharedFromString(dump_filepath));
-    ASSIGN_OR_RETURN(rfile, fs->new_random_access_file(dump_filepath));
-    // 1. deserialize pk column
-    for (const auto& primary_key_column : dump_pb.primary_key_column()) {
-        TabletSchemaCSPtr tablet_schema = std::make_shared<TabletSchema>(dump_pb.tablet_meta().schema());
-        auto schema_pair = build_pkey_schema(tablet_schema);
-        Schema& pkey_schema = schema_pair.first;
-        auto pkey_tschema = schema_pair.second;
-        auto chunk_shared_ptr = ChunkHelper::new_chunk(pkey_schema, 4096);
-        auto chunk = chunk_shared_ptr.get();
-        PrimaryKeyChunkReader reader;
-        ASSIGN_OR_RETURN(auto itr, reader.read(dump_filepath, pkey_schema, pkey_tschema, primary_key_column));
-        while (true) {
-            chunk->reset();
-            auto st = itr->get_next(chunk);
-            if (st.is_end_of_file()) {
-                break;
-            } else if (!st.ok()) {
-                return st;
-            } else {
-                column_key_func(primary_key_column.segment_id(), *chunk);
-            }
-        }
-    }
-    // 2. deserialize pk index
-    for (const auto& level : dump_pb.primary_index().primary_index_levels()) {
-        for (const auto& page : level.kvs()) {
-            std::string buff;
-            raw::stl_string_resize_uninitialized(&buff, page.size());
-            RETURN_IF_ERROR(rfile->read_at_fully(page.offset(), buff.data(), buff.size()));
-            PartialKVsPB partial_kvs_pb;
-            if (partial_kvs_pb.ParseFromString(buff)) {
-                index_kvs_func(level.filename(), partial_kvs_pb);
-            } else {
-                return Status::Corruption("deserialize kvs from meta fail, " + dump_filepath);
-            }
-        }
-    }
-    return Status::OK();
 }
 
 } // namespace starrocks

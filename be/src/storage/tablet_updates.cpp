@@ -1266,31 +1266,6 @@ Status TabletUpdates::_apply_column_partial_update_commit(const EditVersionInfo&
     return apply_st;
 }
 
-Status TabletUpdates::primary_index_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb) {
-    auto manager = StorageEngine::instance()->update_manager();
-    std::lock_guard lg(_index_lock);
-    auto index_entry = manager->index_cache().get(_tablet.tablet_id());
-    if (index_entry != nullptr) {
-        auto& index = index_entry->value();
-        // release or remove index entry when function end
-        DeferOp index_defer([&]() { manager->index_cache().release(index_entry); });
-        RETURN_IF_ERROR(index.pk_dump(dump, dump_pb));
-    } else {
-        // If index not in cache, build it from meta.
-        PersistentIndexMetaPB index_meta;
-        auto st = TabletMetaManager::get_persistent_index_meta(_tablet.data_dir(), _tablet.tablet_id(), &index_meta);
-        if (!st.ok()) {
-            LOG(ERROR) << "get persistent index meta failed, st " << st;
-            // keep generate dump file
-            return Status::OK();
-        }
-        PersistentIndex index(_tablet.schema_hash_path());
-        RETURN_IF_ERROR(index.load(index_meta));
-        RETURN_IF_ERROR(index.pk_dump(dump, dump_pb));
-    }
-    return Status::OK();
-}
-
 Status TabletUpdates::_apply_rowset_commit(const EditVersionInfo& version_info) {
     auto scope = IOProfiler::scope(IOProfiler::TAG_LOAD, _tablet.tablet_id());
     Status st;

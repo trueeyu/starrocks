@@ -1068,15 +1068,6 @@ public:
         return Status::OK();
     }
 
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& each : _map) {
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(reinterpret_cast<const char*>(each.first.data), sizeof(KeyType)),
-                    each.second.get_value(), dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
-    }
-
     std::vector<std::vector<KVRef>> get_kv_refs_by_shard(size_t nshard, size_t num_entry,
                                                          bool with_null) const override {
         std::vector<std::vector<KVRef>> ret(nshard);
@@ -1451,15 +1442,6 @@ public:
                       Status::Corruption("Pindex load snapshot failed because load composite_key failed"));
         }
         return Status::OK();
-    }
-
-    Status pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) override {
-        for (const auto& composite_key : _set) {
-            auto value = UNALIGNED_LOAD64(composite_key.data() + composite_key.size() - kIndexValueSize);
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(composite_key.data(), composite_key.size() - kIndexValueSize), value, dump_pb));
-        }
-        return dump->finish_pindex_kvs(dump_pb);
     }
 
     Status load_snapshot(phmap::BinaryInputArchive& ar) override {
@@ -2112,14 +2094,6 @@ Status ShardByLengthMutableIndex::dump(phmap::BinaryOutputArchive& ar_out, std::
     return Status::OK();
 }
 
-Status ShardByLengthMutableIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) {
-    for (uint32_t i = 0; i < _shards.size(); ++i) {
-        const auto& shard = _shards[i];
-        RETURN_IF_ERROR(shard->pk_dump(dump, dump_pb));
-    }
-    return Status::OK();
-}
-
 static Status checksum_of_file(RandomAccessFile* file, uint64_t offset, uint32_t size, uint32* checksum) {
     std::string buff;
     raw::stl_string_resize_uninitialized(&buff, size);
@@ -2763,40 +2737,6 @@ Status ImmutableIndex::_get_in_shard_by_page(size_t shard_idx, size_t n, const S
     } else {
         return _get_in_varlen_shard_by_page(shard_idx, n, keys, values, found_keys_info, keys_info_by_page, pages);
     }
-}
-
-Status ImmutableIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexDumpPB* dump_pb) {
-    // put all kvs in one shard
-    std::vector<std::vector<KVRef>> kvs_by_shard(1);
-    std::vector<std::unique_ptr<ImmutableIndexShard>> shard_ptrs(_shards.size());
-    for (size_t shard_idx = 0; shard_idx < _shards.size(); shard_idx++) {
-        const auto& shard_info = _shards[shard_idx];
-        if (shard_info.size == 0) {
-            // skip empty shard
-            continue;
-        }
-        shard_ptrs[shard_idx] = std::make_unique<ImmutableIndexShard>(shard_info.npage, shard_info.page_size, true);
-        RETURN_IF_ERROR(_file->read_at_fully(shard_info.offset, shard_ptrs[shard_idx]->data(), shard_info.bytes));
-        RETURN_IF_ERROR(shard_ptrs[shard_idx]->decompress_pages(_compression_type, shard_info.npage,
-                                                                shard_info.uncompressed_size, shard_info.bytes,
-                                                                shard_info.page_off));
-        if (shard_info.key_size != 0) {
-            RETURN_IF_ERROR(_get_fixlen_kvs_for_shard(kvs_by_shard, shard_idx, 0, &shard_ptrs[shard_idx]));
-        } else {
-            RETURN_IF_ERROR(_get_varlen_kvs_for_shard(kvs_by_shard, shard_idx, 0, &shard_ptrs[shard_idx]));
-        }
-    }
-
-    // read kv from KVRef
-    for (const auto& each : kvs_by_shard) {
-        for (const auto& each_kv : each) {
-            auto value = UNALIGNED_LOAD64(each_kv.kv_pos + each_kv.size - kIndexValueSize);
-            RETURN_IF_ERROR(dump->add_pindex_kvs(
-                    std::string_view(reinterpret_cast<const char*>(each_kv.kv_pos), each_kv.size - kIndexValueSize),
-                    value, dump_pb));
-        }
-    }
-    return dump->finish_pindex_kvs(dump_pb);
 }
 
 Status ImmutableIndex::_get_in_shard(size_t shard_idx, size_t n, const Slice* keys, std::vector<KeyInfo>& keys_info,
@@ -5429,25 +5369,6 @@ Status PersistentIndex::_load_by_loader(TabletLoader* loader) {
     return Status::OK();
 }
 
-Status PersistentIndex::pk_dump(PrimaryKeyDump* dump, PrimaryIndexMultiLevelPB* dump_pb) {
-    for (const auto& l2 : _l2_vec) {
-        PrimaryIndexDumpPB* level = dump_pb->add_primary_index_levels();
-        level->set_filename(l2->filename());
-        RETURN_IF_ERROR(l2->pk_dump(dump, level));
-    }
-    for (const auto& l1 : _l1_vec) {
-        PrimaryIndexDumpPB* level = dump_pb->add_primary_index_levels();
-        level->set_filename(l1->filename());
-        RETURN_IF_ERROR(l1->pk_dump(dump, level));
-    }
-    if (_l0) {
-        PrimaryIndexDumpPB* level = dump_pb->add_primary_index_levels();
-        level->set_filename("persistent index l0");
-        RETURN_IF_ERROR(_l0->pk_dump(dump, level));
-    }
-    return Status::OK();
-}
-
 void PersistentIndex::_calc_memory_usage() {
     size_t memory_usage = _l0 ? _l0->memory_usage() : 0;
     for (int i = 0; i < _l1_vec.size(); i++) {
@@ -5457,10 +5378,6 @@ void PersistentIndex::_calc_memory_usage() {
         memory_usage += _l2_vec[i]->memory_usage();
     }
     _memory_usage.store(memory_usage);
-}
-
-void PersistentIndex::test_force_dump() {
-    _dump_snapshot = true;
 }
 
 size_t PersistentIndex::_get_encoded_fixed_size(const Schema& schema) {
