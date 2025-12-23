@@ -3633,6 +3633,7 @@ Status PersistentIndex::commit(PersistentIndexMetaPB* index_meta, IOStat* stat) 
     bool do_minor_compaction = false;
     // if l1 is not empty,
     if (_flushed) {
+        LOG(ERROR) << "LXH: flush persistent index";
         if (_enable_minor_compaction()) {
             RETURN_IF_ERROR(_minor_compaction(index_meta));
             do_minor_compaction = true;
@@ -3645,6 +3646,7 @@ Status PersistentIndex::commit(PersistentIndexMetaPB* index_meta, IOStat* stat) 
         }
     } else {
         if (l1_l2_file_size != 0) {
+            LOG(ERROR) << "LXH: l1/l2 file size";
             // and l0 memory usage is large enough,
             if (_l0_is_full(l1_l2_file_size)) {
                 // do l0 l1 merge compaction
@@ -3662,6 +3664,7 @@ Status PersistentIndex::commit(PersistentIndexMetaPB* index_meta, IOStat* stat) 
             }
             // if l1 is empty, and l0 memory usage is large enough
         } else if (_l0_is_full()) {
+            LOG(ERROR) << "LXH: l0 is full";
             // do flush l0
             _flushed = true;
             RETURN_IF_ERROR(_flush_l0());
@@ -4183,6 +4186,8 @@ bool PersistentIndex::_can_dump_directly() {
 }
 
 bool PersistentIndex::_l0_is_full(int64_t l1_l2_size) {
+    return true;
+    /*
     const auto l0_mem_size = _l0->memory_usage();
     auto manager = StorageEngine::instance()->update_manager();
     // There are three condition that we regard l0 as full:
@@ -4194,6 +4199,7 @@ bool PersistentIndex::_l0_is_full(int64_t l1_l2_size) {
     bool exceed_mem_limit = manager->mem_tracker()->limit_exceeded_by_ratio(config::memory_urgent_level) &&
                             l0_mem_size >= config::l0_min_mem_usage;
     return exceed_max_mem || exceed_index_size || exceed_mem_limit;
+    */
 }
 
 bool PersistentIndex::_need_flush_advance() {
