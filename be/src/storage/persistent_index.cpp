@@ -2917,7 +2917,7 @@ Status ImmutableIndex::_check_not_exist_in_shard(size_t shard_idx, size_t n, con
         return Status::OK();
     }
     std::unique_ptr<ImmutableIndexShard> shard =
-            std::make_unique<ImmutableIndexShard>(shard_info.npage, shard_info.page_size);
+            std::make_unique<ImmutableIndexShard>(shard_info.npage, shard_info.page_size, true);
     if (shard_info.uncompressed_size == 0) {
         RETURN_ERROR_IF_FALSE(shard->npage() * shard_info.page_size == shard_info.bytes, "illegal shard size");
     } else {
