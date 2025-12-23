@@ -4937,7 +4937,7 @@ StatusOr<EditVersion> PersistentIndex::_major_compaction_impl(
             std::vector<KVRef> empty_l0_kvs;
             RETURN_IF_ERROR(merge_shard_kvs(key_size, empty_l0_kvs, l2_kvs, estimate_size_per_shard, kvs));
             // write shard
-            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs, true));
+            RETURN_IF_ERROR(writer->write_shard(key_size, npage_hint, page_size, nbucket, kvs, true)); //LXH_NO
         }
     }
     RETURN_IF_ERROR(writer->finish());
@@ -5088,40 +5088,6 @@ Status PersistentIndex::major_compaction(DataDir* data_dir, int64_t tablet_id, s
 
 std::vector<int8_t> PersistentIndex::test_get_move_buckets(size_t target, const uint8_t* bucket_packs_in_page) {
     return get_move_buckets(target, kBucketPerPage, bucket_packs_in_page);
-}
-
-// This function is only used for unit test and the following code is temporary
-// The following test case will be refactor after L0 support varlen keys
-Status PersistentIndex::test_flush_varlen_to_immutable_index(const std::string& dir, const EditVersion& version,
-                                                             const size_t num_entry, const Slice* keys,
-                                                             const IndexValue* values) {
-    const auto total_data_size = std::accumulate(keys, keys + num_entry, 0,
-                                                 [](size_t s, const auto& e) { return s + e.size + kIndexValueSize; });
-    const auto [nshard, npage_hint, page_size] = MutableIndex::estimate_nshard_and_npage(total_data_size, num_entry);
-    const auto nbucket =
-            MutableIndex::estimate_nbucket(SliceMutableIndex::kKeySizeMagicNum, num_entry, nshard, npage_hint);
-    ImmutableIndexWriter writer;
-    RETURN_IF_ERROR(writer.init(dir, version, false));
-    std::vector<std::vector<KVRef>> kv_ref_by_shard(nshard);
-    const auto shard_bits = log2(nshard);
-    for (size_t i = 0; i < nshard; i++) {
-        kv_ref_by_shard[i].reserve(num_entry / nshard * 100 / 85);
-    }
-    std::string kv_buf;
-    kv_buf.reserve(total_data_size);
-    size_t kv_offset = 0;
-    for (size_t i = 0; i < num_entry; i++) {
-        uint64_t hash = key_index_hash(keys[i].data, keys[i].size);
-        kv_buf.append(keys[i].to_string());
-        put_fixed64_le(&kv_buf, values[i].get_value());
-        kv_ref_by_shard[IndexHash(hash).shard(shard_bits)].emplace_back((uint8_t*)(kv_buf.data() + kv_offset), hash,
-                                                                        keys[i].size + kIndexValueSize);
-        kv_offset += keys[i].size + kIndexValueSize;
-    }
-    for (const auto& kvs : kv_ref_by_shard) {
-        RETURN_IF_ERROR(writer.write_shard(SliceMutableIndex::kKeySizeMagicNum, npage_hint, page_size, nbucket, kvs, true));
-    }
-    return writer.finish();
 }
 
 double PersistentIndex::major_compaction_score(const PersistentIndexMetaPB& index_meta) {

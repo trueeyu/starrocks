@@ -768,9 +768,6 @@ public:
 
     std::vector<int8_t> test_get_move_buckets(size_t target, const uint8_t* bucket_packs_in_page);
 
-    Status test_flush_varlen_to_immutable_index(const std::string& dir, const EditVersion& version, size_t num_entry,
-                                                const Slice* keys, const IndexValue* values);
-
     bool is_error() { return _error; }
 
     // just for unit test
