@@ -174,7 +174,7 @@ DEFINE_SET_TYPE(AggHashSetVariant::Type::phase2_slice_fx16, SerializedKeyAggHash
 
 } // namespace detail
 void AggHashMapVariant::init(RuntimeState* state, Type type, AggStatistics* agg_stat) {
-    LOG(ERROR) << "LXH: AggHashMapVariant: " << type;
+    LOG(ERROR) << "LXH: AggHashMapVariant: " << (int)type;
     _type = type;
     _agg_stat = agg_stat;
     switch (_type) {
