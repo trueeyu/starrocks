@@ -708,9 +708,8 @@ Status SegmentIterator::_try_to_update_ranges_by_runtime_filter() {
     return _opts.runtime_range_pruner.update_range_if_arrived(
             _opts.global_dictmaps,
             [this](auto cid, const PredicateList& predicates) {
-                const ColumnPredicate* del_pred;
                 auto iter = _del_predicates.find(cid);
-                del_pred = iter != _del_predicates.end() ? &(iter->second) : nullptr;
+                const ColumnPredicate* del_pred = iter != _del_predicates.end() ? &(iter->second) : nullptr;
                 SparseRange<> r;
 
                 RETURN_IF_ERROR(_column_iterators[cid]->get_row_ranges_by_zone_map(predicates, del_pred, &r,
