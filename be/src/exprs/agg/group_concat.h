@@ -630,25 +630,6 @@ public:
         // further remove duplicated values, pick the last unique one to identify the last sep and don't output it.
         // TODO(fzh) optimize it later, as distinct is often rewritten to group by.
         Buffer<bool> duplicated(outputs[0]->size(), false);
-        if (ctx->get_is_distinct()) {
-            for (auto row_id = 0; row_id < elem_size; row_id++) {
-                bool is_duplicated = false;
-                for (auto next_id = row_id + 1; next_id < elem_size; next_id++) {
-                    bool tmp_duplicated = true;
-                    for (auto col_id = 0; col_id < output_col_num - 1; col_id++) { // exclude sep
-                        if (!outputs[col_id]->equals(next_id, *outputs[col_id], row_id)) {
-                            tmp_duplicated = false;
-                            break;
-                        }
-                    }
-                    if (tmp_duplicated) {
-                        is_duplicated = true;
-                        break;
-                    }
-                }
-                duplicated[row_id] = is_duplicated;
-            }
-        }
         // copy col_0, col_1 ... col_n row by row
         auto* string = down_cast<BinaryColumn*>(ColumnHelper::get_data_column(to));
         if (to->is_nullable()) {
