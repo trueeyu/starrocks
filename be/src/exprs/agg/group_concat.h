@@ -649,16 +649,6 @@ public:
         bool overflow = false;
         size_t limit = ctx->get_group_concat_max_len() + offset;
         auto last_unique_row_id = elem_size - 1;
-        for (auto i = elem_size - 1; i >= 0; i--) {
-            auto idx = i;
-            if (!perm.empty()) {
-                idx = perm[i].index_in_chunk;
-            }
-            if (!duplicated[idx]) {
-                last_unique_row_id = i;
-                break;
-            }
-        }
 
         DCHECK(perm.empty() || elem_size == perm.size());
         for (auto j = 0; j <= last_unique_row_id && !overflow; ++j) {
@@ -666,16 +656,9 @@ public:
             if (!perm.empty()) {
                 idx = perm[j].index_in_chunk;
             }
-            if (duplicated[idx]) {
-                continue;
-            }
             for (auto i = 0; i < output_col_num && !overflow; ++i) {
                 if (j == last_unique_row_id && i + 1 == output_col_num) { // ignore the last separator
                     continue;
-                }
-                if (UNLIKELY(i + 1 < output_col_num && binary_cols[i]->is_null(idx))) {
-                    ctx->set_error("group_concat mustn't output null", false);
-                    return;
                 }
                 auto str = binary_cols[i]->get_slice(idx);
                 if (offset + str.get_size() <= limit) {
