@@ -131,7 +131,7 @@ TEST_F(ChunkTest, test_remove_column_by_slot_id) {
 TEST_F(ChunkTest, test_lxh_column) {
     ColumnPtr c1 = BinaryColumn::create();
     c1->append_datum(Datum("1"));
-    LOG(ERROR) << "REF: " << c1.use_count();
+    LOG(ERROR) << "REF: " << c1->use_count();
 
     //ColumnPtr c2 = std::move(c1);
     //LOG(ERROR) << "SIZE: " << (c1 == nullptr);
