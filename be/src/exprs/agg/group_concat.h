@@ -597,9 +597,11 @@ public:
             return;
         }
         auto output_col_num = state_impl.output_col_num + 1; // include sep
+        LOG(ERROR) << "LXH: output_col_num: " << output_col_num;
         Columns outputs(output_col_num);
         for (auto i = 0; i < output_col_num; ++i) {
             outputs[i] = (*state_impl.data_columns)[i];
+            LOG(ERROR) << "LXH: output_col_num: " << i << " " << outputs[i]->get_name();
             DCHECK(!outputs[i]->is_constant()); // as they are appended one by one.
         }
         // order by
