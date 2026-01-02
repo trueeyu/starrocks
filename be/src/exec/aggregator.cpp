@@ -1169,6 +1169,9 @@ void Aggregator::_serialize_to_chunk(ConstAggDataPtr __restrict state, Columns& 
 }
 
 void Aggregator::_finalize_to_chunk(ConstAggDataPtr __restrict state, Columns& agg_result_columns) {
+    if (_agg_expr_ctxs[0].size() > 0) {
+        LOG(ERROR) << "LXH: " << _agg_fn_ctxs.size() << ": " << _agg_expr_ctxs[0][0]->root()->fn().name;
+    }
     for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
         _agg_functions[i]->finalize_to_column(_agg_fn_ctxs[i], state + _agg_states_offsets[i],
                                               agg_result_columns[i].get());

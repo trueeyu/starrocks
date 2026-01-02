@@ -584,12 +584,6 @@ public:
                 to->append_default();
             }
         });
-        if (UNLIKELY(!(ColumnHelper::get_data_column(to)->is_binary()))) {
-            ctx->set_error(std::string("The output column of " + get_name() +
-                                       " finalize_to_column() is not string, but is " + to->get_name())
-                                   .c_str(),
-                           false);
-        }
         auto& state_impl = this->data(state);
         if (state_impl.data_columns == nullptr) {
             to->append_default();
