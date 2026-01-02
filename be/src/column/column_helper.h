@@ -119,6 +119,10 @@ public:
         return unpack_and_duplicate_const_column(chunk_size, column->as_mutable_ptr());
     }
 
+    static ColumnPtr unpack_and_duplicate_const_column2(size_t chunk_size, const ColumnPtr& column) {
+        return unpack_and_duplicate_const_column(chunk_size, column->as_mutable_ptr());
+    }
+
     static MutableColumnPtr unpack_and_duplicate_const_column(size_t chunk_size, MutableColumnPtr&& column) {
         if (column->is_constant()) {
             auto* const_column = down_cast<ConstColumn*>(column.get());
