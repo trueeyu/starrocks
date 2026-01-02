@@ -148,6 +148,7 @@ public:
     virtual void batch_finalize_with_selection(FunctionContext* ctx, size_t chunk_size,
                                                const Buffer<AggDataPtr>& agg_states, size_t state_offset, Column* to,
                                                const Filter& selection) const {
+        LOG(ERROR) << "LXH: batch_finalize_with_selection";
         for (size_t i = 0; i < chunk_size; i++) {
             if (selection[i] == 0) {
                 this->finalize_to_column(ctx, agg_states[i] + state_offset, to);

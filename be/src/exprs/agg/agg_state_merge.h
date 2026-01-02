@@ -77,6 +77,7 @@ public:
 
     void finalize_to_column(FunctionContext* ctx __attribute__((unused)), ConstAggDataPtr __restrict state,
                             Column* to) const override {
+        LOG(ERROR) << "LXH: finalize_to_column";
         _function->finalize_to_column(ctx, state, to);
     }
 
