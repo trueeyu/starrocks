@@ -120,7 +120,19 @@ public:
     }
 
     static ColumnPtr unpack_and_duplicate_const_column2(size_t chunk_size, const ColumnPtr& column) {
-        return unpack_and_duplicate_const_column(chunk_size, column->as_mutable_ptr());
+        auto tmp_ptr = column->as_mutable_ptr();
+        LOG(ERROR) << "REF2: " << tmp_ptr->use_count();
+        return unpack_and_duplicate_const_column2(chunk_size, std::move(tmp_ptr));
+    }
+
+    static MutableColumnPtr unpack_and_duplicate_const_column2(size_t chunk_size, MutableColumnPtr&& column) {
+        LOG(ERROR) << "REF3: " << column->use_count();
+        if (column->is_constant()) {
+            auto* const_column = down_cast<ConstColumn*>(column.get());
+            const_column->mutable_data_column()->assign(chunk_size, 0);
+            return const_column->data_column_ptr();
+        }
+        return std::move(column);
     }
 
     static MutableColumnPtr unpack_and_duplicate_const_column(size_t chunk_size, MutableColumnPtr&& column) {
