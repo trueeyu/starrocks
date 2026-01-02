@@ -621,9 +621,6 @@ public:
                 return;
             }
         }
-        // further remove duplicated values, pick the last unique one to identify the last sep and don't output it.
-        // TODO(fzh) optimize it later, as distinct is often rewritten to group by.
-        Buffer<bool> duplicated(outputs[0]->size(), false);
         // copy col_0, col_1 ... col_n row by row
         auto* string = down_cast<BinaryColumn*>(ColumnHelper::get_data_column(to));
         if (to->is_nullable()) {
@@ -638,6 +635,8 @@ public:
             binary_cols[i] = down_cast<BinaryColumn*>(tmp);
             length += binary_cols[i]->get_bytes().size();
         }
+
+        LOG(ERROR) << "LXH: " << offset << ":" << length;
 
         bytes.resize(offset + length);
         bool overflow = false;
