@@ -129,11 +129,14 @@ TEST_F(ChunkTest, test_remove_column_by_slot_id) {
 }
 
 TEST_F(ChunkTest, test_lxh_column) {
-    BinaryColumn::Ptr c1 = BinaryColumn::create();
-    c1->append_string("1");
+    ColumnPtr c1 = BinaryColumn::create();
+    c1->append_datum(Datum("1"));
 
-    ColumnPtr c2 = ColumnHelper::unpack_and_duplicate_const_column(1, c1);
+    ColumnPtr c2 = std::move(c1);
     LOG(ERROR) << "SIZE: " << c1->size();
+
+    //ColumnPtr c2 = ColumnHelper::unpack_and_duplicate_const_column(1, c1);
+    //LOG(ERROR) << "SIZE: " << c1->size();
 }
 
 // NOLINTNEXTLINE
