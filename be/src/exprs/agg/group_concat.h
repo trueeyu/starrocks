@@ -636,8 +636,6 @@ public:
             length += binary_cols[i]->get_bytes().size();
         }
 
-        LOG(ERROR) << "LXH: " << offset << ":" << length;
-
         bytes.resize(offset + length);
         bool overflow = false;
         size_t limit = ctx->get_group_concat_max_len() + offset;
