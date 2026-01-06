@@ -68,7 +68,7 @@ public class HudiRemoteFileIO implements RemoteFileIO {
             ctx.usedCount++;
             if (ctx.usedCount == 1) {
                 HoodieLocalEngineContext engineContext = new HoodieLocalEngineContext(configuration);
-                HoodieMetadataConfig metadataConfig = HoodieMetadataConfig.newBuilder().enable(true).build();
+                HoodieMetadataConfig metadataConfig = HoodieMetadataConfig.newBuilder().enable(false).build();
                 HoodieTableMetaClient metaClient =
                         HoodieTableMetaClient.builder().setConf(configuration).setBasePath(hudiTableLocation).build();
                 // metaClient.reloadActiveTimeline();
