@@ -457,6 +457,7 @@ StatusOr<ColumnPtr> JsonFunctions::json_query(FunctionContext* context, const Co
 
 template <LogicalType ResultType>
 StatusOr<ColumnPtr> JsonFunctions::_json_query_impl(FunctionContext* context, const Columns& columns) {
+    LOG(ERROR) << "LXH: " << columns[0]->get_name() << ":" << columns[1]->get_name();
     RETURN_IF_COLUMNS_ONLY_NULL(columns);
     const auto* cc = ColumnHelper::get_data_column(columns[0].get());
     const JsonColumn* js = down_cast<const JsonColumn*>(cc);
