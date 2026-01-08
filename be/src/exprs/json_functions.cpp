@@ -464,7 +464,11 @@ StatusOr<ColumnPtr> JsonFunctions::_json_query_impl(FunctionContext* context, co
     if (js->is_flat_json()) {
         return _flat_json_query_impl<ResultType>(context, columns);
     }
-    return _full_json_query_impl<ResultType>(context, columns);
+    auto result = _full_json_query_impl<ResultType>(context, columns);
+    if (result.ok()) {
+        LOG(ERROR) << "LXH: " << result.value()->get_name() << ":" << result.value()->size();
+    }
+    return result;
 }
 
 template <LogicalType TargetType>
