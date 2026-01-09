@@ -392,13 +392,14 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     binary_column->append_string("$.k2");
 
     Columns columns { json_column, binary_column };
-    auto result =  JsonFunctions::json_query(ctx.get(), columns);
-    LOG(ERROR) << "result: " << result.value()->size();
-    LOG(ERROR) << "result: " << result.value()->debug_string();
 
     auto result2 = JsonFunctions::get_json_string(ctx.get(), columns);
     LOG(ERROR) << "result2: " << result2.value()->size();
     LOG(ERROR) << "result2: " << result2.value()->debug_string();
+
+    auto result =  JsonFunctions::json_query(ctx.get(), columns);
+    LOG(ERROR) << "result: " << result.value()->size();
+    LOG(ERROR) << "result: " << result.value()->debug_string();
 }
 
 TEST_P(JsonQueryTestFixture, json_query) {
