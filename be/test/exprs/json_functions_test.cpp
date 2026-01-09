@@ -357,6 +357,10 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     JsonValue json_2(slice_2);
     JsonValue json_3(slice_3);
 
+    LOG(ERROR) << "slice_1: " << slice_1 << ":" << json_1.to_string();
+    LOG(ERROR) << "slice_2: " << slice_1 << ":" << json_2.to_string();
+    LOG(ERROR) << "slice_3: " << slice_1 << ":" << json_3.to_string();
+
     JsonColumn::Ptr json_column =  JsonColumn::create();
     json_column->append(&json_1);
     json_column->append(&json_2);
