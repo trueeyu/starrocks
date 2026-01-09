@@ -361,6 +361,7 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     json_column->append(&json_1);
     json_column->append(&json_2);
     json_column->append(&json_3);
+    LOG(ERROR) << "json_column: " << json_column->debug_string();
 
     Filter filter(3);
     filter[0] = 0;
