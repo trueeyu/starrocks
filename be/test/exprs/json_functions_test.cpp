@@ -353,18 +353,21 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     Slice slice_2(str_2);
     Slice slice_3(str_3);
 
-    JsonValue json_1(slice_1);
-    JsonValue json_2(slice_2);
-    JsonValue json_3(slice_3);
+    auto ret1 = JsonValue::parse_json_or_string(slice_1);
+    ASSERT_OK(ret1);
+    auto ret2 = JsonValue::parse_json_or_string(slice_2);
+    ASSERT_OK(ret2);
+    auto ret3 = JsonValue::parse_json_or_string(slice_3);
+    ASSERT_OK(ret3);
 
-    LOG(ERROR) << "slice_1: " << slice_1 << ":" << json_1.to_string();
-    LOG(ERROR) << "slice_2: " << slice_1 << ":" << json_2.to_string();
-    LOG(ERROR) << "slice_3: " << slice_1 << ":" << json_3.to_string();
+    LOG(ERROR) << "slice_1: " << slice_1 << ":" << ret1.value().to_string();
+    LOG(ERROR) << "slice_2: " << slice_1 << ":" << ret2.value().to_string();
+    LOG(ERROR) << "slice_3: " << slice_1 << ":" << ret2.value().to_string();
 
     JsonColumn::Ptr json_column =  JsonColumn::create();
-    json_column->append(&json_1);
-    json_column->append(&json_2);
-    json_column->append(&json_3);
+    json_column->append(ret1.value());
+    json_column->append(ret2.value());
+    json_column->append(ret2.value());
     LOG(ERROR) << "json_column: " << json_column->debug_string();
 
     Filter filter(3);
