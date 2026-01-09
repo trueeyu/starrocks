@@ -368,9 +368,9 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     LOG(ERROR) << "json_column: " << json_column->debug_string();
 
     Filter filter(3);
-    filter[0] = 0;
+    filter[0] = 1;
     filter[1] = 1;
-    filter[2] = 0;
+    filter[2] = 1;
 
     auto size = json_column->filter(filter);
     LOG(ERROR) << "size: " << size;
