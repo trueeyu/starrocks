@@ -363,8 +363,8 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     json_column->append(&json_3);
 
     Filter filter(3);
-    filter[0] = 1;
-    filter[1] = 0;
+    filter[0] = 0;
+    filter[1] = 1;
     filter[2] = 0;
 
     auto size = json_column->filter(filter);
