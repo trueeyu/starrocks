@@ -146,6 +146,10 @@ TEST_F(JsonFunctionsTest, get_json_string_casting) {
                         .ok());
 }
 
+TEST_F(JsonFunctionsTest, LXH_FILTER) {
+
+}
+
 TEST_F(JsonFunctionsTest, get_json_string_array) {
     std::unique_ptr<FunctionContext> ctx(FunctionContext::create_test_context());
     Columns columns;
@@ -339,6 +343,43 @@ TEST_F(JsonFunctionsTest, json_float_double) {
 }
 
 class JsonQueryTestFixture : public ::testing::TestWithParam<std::tuple<std::string, std::string, std::string>> {};
+
+TEST_P(JsonQueryTestFixture, lxh_json_query) {
+    std::string str_1 = R"( {"k1":1, "k2":"hehe", "k3":[1]} )";
+    std::string str_2 = R"( {"k1":2, "k2":"abc", "k3":[1]} )";;
+    std::string str_3 = R"( {"k1":3, "k2":"efg", "k3":[1]} )";;
+
+    Slice slice_1(str_1);
+    Slice slice_2(str_2);
+    Slice slice_3(str_3);
+
+    JsonValue json_1(slice_1);
+    JsonValue json_2(slice_2);
+    JsonValue json_3(slice_3);
+
+    JsonColumn::Ptr json_column =  JsonColumn::create();
+    json_column->append(&json_1);
+    json_column->append(&json_2);
+    json_column->append(&json_3);
+
+    Filter filter(3);
+    filter[0] = 1;
+    filter[1] = 0;
+    filter[2] = 0;
+
+    auto size = json_column->filter(filter);
+    LOG(ERROR) << "size: " << size;
+
+    std::unique_ptr<FunctionContext> ctx(FunctionContext::create_test_context());
+
+    BinaryColumn::Ptr binary_column = BinaryColumn::create();
+    binary_column->append_string("$.k2");
+    binary_column->append_string("$.k2");
+    binary_column->append_string("$.k2");
+
+    Columns columns { json_column, binary_column };
+    auto result =  JsonFunctions::json_query(ctx.get(), columns);
+}
 
 TEST_P(JsonQueryTestFixture, json_query) {
     std::unique_ptr<FunctionContext> ctx(FunctionContext::create_test_context());
