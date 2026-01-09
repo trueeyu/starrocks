@@ -448,6 +448,7 @@ StatusOr<ColumnPtr> JsonFunctions::_full_json_query_impl(FunctionContext* contex
     JsonPath stored_path;
     vpack::Builder builder;
     for (int row = 0; row < num_rows; ++row) {
+        LOG(ERROR) << "LXH: IS_NULL: " << json_viewer.is_null(row) << ", PATH: " << path_viewer.value(row);
         if (json_viewer.is_null(row) || path_viewer.is_null(row)) {
             result.append_null();
             continue;
