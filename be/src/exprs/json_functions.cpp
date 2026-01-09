@@ -457,6 +457,7 @@ StatusOr<ColumnPtr> JsonFunctions::_full_json_query_impl(FunctionContext* contex
         auto path_value = path_viewer.value(row);
 
         auto jsonpath = get_prepared_or_parse(context, path_value, &stored_path);
+        LOG(ERROR) << "LXH: PATH_IS_OK: " << jsonpath.ok();
         if (!jsonpath.ok()) {
             VLOG(2) << "parse json path failed: " << path_value;
             result.append_null();
