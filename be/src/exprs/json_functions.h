@@ -188,9 +188,6 @@ private:
     static StatusOr<ColumnPtr> _json_query_impl(FunctionContext* context, const Columns& columns);
 
     template <LogicalType RresultType>
-    DEFINE_VECTORIZED_FN(_flat_json_query_impl);
-
-    template <LogicalType RresultType>
     DEFINE_VECTORIZED_FN(_full_json_query_impl);
 
     /**
@@ -198,7 +195,6 @@ private:
      * @paramType: [JsonColumn, BinaryColumn]
      * @return: BooleanColumn
      */
-    DEFINE_VECTORIZED_FN(_flat_json_exists);
     DEFINE_VECTORIZED_FN(_full_json_exists);
 
     /**
@@ -206,14 +202,12 @@ private:
      * @param JSON, JSONPath
      * @return number of elements if it's object or array, otherwise return 1
      */
-    DEFINE_VECTORIZED_FN(_flat_json_length);
     DEFINE_VECTORIZED_FN(_full_json_length);
 
     /**
      * Returns the keys from the top-level value of a JSON object as a JSON array
      */
     DEFINE_VECTORIZED_FN(_json_keys_without_path);
-    DEFINE_VECTORIZED_FN(_flat_json_keys_with_path);
     DEFINE_VECTORIZED_FN(_full_json_keys_with_path);
 
     template <LogicalType RresultType>
