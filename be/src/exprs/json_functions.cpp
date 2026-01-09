@@ -384,16 +384,7 @@ StatusOr<ColumnPtr> JsonFunctions::_get_json_value(FunctionContext* context, con
 
 //////////////////////////// User visiable functions /////////////////////////////////
 struct NativeJsonState {
-public:
     JsonPath json_path;
-
-    bool is_partial_match = false;
-    JsonPath real_path;
-
-    // support cast expr
-    ObjectPool pool;
-    Expr* ref;
-    Expr* cast_expr;
 };
 
 static StatusOr<JsonPath*> get_prepared_or_parse(FunctionContext* context, Slice slice, JsonPath* out) {
