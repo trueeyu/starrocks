@@ -344,7 +344,7 @@ TEST_F(JsonFunctionsTest, json_float_double) {
 
 class JsonQueryTestFixture : public ::testing::TestWithParam<std::tuple<std::string, std::string, std::string>> {};
 
-TEST_P(JsonFunctionsTest, lxh_json_query) {
+TEST_F(JsonFunctionsTest, lxh_json_query) {
     std::string str_1 = R"( {"k1":1, "k2":"hehe", "k3":[1]} )";
     std::string str_2 = R"( {"k1":2, "k2":"abc", "k3":[1]} )";;
     std::string str_3 = R"( {"k1":3, "k2":"efg", "k3":[1]} )";;
