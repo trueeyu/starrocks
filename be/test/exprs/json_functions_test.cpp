@@ -370,6 +370,9 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     json_column->append(ret2.value());
     LOG(ERROR) << "json_column: " << json_column->debug_string();
 
+    auto& data = json_column->get_data();
+    LOG(ERROR) << "size: " << data.size();
+
     Filter filter(3);
     filter[0] = 0;
     filter[1] = 1;
@@ -377,8 +380,6 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
 
     auto size = json_column->filter(filter);
     LOG(ERROR) << "size: " << size;
-    auto& data = json_column->get_data();
-    LOG(ERROR) << "size: " << data.size();
 
     std::unique_ptr<FunctionContext> ctx(FunctionContext::create_test_context());
 
