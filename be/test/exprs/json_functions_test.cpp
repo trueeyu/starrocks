@@ -394,7 +394,7 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
 
     Columns columns { json_column, const_column};
 
-    auto result2 = JsonFunctions::get_json_string(ctx.get(), columns);
+    auto result2 = JsonFunctions::get_native_json_string(ctx.get(), columns);
     LOG(ERROR) << "result2: " << result2.value()->size();
     LOG(ERROR) << "result2: " << result2.value()->debug_string();
 
