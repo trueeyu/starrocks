@@ -390,8 +390,9 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     binary_column->append_string("$.k2");
     binary_column->append_string("$.k2");
     binary_column->append_string("$.k2");
+    ConstColumn::Ptr const_column = ConstColumn::create(binary_column, 3);
 
-    Columns columns { json_column, binary_column };
+    Columns columns { json_column, const_column};
 
     auto result2 = JsonFunctions::get_json_string(ctx.get(), columns);
     LOG(ERROR) << "result2: " << result2.value()->size();
