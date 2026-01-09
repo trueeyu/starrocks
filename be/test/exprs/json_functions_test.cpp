@@ -382,6 +382,7 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
     Columns columns { json_column, binary_column };
     auto result =  JsonFunctions::json_query(ctx.get(), columns);
     LOG(ERROR) << "result: " << result.value()->size();
+    LOG(ERROR) << "result: " << result.value()->debug_string();
 }
 
 TEST_P(JsonQueryTestFixture, json_query) {
