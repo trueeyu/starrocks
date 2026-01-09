@@ -41,7 +41,6 @@
 #include "exprs/function_helper.h"
 #include "exprs/jsonpath.h"
 #include "glog/logging.h"
-#include "gutil/casts.h"
 #include "gutil/strings/escaping.h"
 #include "gutil/strings/substitute.h"
 #include "storage/chunk_helper.h"
@@ -388,11 +387,7 @@ struct NativeJsonState {
 public:
     JsonPath json_path;
 
-    // flat json used
-    std::once_flag init_flat_once;
     bool is_partial_match = false;
-    LogicalType flat_column_type;
-    std::string flat_path;
     JsonPath real_path;
 
     // support cast expr
@@ -400,10 +395,6 @@ public:
     Expr* ref;
     Expr* cast_expr;
 };
-
-static NativeJsonState* get_native_json_state(FunctionContext* context) {
-    return reinterpret_cast<NativeJsonState*>(context->get_function_state(FunctionContext::FRAGMENT_LOCAL));
-}
 
 static StatusOr<JsonPath*> get_prepared_or_parse(FunctionContext* context, Slice slice, JsonPath* out) {
     auto* prepared = reinterpret_cast<NativeJsonState*>(context->get_function_state(FunctionContext::FRAGMENT_LOCAL));
@@ -636,8 +627,6 @@ StatusOr<ColumnPtr> JsonFunctions::json_object(FunctionContext* context, const C
 
 StatusOr<ColumnPtr> JsonFunctions::json_length(FunctionContext* context, const Columns& columns) {
     RETURN_IF_COLUMNS_ONLY_NULL(columns);
-    const auto* cc = ColumnHelper::get_data_column(columns[0].get());
-    const JsonColumn* js = down_cast<const JsonColumn*>(cc);
     return _full_json_length(context, columns);
 }
 
