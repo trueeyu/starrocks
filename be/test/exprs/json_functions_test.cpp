@@ -372,6 +372,9 @@ TEST_F(JsonFunctionsTest, lxh_json_query) {
 
     auto& data = json_column->get_data();
     LOG(ERROR) << "size: " << data.size();
+    for (size_t i = 0; i < data.size(); ++i) {
+        LOG(ERROR) << "data[" << i << "]: " << data[i];
+    }
 
     Filter filter(3);
     filter[0] = 0;

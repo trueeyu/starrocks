@@ -51,6 +51,7 @@ ColumnViewer<Type>::ColumnViewer(const ColumnPtr& column)
         _null_column = GlobalVariables::GetInstance()->one_size_not_null_column();
     }
 
+    LOG(ERROR) << "LXH VIEWER SIZE: " << _column->get_data().size();
     _data = _column->get_data().data();
     _null_data = _null_column->get_data().data();
 }
