@@ -137,7 +137,8 @@ StatusOr<std::string> JsonValue::to_string() const {
         options.singleLinePrettyPrint = true;
 
         std::string result;
-        return slice.toJson(result, &options);
+        slice.toJson(result, &options);
+        return result;
     });
 }
 
