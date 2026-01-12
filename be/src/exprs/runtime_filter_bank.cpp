@@ -728,6 +728,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
         if ((skip_topn && rf_desc->is_stream_build_filter()) || filter == nullptr || filter->always_true()) {
             continue;
         }
+        LOG(ERROR) << "LXH: push_down: " << rf_desc->has_push_down_to_storage();
         if (rf_desc->has_push_down_to_storage()) {
             continue;
         }
