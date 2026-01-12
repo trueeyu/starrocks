@@ -690,7 +690,7 @@ StatusOr<ColumnPtr> JsonFunctions::_full_json_query_impl(FunctionContext* contex
         }
         JsonValue* json_value = json_viewer.value(row);
         auto path_value = path_viewer.value(row);
-        json_value = (random() * 100) % 2 == 0 ? nullptr : json_value;
+        json_value->assign(Slice((const char*)nullptr, 0));
 
         auto jsonpath = get_prepared_or_parse(context, path_value, &stored_path);
         if (!jsonpath.ok()) {
