@@ -689,8 +689,8 @@ StatusOr<ColumnPtr> JsonFunctions::_full_json_query_impl(FunctionContext* contex
             continue;
         }
         JsonValue* json_value = json_viewer.value(row);
-        json_value = nullptr;
         auto path_value = path_viewer.value(row);
+        path_value = nullptr;
 
         auto jsonpath = get_prepared_or_parse(context, path_value, &stored_path);
         if (!jsonpath.ok()) {
