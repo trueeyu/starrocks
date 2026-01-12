@@ -738,6 +738,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
             LOG(ERROR) << "LXH: probe_expr_ctx: " << ctx->root()->debug_string();
         }
         ColumnPtr column = EVALUATE_NULL_IF_ERROR(ctx, ctx->root(), chunk);
+        LOG(ERROR) << "LXH: COLUMN_TYPE: " << column->get_name();
 
         // for colocate grf
         compute_hash_values(chunk, column.get(), rf_desc, eval_context);
