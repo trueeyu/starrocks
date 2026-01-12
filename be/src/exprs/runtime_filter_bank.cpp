@@ -734,6 +734,9 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
         }
 
         auto* ctx = rf_desc->probe_expr_ctx();
+        if (ctx != nullptr) {
+            LOG(ERROR) << "LXH: probe_expr_ctx: " << ctx->root()->debug_string();
+        }
         ColumnPtr column = EVALUATE_NULL_IF_ERROR(ctx, ctx->root(), chunk);
 
         // for colocate grf
