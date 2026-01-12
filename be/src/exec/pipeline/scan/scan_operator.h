@@ -215,6 +215,7 @@ protected:
         }
 
         if (auto* bloom_filters = runtime_bloom_filters()) {
+            LOG(ERROR) << "LXH: " << bloom_filters->debug_string();
             _init_rf_counters(true);
             if (_topn_filter_back_pressure) {
                 _bloom_filter_eval_context.mode = RuntimeMembershipFilterEvalContext::Mode::M_WITHOUT_TOPN;
