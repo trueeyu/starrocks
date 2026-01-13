@@ -43,9 +43,9 @@ std::pair<Columns, UInt32Column::Ptr> JsonEach::process(RuntimeState* runtime_st
     LOG(ERROR) << "LXH: json_eadh: " << num_input_rows;
     for (int i = 0; i < num_input_rows; i++) {
         const JsonValue* json = json_column->get_object(i);
-        LOG(ERROR) << "LXH: json string: " << json->get_data();
         DCHECK(!!json);
         vpack::Slice json_slice = json->to_vslice();
+        LOG(ERROR) << "LXH: json string: " << static_cast<int>(json_slice.type());
         if (json_slice.isObject()) {
             for (auto [key, value] : vpack::ObjectIterator(json_slice)) {
                 std::string_view key_str = key.stringView();
