@@ -67,6 +67,12 @@ std::pair<Columns, UInt32Column::Ptr> JsonEach::process(RuntimeState* runtime_st
         offset_column->append(offset);
     }
 
+    int i = 0;
+    for (auto& col : result) {
+        LOG(ERROR) << "LXH: col size: " << i << ":" << col->size() << ":" << col->get_name();
+        i++;
+    }
+
     return std::make_pair(std::move(result), std::move(offset_column));
 }
 
