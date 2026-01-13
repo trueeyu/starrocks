@@ -40,6 +40,7 @@ std::pair<Columns, UInt32Column::Ptr> JsonEach::process(RuntimeState* runtime_st
     int offset = 0;
     offset_column->append(offset);
 
+    LOG(ERROR) << "LXH: json_eadh: " << num_input_rows;
     for (int i = 0; i < num_input_rows; i++) {
         const JsonValue* json = json_column->get_object(i);
         DCHECK(!!json);
