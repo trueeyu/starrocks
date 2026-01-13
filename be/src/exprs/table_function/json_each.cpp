@@ -43,6 +43,7 @@ std::pair<Columns, UInt32Column::Ptr> JsonEach::process(RuntimeState* runtime_st
     LOG(ERROR) << "LXH: json_eadh: " << num_input_rows;
     for (int i = 0; i < num_input_rows; i++) {
         const JsonValue* json = json_column->get_object(i);
+        LOG(ERROR) << "LXH: json is null: " << (json == nullptr);
         DCHECK(!!json);
         vpack::Slice json_slice = json->to_vslice();
         if (json_slice.isObject()) {
