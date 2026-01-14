@@ -157,6 +157,7 @@ Status OlapScanContext::parse_conjuncts(RuntimeState* state, const std::vector<E
     // Get key_ranges and not_push_down_conjuncts from _conjuncts_manager.
     RETURN_IF_ERROR(cm.get_key_ranges(&_key_ranges));
     cm.get_not_push_down_conjuncts(&_not_push_down_conjuncts);
+    LOG(ERROR) << "LXH: NOT_PUSH_DOWN: " << _not_push_down_conjuncts.size();
 
     // rewrite after push down scan predicate, scan predicate should rewrite by local-dict
     RETURN_IF_ERROR(state->mutable_dict_optimize_parser()->rewrite_conjuncts(&_not_push_down_conjuncts));
