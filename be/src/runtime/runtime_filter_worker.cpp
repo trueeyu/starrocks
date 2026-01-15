@@ -1153,6 +1153,7 @@ void RuntimeFilterWorker::execute() {
         }
 
         _metrics->update_event_nums(ev.type, -1);
+        LOG(ERROR) << "LXH: filter type: " << ev.type;
         switch (ev.type) {
         case RECEIVE_TOTAL_RF: {
             _metrics->update_rf_bytes(ev.type, -ev.transmit_rf_request.data().size());
