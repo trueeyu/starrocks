@@ -907,6 +907,7 @@ void RuntimeFilterProbeCollector::update_selectivity(Chunk* chunk, RuntimeMember
     eval_context.running_context.compatibility =
             _runtime_state->func_version() <= 3 || !_runtime_state->enable_pipeline_engine();
     auto& seletivity_map = eval_context.selectivity;
+    LOG(ERROR) << "LXH: Update: " << eval_context.running_context.selection.size();
     use_merged_selection = true;
 
     seletivity_map.clear();
@@ -940,6 +941,7 @@ void RuntimeFilterProbeCollector::update_selectivity(Chunk* chunk, RuntimeMember
         filter->evaluate(column.get(), &eval_context.running_context);
         auto true_count = SIMD::count_nonzero(selection);
         eval_context.run_filter_nums += 1;
+        LOG(ERROR) << "LXH: SELECT: " << selection.size() << "," << true_count;
         double selectivity = true_count * 1.0 / chunk_size;
         if (selectivity <= 0.5) {                          // useful filter
             if (selectivity < _early_return_selectivity) { // very useful filter, could early return
