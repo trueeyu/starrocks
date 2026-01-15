@@ -206,6 +206,7 @@ void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBui
         rf_data->resize(actual_size);
 
         auto passthrough_delivery = actual_size <= config::deliver_broadcast_rf_passthrough_bytes_limit;
+        LOG(ERROR) << "LXH: send runtime filter";
         if (directly_send_broadcast_grf) {
             auto sender_id =
                     std::min_element(rf_desc->broadcast_grf_senders().begin(), rf_desc->broadcast_grf_senders().end(),
