@@ -194,6 +194,7 @@ public:
         ss << "is_not_in = " << _is_not_in << " ";
         ss << "type = " << Type << " ";
         ss << "has_null = " << _has_null << " ";
+        ss << "size = " << size() << ")";
         return ss.str();
     }
 
