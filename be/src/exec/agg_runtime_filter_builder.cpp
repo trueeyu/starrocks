@@ -70,6 +70,7 @@ struct AggInRuntimeFilterBuilderImpl {
 };
 
 RuntimeFilter* AggInRuntimeFilterBuilder::build(Aggregator* aggretator, ObjectPool* pool) {
+    LOG(ERROR) << "LXH: build agg in runtime filter";
     return type_dispatch_predicate<RuntimeFilter*>(_type, false, AggInRuntimeFilterBuilderImpl(), pool, aggretator,
                                                    _build_desc->build_expr_order());
 }
