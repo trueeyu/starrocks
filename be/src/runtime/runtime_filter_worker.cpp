@@ -140,12 +140,16 @@ void RuntimeFilterPort::publish_runtime_filters_for_skew_broadcast_join(
 }
 
 void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBuildDescriptor*>& rf_descs) {
+    LOG(ERROR) << "LXH: publish runtime filters 1";
     RuntimeState* state = _state;
     for (auto* rf_desc : rf_descs) {
         auto* filter = rf_desc->runtime_filter();
+        LOG(ERROR) << "LXH: publish runtime filters 2";
         if (filter == nullptr) continue;
+        LOG(ERROR) << "LXH: publish runtime filters 3";
         state->runtime_filter_port()->receive_runtime_filter(rf_desc->filter_id(), filter);
     }
+    LOG(ERROR) << "LXH: publish runtime filters 4";
     int timeout_ms = config::send_rpc_runtime_filter_timeout_ms;
     if (state->query_options().__isset.runtime_filter_send_timeout_ms) {
         timeout_ms = state->query_options().runtime_filter_send_timeout_ms;
@@ -296,7 +300,7 @@ void RuntimeFilterPort::receive_runtime_filter(int32_t filter_id, const RuntimeF
     auto it = _listeners.find(filter_id);
     if (it == _listeners.end()) return;
     auto& wait_list = it->second;
-    VLOG_FILE << "RuntimeFilterPort::receive_runtime_filter(local). filter_id = " << filter_id
+    LOG(ERROR) << "LXH: RuntimeFilterPort::receive_runtime_filter(local). filter_id = " << filter_id
               << ", wait_list_size = " << wait_list.size() << "filter = " << rf->debug_string();
     for (auto* rf_desc : wait_list) {
         rf_desc->set_runtime_filter(rf);
