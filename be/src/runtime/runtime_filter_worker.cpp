@@ -310,6 +310,7 @@ void RuntimeFilterPort::receive_runtime_filter(int32_t filter_id, const RuntimeF
 
 void RuntimeFilterPort::receive_shared_runtime_filter(int32_t filter_id,
                                                       const std::shared_ptr<const RuntimeFilter>& rf) {
+    LOG(ERROR) << "LXH: receive shared start";
     auto it = _listeners.find(filter_id);
     if (it == _listeners.end()) return;
     auto& wait_list = it->second;
