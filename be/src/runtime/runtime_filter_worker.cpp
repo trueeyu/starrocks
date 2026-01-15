@@ -952,6 +952,7 @@ void RuntimeFilterWorker::_receive_total_runtime_filter(PTransmitRuntimeFilterPa
     }
 
     std::shared_ptr<RuntimeFilter> shared_rf(rf);
+    LOG(ERROR) << "LXH: receive total runtime filter 2";
     // for pipeline engine
     if (request.has_is_pipeline() && request.is_pipeline()) {
         receive_total_runtime_filter_pipeline(request, shared_rf);
