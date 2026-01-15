@@ -295,7 +295,6 @@ StatusOr<ChunkPtr> ScanOperator::pull_chunk(RuntimeState* state) {
         evaluate_topn_runtime_filters(res.get());
         eval_runtime_bloom_filters(res.get());
         res->owner_info().set_owner_id(owner_id, is_eos);
-        sleep(1);
     }
 
     return res;
