@@ -742,6 +742,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
         filter->evaluate(column.get(), &eval_context.running_context);
 
         auto true_count = SIMD::count_nonzero(selection);
+        LOG(ERROR) << "LXH: true_count: " << true_count << ":" << selection.size();
         eval_context.run_filter_nums += 1;
 
         if (true_count == 0) {
