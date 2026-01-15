@@ -128,6 +128,7 @@ public:
     }
 
     std::set<CppType> get_set(ObjectPool* pool) const {
+        LOG(ERROR) << "LXH: get_set";
         std::set<CppType> set;
         ScopedPtr ptr;
         if (_values.Read(&ptr) != 0) {
