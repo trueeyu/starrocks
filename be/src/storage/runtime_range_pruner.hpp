@@ -214,6 +214,7 @@ struct RuntimeColumnPredicateBuilder {
         auto* filter = down_cast<const InRuntimeFilter<mapping_type>*>(rf->get_in_filter());
         if (filter == nullptr) return;
         auto hash_set = filter->get_set(pool);
+        LOG(ERROR) << "LXH: build_in_range: " << hash_set.size();
         boost::container::flat_set<typename Range::RangeValueType> values(hash_set.begin(), hash_set.end());
         (void)range.add_fixed_values(FILTER_IN, values);
     }
