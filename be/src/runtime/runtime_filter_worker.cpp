@@ -936,6 +936,7 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
 }
 
 void RuntimeFilterWorker::_receive_total_runtime_filter(PTransmitRuntimeFilterParams& request) {
+    LOG(ERROR) << "LXH: receive total runtime filter 1";
     auto [query_ctx, mem_tracker] = get_mem_tracker(request.query_id(), request.is_pipeline());
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(mem_tracker.get());
     // deserialize once, and all fragment instance shared that runtime filter.
