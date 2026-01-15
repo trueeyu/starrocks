@@ -123,7 +123,9 @@ void Operator::close(RuntimeState* state) {
     if (auto* rf_bloom_filters = runtime_bloom_filters()) {
         _init_rf_counters(false);
         _runtime_in_filter_num_counter->set((int64_t)runtime_in_filters().size());
+        LOG(ERROR) << "LXH: RUNTIME_IN: " << _runtime_in_filter_num_counter->value();
         _runtime_bloom_filter_num_counter->set((int64_t)rf_bloom_filters->size());
+        LOG(ERROR) << "LXH: RUNTIME_BLOOM: " << _runtime_bloom_filter_num_counter->value();
 
         if (!rf_bloom_filters->descriptors().empty()) {
             std::string rf_desc = "";
