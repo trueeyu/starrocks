@@ -701,7 +701,6 @@ void RuntimeFilterProbeCollector::close(RuntimeState* state) {
 // do_evaluate is reentrant, can be called concurrently by multiple operators that shared the same
 // RuntimeFilterProbeCollector.
 void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFilterEvalContext& eval_context) {
-    LOG(ERROR) << "LXH: Do eval: " << eval_context.mode;
     if (eval_context.mode == RuntimeMembershipFilterEvalContext::Mode::M_ONLY_TOPN) {
         update_selectivity(chunk, eval_context);
         return;
@@ -718,7 +717,6 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
     }
 
     auto& selection = eval_context.running_context.selection;
-    LOG(ERROR) << "LXH: RUNNING_CONTEXT: " << selection.size();
     eval_context.running_context.use_merged_selection = false;
     eval_context.running_context.compatibility =
             _runtime_state->func_version() <= 3 || !_runtime_state->enable_pipeline_engine();
@@ -741,10 +739,8 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
         compute_hash_values(chunk, column.get(), rf_desc, eval_context);
 
         filter->evaluate(column.get(), &eval_context.running_context);
-        LOG(ERROR) << "LXH: before eval: " << column->size() << ":" << filter->debug_string();
 
         auto true_count = SIMD::count_nonzero(selection);
-        LOG(ERROR) << "LXH: ffff: " << selection.size() << "," << true_count;
         eval_context.run_filter_nums += 1;
 
         if (true_count == 0) {
@@ -850,6 +846,8 @@ void RuntimeFilterProbeCollector::evaluate(Chunk* chunk, RuntimeMembershipFilter
         SCOPED_TIMER(eval_context.join_runtime_filter_timer);
         eval_context.join_runtime_filter_input_counter->update(before);
         eval_context.run_filter_nums = 0;
+        LOG(ERROR) << "LXH: EVAL: " << eval_context.running_context.selection.size() <<
+            ":" << eval_context.running_context.merged_selection.size();
         do_evaluate(chunk, eval_context);
         size_t after = chunk->num_rows();
         LOG(ERROR) << "LXH: Collector: " << before << "->" << after;

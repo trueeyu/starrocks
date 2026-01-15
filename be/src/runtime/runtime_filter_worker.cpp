@@ -140,16 +140,12 @@ void RuntimeFilterPort::publish_runtime_filters_for_skew_broadcast_join(
 }
 
 void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBuildDescriptor*>& rf_descs) {
-    LOG(ERROR) << "LXH: publish runtime filters 1";
     RuntimeState* state = _state;
     for (auto* rf_desc : rf_descs) {
         auto* filter = rf_desc->runtime_filter();
-        LOG(ERROR) << "LXH: publish runtime filters 2";
         if (filter == nullptr) continue;
-        LOG(ERROR) << "LXH: publish runtime filters 3";
         state->runtime_filter_port()->receive_runtime_filter(rf_desc->filter_id(), filter);
     }
-    LOG(ERROR) << "LXH: publish runtime filters 4";
     int timeout_ms = config::send_rpc_runtime_filter_timeout_ms;
     if (state->query_options().__isset.runtime_filter_send_timeout_ms) {
         timeout_ms = state->query_options().runtime_filter_send_timeout_ms;
@@ -193,7 +189,7 @@ void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBui
         prepare_params(params, state, rf_desc);
 
         // print before setting data, otherwise it's too big.
-        LOG(ERROR) << "LXH: RuntimeFilterPort::publish_runtime_filters. merge_node[0] = " << rf_desc->merge_nodes()[0]
+        LOG(ERROR) << "RuntimeFilterPort::publish_runtime_filters. merge_node[0] = " << rf_desc->merge_nodes()[0]
                   << ", query_id = " << params.query_id() << ", finst_id = " << params.finst_id()
                   << ", be_number = " << params.build_be_number() << ", is_pipeline = " << params.is_pipeline()
                   << ", filter = " << filter->debug_string();
@@ -206,7 +202,7 @@ void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBui
         rf_data->resize(actual_size);
 
         auto passthrough_delivery = actual_size <= config::deliver_broadcast_rf_passthrough_bytes_limit;
-        LOG(ERROR) << "LXH: send runtime filter: " << directly_send_broadcast_grf;
+        LOG(ERROR) << "send runtime filter: " << directly_send_broadcast_grf;
         if (directly_send_broadcast_grf) {
             auto sender_id =
                     std::min_element(rf_desc->broadcast_grf_senders().begin(), rf_desc->broadcast_grf_senders().end(),
@@ -301,7 +297,7 @@ void RuntimeFilterPort::receive_runtime_filter(int32_t filter_id, const RuntimeF
     auto it = _listeners.find(filter_id);
     if (it == _listeners.end()) return;
     auto& wait_list = it->second;
-    LOG(ERROR) << "LXH: RuntimeFilterPort::receive_runtime_filter(local). filter_id = " << filter_id
+    LOG(ERROR) << "RuntimeFilterPort::receive_runtime_filter(local). filter_id = " << filter_id
               << ", wait_list_size = " << wait_list.size() << "filter = " << rf->debug_string();
     for (auto* rf_desc : wait_list) {
         rf_desc->set_runtime_filter(rf);
@@ -310,11 +306,11 @@ void RuntimeFilterPort::receive_runtime_filter(int32_t filter_id, const RuntimeF
 
 void RuntimeFilterPort::receive_shared_runtime_filter(int32_t filter_id,
                                                       const std::shared_ptr<const RuntimeFilter>& rf) {
-    LOG(ERROR) << "LXH: receive shared start";
+    LOG(ERROR) << "receive shared start";
     auto it = _listeners.find(filter_id);
     if (it == _listeners.end()) return;
     auto& wait_list = it->second;
-    LOG(ERROR) << "LXH: RuntimeFilterPort::receive_runtime_filter(shared). filter_id = " << filter_id
+    LOG(ERROR) << "RuntimeFilterPort::receive_runtime_filter(shared). filter_id = " << filter_id
               << ", wait_list_size = " << wait_list.size() << ", filter = " << rf->debug_string();
     for (auto* rf_desc : wait_list) {
         rf_desc->set_shared_runtime_filter(rf);
@@ -878,7 +874,6 @@ void RuntimeFilterWorker::receive_runtime_filter(const PTransmitRuntimeFilterPar
 // receive total runtime filter in pipeline engine.
 static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterParams& params,
                                                          const std::shared_ptr<RuntimeFilter>& shared_rf) {
-    LOG(ERROR) << "LXH: receive pipeline 1";
     auto& pb_query_id = params.query_id();
     TUniqueId query_id;
     query_id.hi = pb_query_id.hi();
@@ -893,22 +888,18 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
         ExecEnv::GetInstance()->add_rf_event({params.query_id(), params.filter_id(), BackendOptions::get_localhost(),
                                               "PUT_TOTAL_RF_IN_CACHE_QUERY_NOT_READY"});
     }
-    LOG(ERROR) << "LXH: receive pipeline 2";
     // race condition exists among rf caching, FragmentContext's registration and OperatorFactory's preparation
     query_ctx = ExecEnv::GetInstance()->query_context_mgr()->get(query_id);
     if (!query_ctx) {
         return;
     }
-    LOG(ERROR) << "LXH: receive pipeline 3";
     // the query is already finished, so it is needless to cache rf.
     if (query_ctx->has_no_active_instances() || query_ctx->is_query_expired()) {
         return;
     }
-    LOG(ERROR) << "LXH: receive pipeline 4";
 
     auto& probe_finst_ids = params.probe_finst_ids();
     for (const auto& pb_finst_id : probe_finst_ids) {
-        LOG(ERROR) << "LXH: receive pipeline 5";
         TUniqueId finst_id;
         finst_id.hi = pb_finst_id.hi();
         finst_id.lo = pb_finst_id.lo();
@@ -916,27 +907,22 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
 
         // fragment_ctx is absent means that the fragment instance is finished, or it has not arrived, so
         // we conservatively consider that global rf arrives in advance, so cache it for later use.
-        LOG(ERROR) << "LXH: receive pipeline 6";
         if (!fragment_ctx) {
             ExecEnv::GetInstance()->runtime_filter_cache()->put_if_absent(query_id, params.filter_id(), shared_rf);
             ExecEnv::GetInstance()->add_rf_event({params.query_id(), params.filter_id(),
                                                   BackendOptions::get_localhost(),
                                                   "PUT_TOTAL_RF_IN_CACHE_FRAGMENT_INSTANCE_NOT_READY"});
         }
-        LOG(ERROR) << "LXH: receive pipeline 7";
         // race condition exists among rf caching, FragmentContext's registration and OperatorFactory's preparation
         fragment_ctx = query_ctx->fragment_mgr()->get(finst_id);
         if (!fragment_ctx) {
             continue;
         }
-        LOG(ERROR) << "LXH: receive pipeline 8";
         // FragmentContext is already destructed or invalid, so do nothing.
         if (fragment_ctx->is_canceled()) {
             continue;
         }
-        LOG(ERROR) << "LXH: receive pipeline 9";
         fragment_ctx->runtime_filter_port()->receive_shared_runtime_filter(params.filter_id(), shared_rf);
-        LOG(ERROR) << "LXH: receive pipeline 10";
         ExecEnv::GetInstance()->add_rf_event(
                 {params.query_id(), params.filter_id(), BackendOptions::get_localhost(),
                  strings::Substitute("INSTALL_GRF(num_waiters=$0, instance_id=$1)",
@@ -946,7 +932,6 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
 }
 
 void RuntimeFilterWorker::_receive_total_runtime_filter(PTransmitRuntimeFilterParams& request) {
-    LOG(ERROR) << "LXH: receive total runtime filter 1";
     auto [query_ctx, mem_tracker] = get_mem_tracker(request.query_id(), request.is_pipeline());
     SCOPED_THREAD_LOCAL_MEM_TRACKER_SETTER(mem_tracker.get());
     // deserialize once, and all fragment instance shared that runtime filter.
@@ -962,7 +947,6 @@ void RuntimeFilterWorker::_receive_total_runtime_filter(PTransmitRuntimeFilterPa
     }
 
     std::shared_ptr<RuntimeFilter> shared_rf(rf);
-    LOG(ERROR) << "LXH: receive total runtime filter 2";
     // for pipeline engine
     if (request.has_is_pipeline() && request.is_pipeline()) {
         receive_total_runtime_filter_pipeline(request, shared_rf);
@@ -1166,7 +1150,6 @@ void RuntimeFilterWorker::execute() {
         }
 
         _metrics->update_event_nums(ev.type, -1);
-        LOG(ERROR) << "LXH: filter type: " << ev.type;
         switch (ev.type) {
         case RECEIVE_TOTAL_RF: {
             _metrics->update_rf_bytes(ev.type, -ev.transmit_rf_request.data().size());
