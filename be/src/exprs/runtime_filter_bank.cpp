@@ -701,6 +701,7 @@ void RuntimeFilterProbeCollector::close(RuntimeState* state) {
 // do_evaluate is reentrant, can be called concurrently by multiple operators that shared the same
 // RuntimeFilterProbeCollector.
 void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFilterEvalContext& eval_context) {
+    LOG(ERROR) << "LXH: Do eval: " << eval_context.mode;
     if (eval_context.mode == RuntimeMembershipFilterEvalContext::Mode::M_ONLY_TOPN) {
         update_selectivity(chunk, eval_context);
         return;
