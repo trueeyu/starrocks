@@ -313,7 +313,7 @@ void RuntimeFilterPort::receive_shared_runtime_filter(int32_t filter_id,
     auto it = _listeners.find(filter_id);
     if (it == _listeners.end()) return;
     auto& wait_list = it->second;
-    VLOG_FILE << "RuntimeFilterPort::receive_runtime_filter(shared). filter_id = " << filter_id
+    LOG(ERROR) << "LXH: RuntimeFilterPort::receive_runtime_filter(shared). filter_id = " << filter_id
               << ", wait_list_size = " << wait_list.size() << ", filter = " << rf->debug_string();
     for (auto* rf_desc : wait_list) {
         rf_desc->set_shared_runtime_filter(rf);
