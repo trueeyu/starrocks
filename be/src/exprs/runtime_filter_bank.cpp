@@ -717,6 +717,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
     }
 
     auto& selection = eval_context.running_context.selection;
+    LOG(ERROR) << "LXH: RUNNING_CONTEXT: " << selection.size();
     eval_context.running_context.use_merged_selection = false;
     eval_context.running_context.compatibility =
             _runtime_state->func_version() <= 3 || !_runtime_state->enable_pipeline_engine();
