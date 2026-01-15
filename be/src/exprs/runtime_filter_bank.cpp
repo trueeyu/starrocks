@@ -739,6 +739,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
         compute_hash_values(chunk, column.get(), rf_desc, eval_context);
 
         filter->evaluate(column.get(), &eval_context.running_context);
+        LOG(ERROR) << "LXH: before eval: " << column->size() << ":" << filter->debug_string();
 
         auto true_count = SIMD::count_nonzero(selection);
         LOG(ERROR) << "LXH: ffff: " << selection.size() << "," << true_count;
