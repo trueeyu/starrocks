@@ -878,6 +878,7 @@ void RuntimeFilterWorker::receive_runtime_filter(const PTransmitRuntimeFilterPar
 // receive total runtime filter in pipeline engine.
 static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterParams& params,
                                                          const std::shared_ptr<RuntimeFilter>& shared_rf) {
+    LOG(ERROR) << "LXH: receive pipeline 1";
     auto& pb_query_id = params.query_id();
     TUniqueId query_id;
     query_id.hi = pb_query_id.hi();
@@ -892,15 +893,18 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
         ExecEnv::GetInstance()->add_rf_event({params.query_id(), params.filter_id(), BackendOptions::get_localhost(),
                                               "PUT_TOTAL_RF_IN_CACHE_QUERY_NOT_READY"});
     }
+    LOG(ERROR) << "LXH: receive pipeline 2";
     // race condition exists among rf caching, FragmentContext's registration and OperatorFactory's preparation
     query_ctx = ExecEnv::GetInstance()->query_context_mgr()->get(query_id);
     if (!query_ctx) {
         return;
     }
+    LOG(ERROR) << "LXH: receive pipeline 3";
     // the query is already finished, so it is needless to cache rf.
     if (query_ctx->has_no_active_instances() || query_ctx->is_query_expired()) {
         return;
     }
+    LOG(ERROR) << "LXH: receive pipeline 4";
 
     auto& probe_finst_ids = params.probe_finst_ids();
     for (const auto& pb_finst_id : probe_finst_ids) {
@@ -926,7 +930,9 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
         if (fragment_ctx->is_canceled()) {
             continue;
         }
+        LOG(ERROR) << "LXH: receive pipeline 5";
         fragment_ctx->runtime_filter_port()->receive_shared_runtime_filter(params.filter_id(), shared_rf);
+        LOG(ERROR) << "LXH: receive pipeline 6";
         ExecEnv::GetInstance()->add_rf_event(
                 {params.query_id(), params.filter_id(), BackendOptions::get_localhost(),
                  strings::Substitute("INSTALL_GRF(num_waiters=$0, instance_id=$1)",
