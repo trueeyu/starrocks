@@ -105,9 +105,6 @@ Status OlapScanContext::capture_tablet_rowsets(const std::vector<TInternalScanRa
 Status OlapScanContext::parse_conjuncts(RuntimeState* state, const std::vector<ExprContext*>& runtime_in_filters,
                                         RuntimeFilterProbeCollector* runtime_bloom_filters, int32_t driver_sequence) {
     TEST_ERROR_POINT("OlapScanContext::parse_conjuncts");
-    if (runtime_bloom_filters != nullptr) {
-        LOG(ERROR) << "LXH: RF: " << runtime_bloom_filters->debug_string();
-    }
     const TOlapScanNode& thrift_olap_scan_node = _scan_node->thrift_olap_scan_node();
     const TupleDescriptor* tuple_desc = state->desc_tbl().get_tuple_descriptor(thrift_olap_scan_node.tuple_id);
 
@@ -157,7 +154,6 @@ Status OlapScanContext::parse_conjuncts(RuntimeState* state, const std::vector<E
     // Get key_ranges and not_push_down_conjuncts from _conjuncts_manager.
     RETURN_IF_ERROR(cm.get_key_ranges(&_key_ranges));
     cm.get_not_push_down_conjuncts(&_not_push_down_conjuncts);
-    LOG(ERROR) << "LXH: NOT_PUSH_DOWN: " << _not_push_down_conjuncts.size();
 
     // rewrite after push down scan predicate, scan predicate should rewrite by local-dict
     RETURN_IF_ERROR(state->mutable_dict_optimize_parser()->rewrite_conjuncts(&_not_push_down_conjuncts));
