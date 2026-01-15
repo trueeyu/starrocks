@@ -101,7 +101,7 @@ public:
         HashSet set;
         DCHECK(!column->is_constant());
         size_t num_rows = column->size();
-        LOG(ERROR) << "LXH: build: " << num_rows;
+        LOG(ERROR) << "LXH: build: " << num_rows << ":" << column->debug_string();
         if (column->is_nullable()) {
             auto* nullable = down_cast<NullableColumn*>(column);
             const auto& null_data = nullable->null_column_data();
