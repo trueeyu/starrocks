@@ -908,6 +908,7 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
 
     auto& probe_finst_ids = params.probe_finst_ids();
     for (const auto& pb_finst_id : probe_finst_ids) {
+        LOG(ERROR) << "LXH: receive pipeline 5";
         TUniqueId finst_id;
         finst_id.hi = pb_finst_id.hi();
         finst_id.lo = pb_finst_id.lo();
@@ -915,24 +916,27 @@ static inline void receive_total_runtime_filter_pipeline(PTransmitRuntimeFilterP
 
         // fragment_ctx is absent means that the fragment instance is finished, or it has not arrived, so
         // we conservatively consider that global rf arrives in advance, so cache it for later use.
+        LOG(ERROR) << "LXH: receive pipeline 6";
         if (!fragment_ctx) {
             ExecEnv::GetInstance()->runtime_filter_cache()->put_if_absent(query_id, params.filter_id(), shared_rf);
             ExecEnv::GetInstance()->add_rf_event({params.query_id(), params.filter_id(),
                                                   BackendOptions::get_localhost(),
                                                   "PUT_TOTAL_RF_IN_CACHE_FRAGMENT_INSTANCE_NOT_READY"});
         }
+        LOG(ERROR) << "LXH: receive pipeline 7";
         // race condition exists among rf caching, FragmentContext's registration and OperatorFactory's preparation
         fragment_ctx = query_ctx->fragment_mgr()->get(finst_id);
         if (!fragment_ctx) {
             continue;
         }
+        LOG(ERROR) << "LXH: receive pipeline 8";
         // FragmentContext is already destructed or invalid, so do nothing.
         if (fragment_ctx->is_canceled()) {
             continue;
         }
-        LOG(ERROR) << "LXH: receive pipeline 5";
+        LOG(ERROR) << "LXH: receive pipeline 9";
         fragment_ctx->runtime_filter_port()->receive_shared_runtime_filter(params.filter_id(), shared_rf);
-        LOG(ERROR) << "LXH: receive pipeline 6";
+        LOG(ERROR) << "LXH: receive pipeline 10";
         ExecEnv::GetInstance()->add_rf_event(
                 {params.query_id(), params.filter_id(), BackendOptions::get_localhost(),
                  strings::Substitute("INSTALL_GRF(num_waiters=$0, instance_id=$1)",
