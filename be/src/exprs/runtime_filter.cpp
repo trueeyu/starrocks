@@ -401,6 +401,7 @@ void RuntimeBitsetFilter<LT>::evaluate(const Column* input_column, RunningContex
     const size_t num_rows = input_column->size();
 
     Filter& selection_filter = ctx->use_merged_selection ? ctx->merged_selection : ctx->selection;
+    LOG(ERROR) << "LXH: RESIZE: 1";
     selection_filter.resize(num_rows);
     uint8_t* selection = selection_filter.data();
 

@@ -759,6 +759,7 @@ void RuntimeFilterProbeCollector::do_evaluate(Chunk* chunk, RuntimeMembershipFil
 void RuntimeFilterProbeCollector::do_evaluate_partial_chunk(Chunk* partial_chunk,
                                                             RuntimeMembershipFilterEvalContext& eval_context) {
     auto& selection = eval_context.running_context.selection;
+    LOG(ERROR) << "LXH: RESIZE: 2: " << selection.size();
     eval_context.running_context.use_merged_selection = false;
     eval_context.running_context.compatibility =
             _runtime_state->func_version() <= 3 || !_runtime_state->enable_pipeline_engine();
@@ -933,6 +934,7 @@ void RuntimeFilterProbeCollector::update_selectivity(Chunk* chunk, RuntimeMember
         auto& selection = eval_context.running_context.use_merged_selection
                                   ? eval_context.running_context.merged_selection
                                   : eval_context.running_context.selection;
+        LOG(ERROR) << "LXH: XX3: " << selection.size();
         auto ctx = rf_desc->probe_expr_ctx();
         ColumnPtr column = EVALUATE_NULL_IF_ERROR(ctx, ctx->root(), chunk);
         // for colocate grf

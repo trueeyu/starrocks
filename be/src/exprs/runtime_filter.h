@@ -700,6 +700,7 @@ public:
         size_t size = input_column->size();
         Filter& selection_filter = ctx->use_merged_selection ? ctx->merged_selection : ctx->selection;
         selection_filter.resize(size);
+        LOG(ERROR) << "LXH: xxx5: " << selection_filter.size();
         uint8_t* selection = selection_filter.data();
         if (input_column->is_constant()) {
             const auto* const_column = down_cast<const ConstColumn*>(input_column);
@@ -1371,6 +1372,7 @@ private:
         size_t size = input_column->size();
         Filter& selection_filter = ctx->use_merged_selection ? ctx->merged_selection : ctx->selection;
         selection_filter.resize(size);
+        LOG(ERROR) << "LXH: xxx4: " << selection_filter.size();
         uint8_t* selection = selection_filter.data();
 
         // reuse ctx's hash_values object.
