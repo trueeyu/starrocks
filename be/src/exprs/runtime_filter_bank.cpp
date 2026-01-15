@@ -850,6 +850,7 @@ void RuntimeFilterProbeCollector::evaluate(Chunk* chunk, RuntimeMembershipFilter
         eval_context.run_filter_nums = 0;
         do_evaluate(chunk, eval_context);
         size_t after = chunk->num_rows();
+        LOG(ERROR) << "LXH: Collector: " << before << "->" << after;
         eval_context.join_runtime_filter_output_counter->update(after);
         eval_context.join_runtime_filter_eval_counter->update(eval_context.run_filter_nums);
     }
