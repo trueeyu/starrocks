@@ -193,7 +193,7 @@ void RuntimeFilterPort::publish_runtime_filters(const std::list<RuntimeFilterBui
         prepare_params(params, state, rf_desc);
 
         // print before setting data, otherwise it's too big.
-        VLOG_FILE << "RuntimeFilterPort::publish_runtime_filters. merge_node[0] = " << rf_desc->merge_nodes()[0]
+        LOG(ERROR) << "LXH: RuntimeFilterPort::publish_runtime_filters. merge_node[0] = " << rf_desc->merge_nodes()[0]
                   << ", query_id = " << params.query_id() << ", finst_id = " << params.finst_id()
                   << ", be_number = " << params.build_be_number() << ", is_pipeline = " << params.is_pipeline()
                   << ", filter = " << filter->debug_string();
