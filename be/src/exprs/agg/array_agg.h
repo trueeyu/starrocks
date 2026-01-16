@@ -234,6 +234,7 @@ public:
         auto* state = new (ptr) ArrayAggAggregateStateV2;
         for (auto i = 0; i < num; ++i) {
             state->data_columns.emplace_back(ctx->create_column(*ctx->get_arg_type(i), true));
+            LOG(ERROR) << "LXH: ARRAY_AGG: " << state->data_columns[i]->get_name();
         }
         DCHECK(state->data_columns.size() == ctx->get_is_asc_order().size() + 1);
     }
