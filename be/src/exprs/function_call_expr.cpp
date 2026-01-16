@@ -209,6 +209,7 @@ StatusOr<ColumnPtr> VectorizedFunctionCallExpr::evaluate_checked(starrocks::Expr
 #endif
 
     StatusOr<ColumnPtr> result;
+    LOG(ERROR) << "LXH: function_name: " << _fn_desc->name;
     if (_fn_desc->exception_safe) {
         result = _fn_desc->scalar_function(fn_ctx, args);
     } else {
