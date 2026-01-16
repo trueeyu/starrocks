@@ -57,7 +57,7 @@ Status ProjectOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
     {
         SCOPED_TIMER(_expr_compute_timer);
         for (size_t i = 0; i < _column_ids.size(); ++i) {
-            LOG(ERROR) << "LXH: " << _expr_ctxs[i]->root()->fn().name;
+            LOG(ERROR) << "LXH: " << _expr_ctxs[i]->root()->debug_string();
             ASSIGN_OR_RETURN(result_columns[i], _expr_ctxs[i]->evaluate(chunk.get()));
 
             if (result_columns[i]->only_null()) {
