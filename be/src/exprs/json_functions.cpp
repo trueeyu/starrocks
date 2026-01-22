@@ -698,6 +698,7 @@ StatusOr<ColumnPtr> JsonFunctions::_full_json_query_impl(FunctionContext* contex
             }
             LOG(ERROR) << "JSON values should not be nullptr: " << row << ", " << columns[0]->get_name() << ", "
                        << tmp_num_rows << "," << context->has_error() << ", " << context->error_msg();
+            json_viewer.check_size();
             return Status::InternalError("Json value parse failed");
         }
         auto path_value = path_viewer.value(row);

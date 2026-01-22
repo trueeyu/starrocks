@@ -53,6 +53,12 @@ public:
 
     typename RunTimeColumnType<Type>::Ptr column() const { return _column; };
 
+    void check_size() const {
+        if constexpr(Type == TYPE_JSON) {
+            _column->output_check_log();
+        }
+    }
+
 private:
     // column ptr
     typename RunTimeColumnType<Type>::Ptr _column;
