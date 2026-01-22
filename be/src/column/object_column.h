@@ -227,7 +227,7 @@ public:
 
     void output_check_log() const {
         if (_cache_ok && _pool.size() != _cache.size()) {
-            LOG(ERROR) << "ObjectColumn data size mismatch, pool size: " << _pool->size()
+            LOG(ERROR) << "ObjectColumn data size mismatch, pool size: " << _pool.size()
                        << ", cache size: " << _cache.size();
         }
     }
