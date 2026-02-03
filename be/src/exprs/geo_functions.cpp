@@ -336,6 +336,7 @@ Status GeoFunctions::st_contains_prepare(FunctionContext* ctx, FunctionContext::
             } else {
                 auto str_value = ColumnHelper::get_const_value<TYPE_VARCHAR>(str_column);
                 contains_ctx->shapes[i] = GeoShape::from_encoded(str_value.data, str_value.size);
+                LOG(ERROR) << "LXH: prepare: " << i << ":" << contains_ctx->shapes[i]->type() << ":" << contains_ctx->shapes[i]->to_string();
                 if (contains_ctx->shapes[i] == nullptr) {
                     contains_ctx->is_null = true;
                 }
