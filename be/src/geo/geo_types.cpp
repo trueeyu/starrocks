@@ -124,6 +124,9 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     if (points.size() < 3) {
         return GEO_PARSE_LOOP_LACK_VERTICES;
     }
+    for (size_t i = 0; i < points.size(); i++) {
+        LOG(ERROR) << "LXH: POINT: " << i << ":" << points[i];
+    }
     *loop = std::make_unique<S2Loop>(points);
     if (!(*loop)->IsValid()) {
         return GEO_PARSE_LOOP_INVALID;
