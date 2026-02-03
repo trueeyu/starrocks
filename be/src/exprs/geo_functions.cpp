@@ -370,6 +370,8 @@ StatusOr<ColumnPtr> GeoFunctions::st_contains(FunctionContext* context, const Co
         auto lhs_value = lhs_viewer.value(row);
         auto rhs_value = rhs_viewer.value(row);
         const Slice* strs[2] = {&lhs_value, &rhs_value};
+        LOG(ERROR) << "LXH: 0: " << *strs[0];
+        LOG(ERROR) << "LXH: 1: " << *strs[1];
         // use this to delete new
         StContainsState local_state;
         int i;
