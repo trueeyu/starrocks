@@ -391,7 +391,9 @@ StatusOr<ColumnPtr> GeoFunctions::st_contains(FunctionContext* context, const Co
         }
     }
 
-    return result.build(ColumnHelper::is_all_const(columns));
+    auto ret = result.build(ColumnHelper::is_all_const(columns));
+    LOG(ERROR) << "LXH: result_2: " <<  ret->debug_string() << ":" << ret->get_name();
+    return ret;
 }
 
 // from wkt
