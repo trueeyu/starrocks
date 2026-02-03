@@ -112,6 +112,7 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     std::vector<S2Point> points(coords.list.size());
     for (int i = 0; i < coords.list.size(); ++i) {
         auto res = to_s2point(coords.list[i], &points[i]);
+        LOG(ERROR) << "LXH: s2point: " << i << ":" << res;
         if (res != GEO_PARSE_OK) {
             return res;
         }
