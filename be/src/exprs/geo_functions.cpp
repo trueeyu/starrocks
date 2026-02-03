@@ -375,8 +375,10 @@ StatusOr<ColumnPtr> GeoFunctions::st_contains(FunctionContext* context, const Co
         int i;
         for (i = 0; i < 2; ++i) {
             if (state != nullptr && state->shapes[i] != nullptr) {
+                LOG(ERROR) << "LXH: SHAP_1: " << i;
                 shapes[i] = state->shapes[i];
             } else {
+                LOG(ERROR) << "LXH: SHAP_2: " << i;
                 shapes[i] = local_state.shapes[i] = GeoShape::from_encoded(strs[i]->data, strs[i]->size);
                 if (shapes[i] == nullptr) {
                     result.append_null();
