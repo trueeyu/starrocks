@@ -359,6 +359,7 @@ StatusOr<ColumnPtr> GeoFunctions::st_contains(FunctionContext* context, const Co
 
     auto size = columns[0]->size();
     ColumnBuilder<TYPE_BOOLEAN> result(size);
+    LOG(ERROR) << "LXH: row_size: " << size;
     for (int row = 0; row < size; ++row) {
         if (lhs_viewer.is_null(row) || rhs_viewer.is_null(row)) {
             result.append_null();
