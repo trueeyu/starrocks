@@ -124,6 +124,7 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     // 3. remove duplicate points
     remove_duplicate_points(&points);
     // 4. remove last point
+    //points.resize(points.size() - 1);
     points.resize(points.size() - 1);
     // 5. check if there is enough point
     if (points.size() < 3) {
