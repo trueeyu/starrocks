@@ -136,6 +136,8 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     if (!(*loop)->IsValid()) {
         return GEO_PARSE_LOOP_INVALID;
     }
+    // if (bound_.lng().GetLength() < M_PI) return true;
+    LOG(ERROR) << "LXH: BOUND: " << (*loop)->GetRectBound().lng().GetLength();
     LOG(ERROR) << "LXH: NORMAL: " << (*loop)->IsNormalized() << ":" << (*loop)->is_hole();
     (*loop)->Normalize();
     return GEO_PARSE_OK;
