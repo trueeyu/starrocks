@@ -124,8 +124,7 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     // 3. remove duplicate points
     remove_duplicate_points(&points);
     // 4. remove last point
-    //points.resize(points.size() - 1);
-    points.resize(points.size());
+    points.resize(points.size() - 1);
     // 5. check if there is enough point
     if (points.size() < 3) {
         return GEO_PARSE_LOOP_LACK_VERTICES;
@@ -140,7 +139,7 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     // if (bound_.lng().GetLength() < M_PI) return true;
     LOG(ERROR) << "LXH: BOUND: " << (*loop)->GetRectBound().lng().GetLength();
     LOG(ERROR) << "LXH: NORMAL: " << (*loop)->IsNormalized() << ":" << (*loop)->is_hole();
-    (*loop)->Normalize();
+    //(*loop)->Normalize();
     return GEO_PARSE_OK;
 }
 
