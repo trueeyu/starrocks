@@ -125,7 +125,7 @@ static GeoParseStatus to_s2loop(const GeoCoordinateList& coords, std::unique_ptr
     remove_duplicate_points(&points);
     // 4. remove last point
     //points.resize(points.size() - 1);
-    points.resize(points.size() - 1);
+    points.resize(points.size());
     // 5. check if there is enough point
     if (points.size() < 3) {
         return GEO_PARSE_LOOP_LACK_VERTICES;
