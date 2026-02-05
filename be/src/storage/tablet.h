@@ -118,7 +118,7 @@ public:
     bool belonged_to_cloud_native() const override { return false; }
 
     // propreties encapsulated in TabletSchema
-    KeysType keys_type() const;
+    KeysType keys_type() const { return _keys_type; }
     size_t num_columns_with_max_version() const;
     size_t num_key_columns_with_max_version() const;
     size_t num_rows_per_row_block_with_max_version() const;
@@ -511,12 +511,12 @@ inline void Tablet::set_cumulative_layer_point(int64_t new_point) {
     _cumulative_point = new_point;
 }
 
-inline KeysType Tablet::keys_type() const {
-    //std::shared_lock rdlock(_schema_lock);
-    //return _max_version_schema->keys_type();
-    //return tablet_schema()->keys_type();
-    return _keys_type;
-}
+//inline KeysType Tablet::keys_type() const {
+//    //std::shared_lock rdlock(_schema_lock);
+//    //return _max_version_schema->keys_type();
+//    //return tablet_schema()->keys_type();
+//    return _keys_type;
+//}
 
 inline size_t Tablet::num_columns_with_max_version() const {
     return tablet_schema()->num_columns();
