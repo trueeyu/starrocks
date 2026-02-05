@@ -971,7 +971,9 @@ Status StorageEngine::_perform_update_compaction(DataDir* data_dir) {
     })
     ADOPT_TRACE(trace.get())
     TRACE("start to perform update compaction");
+    LOG(ERROR) << "LXH: start compact: " << data_dir;
     TabletSharedPtr best_tablet = _tablet_manager->find_best_tablet_to_do_update_compaction(data_dir);
+    LOG(ERROR) << "LXH: end compact: " << data_dir;
     if (best_tablet == nullptr) {
         return Status::NotFound("there are no suitable tablets");
     }
