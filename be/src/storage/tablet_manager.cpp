@@ -1701,6 +1701,7 @@ std::vector<TabletSharedPtr> TabletManager::_get_all_tablets_from_shard(const Ta
 std::vector<TabletSharedPtr> TabletManager::_get_all_tablets_from_shard(const TabletsShard& shard, KeysType keys_type) {
     std::vector<TabletSharedPtr> all_tablets_by_shard;
     std::shared_lock rlock(shard.lock);
+    all_tablets_by_shard.reserve(shard.tablet_map.size());
     for (const auto& [_, tablet] : shard.tablet_map) {
         if (tablet->keys_type() == keys_type) {
             all_tablets_by_shard.push_back(tablet);
