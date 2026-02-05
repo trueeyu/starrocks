@@ -511,7 +511,9 @@ inline void Tablet::set_cumulative_layer_point(int64_t new_point) {
 }
 
 inline KeysType Tablet::keys_type() const {
-    return tablet_schema()->keys_type();
+    std::shared_lock rdlock(_schema_lock);
+    return _max_version_schema->keys_type();
+    //return tablet_schema()->keys_type();
 }
 
 inline size_t Tablet::num_columns_with_max_version() const {
