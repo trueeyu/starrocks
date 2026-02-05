@@ -85,6 +85,7 @@ Tablet::Tablet(const TabletMetaSharedPtr& tablet_meta, DataDir* data_dir)
     // change _rs_graph to _timestamped_version_tracker
     _timestamped_version_tracker.construct_versioned_tracker(_tablet_meta->all_rs_metas());
     _max_version_schema = BaseTablet::tablet_schema();
+    _keys_type = _max_version_schema->keys_type();
     MEM_TRACKER_SAFE_CONSUME(GlobalEnv::GetInstance()->tablet_metadata_mem_tracker(), _mem_usage());
 #ifndef BE_TEST
     StarRocksMetrics::instance()->table_metrics_mgr()->register_table(_tablet_meta->table_id());

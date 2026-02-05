@@ -484,6 +484,7 @@ private:
 
     std::atomic<bool> _is_dropping{false};
     std::atomic<bool> _update_schema_running{false};
+    KeysType _keys_type;
 };
 
 inline bool Tablet::init_succeeded() {
@@ -511,9 +512,10 @@ inline void Tablet::set_cumulative_layer_point(int64_t new_point) {
 }
 
 inline KeysType Tablet::keys_type() const {
-    std::shared_lock rdlock(_schema_lock);
-    return _max_version_schema->keys_type();
+    //std::shared_lock rdlock(_schema_lock);
+    //return _max_version_schema->keys_type();
     //return tablet_schema()->keys_type();
+    return _keys_type;
 }
 
 inline size_t Tablet::num_columns_with_max_version() const {
