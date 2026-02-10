@@ -285,14 +285,15 @@ bool ChunkChanger::change_chunk_v2(ChunkPtr& base_chunk, ChunkPtr& new_chunk, co
             }
             auto new_col = new_col_status.value();
             LOG(ERROR) << "LXH: This rollup column has mv expr, i=" << i << ", ref_column=" << ref_column
-                    << ", new_type=" << new_type_info->type() << ", " << new_col->get_name();
+                       << ", new_type=" << new_type_info->type() << ", " << new_col->get_name();
             if (!new_schema.field(i)->is_nullable() && new_col->is_nullable()) {
                 LOG(WARNING) << "schema of column(" << new_schema.field(i)->name()
                              << ") is not null but data contains null";
                 return false;
             }
 
-            new_col = ColumnHelper::unpack_and_duplicate_const_column(new_col->size(), new_col);
+            const auto& type_desc = _schema_mapping[i].mv_expr_ctx->root()->type();
+            new_col = ColumnHelper::unfold_const_column(type_desc, new_col->size(), new_col);
 
             if (new_schema.field(i)->is_nullable()) {
                 new_col = ColumnHelper::cast_to_nullable_column(new_col);
