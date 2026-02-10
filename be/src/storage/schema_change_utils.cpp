@@ -275,7 +275,7 @@ bool ChunkChanger::change_chunk_v2(ChunkPtr& base_chunk, ChunkPtr& new_chunk, co
 
         // For rollup, if new column has expr, just evalute the mv expr, otherwise do the normal schema change.
         if (_alter_job_type == TAlterJobType::ROLLUP && _schema_mapping[i].mv_expr_ctx != nullptr) {
-            VLOG(2) << "This rollup column has mv expr, i=" << i << ", ref_column=" << ref_column
+            LOG(ERROR) << "LXH: This rollup column has mv expr, i=" << i << ", ref_column=" << ref_column
                     << ", new_type=" << new_type_info->type();
             // init for expression evaluation only
             auto new_col_status = (_schema_mapping[i].mv_expr_ctx)->evaluate(base_chunk.get());
