@@ -105,6 +105,10 @@ public:
     bool is_binary() const override { return std::is_same_v<T, uint32_t> != 0; }
     bool is_large_binary() const override { return std::is_same_v<T, uint64_t> != 0; }
 
+    bool is_cached() const {
+        return _slices_cache;
+    }
+
     const uint8_t* raw_data() const override {
         if (!_slices_cache) {
             _build_slices();

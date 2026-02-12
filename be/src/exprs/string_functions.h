@@ -808,7 +808,8 @@ StatusOr<ColumnPtr> StringFunctions::field(FunctionContext* context, const Colum
         if (state->all_const) {
             const auto list_col = context->get_constant_column(0);
             const ColumnPtr& c = ColumnHelper::as_raw_column<ConstColumn>(list_col)->data_column();
-            LOG(ERROR) << "LXH: field all const: " << c->get_name();
+            const auto& binary_col = reinterpret_cast<const BinaryColumn&>(c);
+            LOG(ERROR) << "LXH: field all const: " << c->get_name() << ":" << binary_col.is_cached();
             const auto list_val = ColumnHelper::get_const_value<Type>(list_col);
             auto it = state->mp.find(list_val);
             if (it != state->mp.end()) {
