@@ -87,7 +87,7 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
             LOG(ERROR) << "LXH: P: " << i << ":" << col->size();
             i++;
             if (i + 1 == chunk->num_columns()) {
-                col->resize(0);
+                col->resize(2);
             }
         }
         RETURN_IF_ERROR(new_writer->write(chunk));
