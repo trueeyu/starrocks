@@ -67,6 +67,12 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
             _writer_stream_pairs[partition] = std::make_pair(std::move(new_writer), new_stream.get());
             _io_poller->enqueue(std::move(new_stream));
         } else {
+            LOG(ERROR) << "LXH: partition: " << chunk->num_columns();
+            int i = 0;
+            for (const auto& col : chunk->columns()) {
+                LOG(ERROR) << "LXH: P: " << i << ":" << col->size();
+                i++;
+            }
             RETURN_IF_ERROR(writer->write(chunk));
         }
     } else {
