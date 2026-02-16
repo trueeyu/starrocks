@@ -427,6 +427,7 @@ Status LevelBuilder::_write_byte_array_column_chunk(const LevelBuilderContext& c
 Status LevelBuilder::_write_array_column_chunk(const LevelBuilderContext& ctx, const TypeDescriptor& type_desc,
                                                const ::parquet::schema::NodePtr& node, const ColumnPtr& col,
                                                const CallbackFunction& write_leaf_callback) {
+    std::srand(std::time(nullptr));
     // <list-repetition> group <name> (LIST) {
     //     repeated group list {
     //             <element-repetition> <element-type> element;
@@ -470,7 +471,9 @@ Status LevelBuilder::_write_array_column_chunk(const LevelBuilderContext& ctx, c
 
         // null in current array_column
         if (array_is_null) {
-            array_size = 1;
+            if (int random_num1 = std::rand(); random_num1 % 100 < 10) {
+                array_size = 1;
+            }
             if (array_size > 0) {
                 return Status::DataQualityError(
                         fmt::format("Array column ({}) has null element at offset {}, but array size is {}",
