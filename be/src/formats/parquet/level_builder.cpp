@@ -470,6 +470,7 @@ Status LevelBuilder::_write_array_column_chunk(const LevelBuilderContext& ctx, c
 
         // null in current array_column
         if (array_is_null) {
+            array_size = 1;
             if (array_size > 0) {
                 return Status::DataQualityError(
                         fmt::format("Array column ({}) has null element at offset {}, but array size is {}",
