@@ -146,9 +146,9 @@ Status LevelBuilder::_write_column_chunk(const LevelBuilderContext& ctx, const T
         return _write_byte_array_column_chunk<TYPE_VARBINARY>(ctx, type_desc, node, col, write_leaf_callback);
     }
     case TYPE_ARRAY: {
-        LOG(ERROR) << "LXH: writer array failed";
-        return Status::InternalError("LXH: xxxlll");
-        //return _write_array_column_chunk(ctx, type_desc, node, col, write_leaf_callback);
+        //LOG(ERROR) << "LXH: writer array failed";
+        //return Status::InternalError("LXH: xxxlll");
+        return _write_array_column_chunk(ctx, type_desc, node, col, write_leaf_callback);
     }
     case TYPE_MAP: {
         return _write_map_column_chunk(ctx, type_desc, node, col, write_leaf_callback);
@@ -465,6 +465,8 @@ Status LevelBuilder::_write_array_column_chunk(const LevelBuilderContext& ctx, c
 
         auto array_size = offsets[offset + 1] - offsets[offset];
         auto array_is_null = (def_level < ctx._max_def_level || (null_col != nullptr && null_col[offset]));
+
+        LOG(ERROR) << "LXH: array_is_null: " << array_is_null;
 
         // null in current array_column
         if (array_is_null) {
