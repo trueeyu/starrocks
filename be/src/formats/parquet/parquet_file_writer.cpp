@@ -51,6 +51,7 @@ Status ParquetFileWriter::write(Chunk* chunk) {
                 _writer_options->use_legacy_decimal_encoding, _writer_options->use_int96_timestamp_encoding);
     }
 
+    LOG(ERROR) << "LXH: write_chunk: " << chunk->num_rows();
     RETURN_IF_ERROR(_rowgroup_writer->write(chunk));
 
     if (_rowgroup_writer->estimated_buffered_bytes() >= _writer_options->rowgroup_size) {

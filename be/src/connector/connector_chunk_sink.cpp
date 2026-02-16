@@ -83,6 +83,7 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
 }
 
 Status ConnectorChunkSink::finish() {
+    LOG(ERROR) << "LXH: FINISH: " << _writer_stream_pairs.size();
     for (auto& [_, writer_and_stream] : _writer_stream_pairs) {
         callback_on_commit(writer_and_stream.first->commit());
     }
