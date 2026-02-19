@@ -116,7 +116,7 @@ Status ConnectorChunkSink::add(const ChunkPtr& chunk) {
 
 Status ConnectorChunkSink::finish() {
     // Flushing data to disk to make more memory space for subsequent merge operations.
-    LOG(ERROR) << "LXH: partition_chunk_writers";
+    LOG(ERROR) << "LXH: partition_chunk_writers: " << _partition_chunk_writers.size();
     for (auto& [partition_key, writer] : _partition_chunk_writers) {
         RETURN_IF_ERROR(writer->flush());
     }
