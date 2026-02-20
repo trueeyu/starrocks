@@ -59,6 +59,8 @@ Status ChunkWriter::write(Chunk* chunk) {
         ++leaf_column_idx;
     };
 
+    LOG(ERROR) << "LXH: write_num_rows: " << chunk->num_rows() << ", " << chunk->num_columns() << ", " << _type_descs.size();
+
     for (size_t i = 0; i < _type_descs.size(); i++) {
         ASSIGN_OR_RETURN(auto col, _eval_func(chunk, i));
         auto level_builder = LevelBuilder(_type_descs[i], _schema->field(i), _timezone, _use_legacy_decimal_encoding,
