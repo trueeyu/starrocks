@@ -63,9 +63,13 @@ Status ChunkWriter::write(Chunk* chunk) {
         ASSIGN_OR_RETURN(auto col, _eval_func(chunk, i));
         auto level_builder = LevelBuilder(_type_descs[i], _schema->field(i), _timezone, _use_legacy_decimal_encoding,
                                           _use_int96_timestamp_encoding);
+        if (_count > 1024 && i == 1) {
+            return Status::InternalError("lxhx=ssssss");
+        }
         RETURN_IF_ERROR(level_builder.init());
         RETURN_IF_ERROR(level_builder.write(ctx, col, write_leaf_column));
     }
+    _count += chunk->num_rows();
 
     return Status::OK();
 }

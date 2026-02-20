@@ -79,6 +79,7 @@ private:
     std::string _timezone;
     bool _use_legacy_decimal_encoding = false;
     bool _use_int96_timestamp_encoding = false;
+    std::atomic<int64_t> _count = 0;
 };
 
 } // namespace starrocks::parquet
