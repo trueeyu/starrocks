@@ -92,10 +92,10 @@ bool ConnectorSinkOperator::is_finished() const {
 Status ConnectorSinkOperator::set_finishing(RuntimeState* state) {
     _no_more_input = true;
     LOG(ERROR) << "LXH: set_ffff: " << _is_cancelled;
-    if (!_is_cancelled) {
-        LOG(ERROR) << "LXH: ConnectorSinkOperator: set_finishing";
-        RETURN_IF_ERROR(_connector_chunk_sink->finish());
+    if (state->is_cancelled()) {
+        return Status::OK();
     }
+    RETURN_IF_ERROR(_connector_chunk_sink->finish());
     return Status::OK();
 }
 
