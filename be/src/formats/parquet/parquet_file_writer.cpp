@@ -14,6 +14,7 @@
 
 #include "formats/parquet/parquet_file_writer.h"
 
+#include <Poco/Exception.h>
 #include <fmt/core.h>
 #include <glog/logging.h>
 #include <parquet/exception.h>
@@ -71,6 +72,8 @@ FileWriter::CommitResult ParquetFileWriter::commit() {
         _writer->Close();
     } catch (const ::parquet::ParquetStatusException& e) {
         result.io_status.update(Status::IOError(fmt::format("{}: {}", "close file error", e.what())));
+    } catch (std::exception& e) {
+        LOG(ERROR) << "LXH: Unexpected exception when closing parquet file: " << e.what();
     }
 
     if (auto status = _output_stream->Close(); !status.ok()) {
