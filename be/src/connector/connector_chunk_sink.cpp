@@ -53,6 +53,7 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
     }
 
     auto it = _writer_stream_pairs.find(partition);
+    LOG(ERROR) << "LXH: add_chunk: " << (it != _writer_stream_pairs.end());
     if (it != _writer_stream_pairs.end()) {
         Writer* writer = it->second.first.get();
         if (writer->get_written_bytes() >= _max_file_size) {
