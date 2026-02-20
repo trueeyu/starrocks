@@ -89,6 +89,7 @@ bool ConnectorSinkOperator::is_finished() const {
         _fragment_context->cancel(status);
     }
     bool ret = finished && _connector_chunk_sink->is_finished();
+    LOG(ERROR) << "LXH: is_finished: " << finished << ":" << _connector_chunk_sink->is_finished();
     return ret;
 }
 
@@ -96,6 +97,7 @@ Status ConnectorSinkOperator::set_finishing(RuntimeState* state) {
     _no_more_input = true;
     LOG(ERROR) << "LXH: set_ffff: " << _is_cancelled << ":" << state->is_cancelled();
     if (state->is_cancelled()) {
+        _connector_chunk_sink->set_status(Status::Cancelled("is cancelled when set finishing"));
         return Status::OK();
     }
     RETURN_IF_ERROR(_connector_chunk_sink->finish());
