@@ -104,6 +104,7 @@ bool ConnectorSinkOperator::pending_finish() const {
 }
 
 Status ConnectorSinkOperator::set_cancelled(RuntimeState* state) {
+    LOG(ERROR) <<  "LXH: set_cancelled, state=" << _is_cancelled;
     _is_cancelled = true;
     return Status::OK();
 }
