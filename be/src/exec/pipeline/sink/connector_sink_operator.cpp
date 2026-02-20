@@ -79,8 +79,10 @@ bool ConnectorSinkOperator::is_finished() const {
     }
 
     auto [status, finished] = _io_poller->poll();
+    LOG(ERROR) << "LXH: pooler: " << status << ":" << finished;
     if (status.ok()) {
         status = _connector_chunk_sink->status();
+        LOG(ERROR) << "LXH: sink_statues: " << status;
     }
     if (!status.ok()) {
         LOG(WARNING) << "cancel fragment: " << status;
