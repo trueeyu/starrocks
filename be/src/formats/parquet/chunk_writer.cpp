@@ -66,6 +66,9 @@ Status ChunkWriter::write(Chunk* chunk) {
         auto level_builder = LevelBuilder(_type_descs[i], _schema->field(i), _timezone, _use_legacy_decimal_encoding,
                                           _use_int96_timestamp_encoding);
         RETURN_IF_ERROR(level_builder.init());
+        if (i == 1) {
+            return Status::InternalError("LXH: xxxxx_sss_ss");
+        }
         RETURN_IF_ERROR(level_builder.write(ctx, col, write_leaf_column));
     }
 
