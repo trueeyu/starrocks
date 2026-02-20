@@ -666,8 +666,7 @@ void ThreadPool::dispatch_thread() {
             // Continue execution to avoid thread pool crash. The task's destructor will be
             // called below to clean up RAII-managed resources.
         } catch (const std::exception& e) {
-            LOG(ERROR) << "Thread pool task failed with exception in pool '" << _name << "': " << e.what() << "\n"
-                       << get_stack_trace();
+            LOG(ERROR) << "Thread pool task failed with exception in pool '" << _name << "': " << e.what() << "\n";
             // Continue execution to avoid thread pool crash. The task's destructor will be
             // called below to clean up RAII-managed resources.
         } catch (...) {
