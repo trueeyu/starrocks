@@ -72,6 +72,8 @@ FileWriter::CommitResult ParquetFileWriter::commit() {
         if (_writer != nullptr) {
             _writer->Close();
         }
+        LOG(ERROR) << "LXH: close file";
+        result.io_status.update(Status::IOError("LXH: xxxxxxxxxxxxxxx"));
     } catch (const ::parquet::ParquetStatusException& e) {
         result.io_status.update(Status::IOError(fmt::format("{}: {}", "close file error", e.what())));
     }

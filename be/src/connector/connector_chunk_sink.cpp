@@ -125,6 +125,8 @@ Status ConnectorChunkSink::finish() {
     for (auto& [partition_key, writer] : _partition_chunk_writers) {
         RETURN_IF_ERROR(writer->finish());
     }
+    LOG(ERROR) << "LXH: sink finish";
+    //return Status::InternalError("LXH: sink finish error");
     return Status::OK();
 }
 

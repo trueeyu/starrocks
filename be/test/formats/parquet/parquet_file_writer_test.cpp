@@ -14,6 +14,7 @@
 
 #include "formats/parquet/parquet_file_writer.h"
 
+#include <arrow/testing/gtest_util.h>
 #include <gtest/gtest.h>
 
 #include <filesystem>
