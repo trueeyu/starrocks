@@ -76,8 +76,8 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
     } else {
         auto path = partitioned ? _location_provider->get(partition) : _location_provider->get();
         ASSIGN_OR_RETURN(auto new_writer_and_stream, _file_writer_factory->create(path));
-        std::unique_ptr<Writer> new_writer = std::move(new_writer_and_stream.writer);
         std::unique_ptr<Stream> new_stream = std::move(new_writer_and_stream.stream);
+        std::unique_ptr<Writer> new_writer = std::move(new_writer_and_stream.writer);
         RETURN_IF_ERROR(new_writer->init());
         RETURN_IF_ERROR(new_writer->write(chunk));
         _writer_stream_pairs[partition] = std::make_pair(std::move(new_writer), new_stream.get());
