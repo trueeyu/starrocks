@@ -158,11 +158,11 @@ public:
 
     T* get_object(size_t n) const { return const_cast<T*>(&_pool[n]); }
 
-    Container& get_data() { return ObjectDataProxyContainer(*this); }
+    Container& get_data() { return _immutable_container; }
 
-    const Container& get_data() const { return ObjectDataProxyContainer(*this); }
+    const Container& get_data() const { return _immutable_container; }
 
-    const ObjectDataProxyContainer immutable_data() const { return ObjectDataProxyContainer(*this); }
+    const ObjectDataProxyContainer immutable_data() const { return _immutable_container; }
 
     Datum get(size_t n) const override { return Datum(get_object(n)); }
 
@@ -261,5 +261,7 @@ private:
     // Only for data loading
     mutable Buffer<Slice> _slices;
     mutable Buffer<uint8_t> _buffer;
+
+    ObjectDataProxyContainer _immutable_container = ObjectDataProxyContainer(*this);
 };
 } // namespace starrocks
