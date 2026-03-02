@@ -158,15 +158,9 @@ public:
 
     T* get_object(size_t n) const { return const_cast<T*>(&_pool[n]); }
 
-    Container& get_data() {
-        _build_cache();
-        return _cache;
-    }
+    Container& get_data() { return ObjectDataProxyContainer(*this); }
 
-    const Container& get_data() const {
-        _build_cache();
-        return _cache;
-    }
+    const Container& get_data() const { return ObjectDataProxyContainer(*this); }
 
     const ObjectDataProxyContainer immutable_data() const { return ObjectDataProxyContainer(*this); }
 
