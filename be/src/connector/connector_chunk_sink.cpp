@@ -59,7 +59,9 @@ Status ConnectorChunkSink::add(Chunk* chunk) {
             auto commit_result = writer->close();
             callback_on_commit(commit_result);
             _writer_stream_pairs.erase(it);
+            LOG(ERROR) << "LXH: status 1: " << commit_result.io_status;
             RETURN_IF_ERROR(commit_result.io_status);
+            LOG(ERROR) << "LXH: status 2: " << commit_result.io_status;
             auto path = partitioned ? _location_provider->get(partition) : _location_provider->get();
             ASSIGN_OR_RETURN(auto new_writer_and_stream, _file_writer_factory->create(path));
             std::unique_ptr<Writer> new_writer = std::move(new_writer_and_stream.writer);
