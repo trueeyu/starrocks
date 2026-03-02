@@ -35,7 +35,6 @@ class ObjectColumn : public CowFactory<ColumnFactory<Column, ObjectColumn<T>>, O
 
 public:
     using ValueType = T;
-    using Container = Buffer<ValueType*>;
 
     struct ObjectDataProxyContainer {
         ObjectDataProxyContainer(const ObjectColumn& column) : _column(column) {}
@@ -47,6 +46,7 @@ public:
     private:
         const ObjectColumn& _column;
     };
+    using Container = ObjectDataProxyContainer;
     using ImmContainer = ObjectDataProxyContainer;
 
     ObjectColumn() = default;
@@ -158,12 +158,12 @@ public:
 
     T* get_object(size_t n) const { return const_cast<T*>(&_pool[n]); }
 
-    Buffer<T*>& get_data() {
+    Container& get_data() {
         _build_cache();
         return _cache;
     }
 
-    const Buffer<T*>& get_data() const {
+    const Container& get_data() const {
         _build_cache();
         return _cache;
     }
