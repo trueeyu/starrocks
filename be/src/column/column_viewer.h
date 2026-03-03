@@ -43,7 +43,7 @@ public:
 
     explicit ColumnViewer(const ColumnPtr& column);
 
-    const RunTimeCppType<Type> value(const size_t idx) const { return _data[idx & _not_const_mask]; }
+    const RunTimeCppType<Type> value(const size_t idx) const { return (*_data)[idx & _not_const_mask]; }
 
     const bool is_null(const size_t idx) const { return _null_data[idx & _null_mask]; }
 
@@ -51,16 +51,16 @@ public:
 
     const NullColumnPtr& null_column() const { return _null_column; };
 
-    typename RunTimeColumnType<Type>::Ptr column() const { return _column; };
+    RunTimeColumnType<Type>::Ptr column() const { return _column; };
 
 private:
     // column ptr
-    typename RunTimeColumnType<Type>::Ptr _column;
+    RunTimeColumnType<Type>::Ptr _column;
 
     NullColumnPtr _null_column;
 
     // raw pointer
-    const RunTimeCppType<Type>* _data;
+    const RunTimeProxyContainerType<Type>* _data;
 
     const NullColumn::ValueType* _null_data;
 
