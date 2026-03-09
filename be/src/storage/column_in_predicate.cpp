@@ -497,7 +497,7 @@ public:
     }
 
     StatusOr<uint16_t> evaluate_branchless(const Column* column, uint16_t* sel, uint16_t sel_size) const override {
-        auto* v = reinterpret_cast<const CppType*>(column->raw_data());
+        const auto* v = ColumnHelper::cast_to_raw<LT>(column)->immutable_raw_data();
 
         uint16_t new_size = 0;
         if (!column->has_null()) {
