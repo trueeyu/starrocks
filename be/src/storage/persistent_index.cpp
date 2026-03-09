@@ -3484,8 +3484,15 @@ Status PersistentIndex::_build_commit(TabletLoader* loader, PersistentIndexMetaP
     return status;
 }
 
-Status PersistentIndex::_insert_rowsets(TabletLoader* loader, const Schema& pkey_schema, MutableColumnPtr pk_column) {
+Status PersistentIndex::_insert_rowsets(TabletLoader* loader, const Schema& pkey_schema) {
     CHECK_MEM_LIMIT("PersistentIndex::_insert_rowsets");
+
+    MutableColumnPtr pk_column;
+    if (pkey_schema.num_fields() > 1) {
+        RETURN_IF_ERROR(
+                PrimaryKeyEncoder::create_column(pkey_schema, &pk_column, PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1));
+    }
+
     std::vector<uint32_t> rowids;
     TRY_CATCH_BAD_ALLOC(rowids.reserve(4096));
     ChunkUniquePtr chunk_shared_ptr;
@@ -3536,7 +3543,7 @@ Status PersistentIndex::_insert_rowsets(TabletLoader* loader, const Schema& pkey
                             keys.emplace_back(fkeys, _key_size);
                             fkeys += _key_size;
                         }
-                        st = insert(pkc->size(), reinterpret_cast<const Slice*>(keys.data()), values.data(), false);
+                        st = insert(pkc->size(), keys.data(), values.data(), false);
                     }
                     if (!st.ok()) {
                         LOG(ERROR) << "load index failed: tablet=" << loader->tablet_id() << " rowset:" << rowset_id
@@ -5417,12 +5424,7 @@ Status PersistentIndex::_load_by_loader(TabletLoader* loader) {
     data->set_offset(0);
     data->set_size(0);
 
-    MutableColumnPtr pk_column;
-    if (pkey_schema.num_fields() > 1) {
-        RETURN_IF_ERROR(
-                PrimaryKeyEncoder::create_column(pkey_schema, &pk_column, PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1));
-    }
-    RETURN_IF_ERROR(_insert_rowsets(loader, pkey_schema, std::move(pk_column)));
+    RETURN_IF_ERROR(_insert_rowsets(loader, pkey_schema));
     RETURN_IF_ERROR(_build_commit(loader, index_meta));
     loader->set_write_amp_score(PersistentIndex::major_compaction_score(index_meta));
     bool is_slow = (timer.elapsed_time() / 1000000) > config::apply_version_slow_log_sec * 1000;
