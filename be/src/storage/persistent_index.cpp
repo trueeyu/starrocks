@@ -3489,8 +3489,8 @@ Status PersistentIndex::_insert_rowsets(TabletLoader* loader, const Schema& pkey
 
     MutableColumnPtr pk_column;
     if (pkey_schema.num_fields() > 1) {
-        RETURN_IF_ERROR(
-                PrimaryKeyEncoder::create_column(pkey_schema, &pk_column, PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1));
+        ASSIGN_OR_RETURN(pk_column,
+                         PrimaryKeyEncoder::create_column(pkey_schema, PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1));
     }
 
     std::vector<uint32_t> rowids;
