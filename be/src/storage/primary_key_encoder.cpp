@@ -269,12 +269,31 @@ Status PrimaryKeyEncoder::create_column(const Schema& schema, MutableColumnPtr* 
     return create_column(schema, pcolumn, key_idxes, encoding_type, large_column);
 }
 
-Status PrimaryKeyEncoder::create_column(const Schema& schema, MutableColumnPtr* pcolumn,
-                                        const std::vector<ColumnId>& key_idxes, PrimaryKeyEncodingType encoding_type,
-                                        bool large_column) {
+StatusOr<MutableColumnPtr> PrimaryKeyEncoder::create_column_with_type(LogicalType lt, bool large_column) {
+    switch (lt) {
+#define M(TYPE) \
+    case TYPE:  \
+        return RunTimeColumnType<TYPE>::create();
+        APPLY_FOR_ALL_PK_SUPPORT_FIXED_TYPE(M)
+#undef M
+    case TYPE_VARCHAR:
+        if (large_column) {
+            return LargeBinaryColumn::create();
+        } else {
+            return BinaryColumn::create();
+        }
+    default:
+        return Status::NotSupported(StringPrintf("primary key type not support: %s", logical_type_to_string(lt)));
+    }
+}
+
+StatusOr<LogicalType> PrimaryKeyEncoder::get_encoded_column_type(const Schema& schema,
+                                                                 const std::vector<ColumnId>& key_idxes,
+                                                                 PrimaryKeyEncodingType encoding_type) {
     if (!is_supported(schema, key_idxes)) {
         return Status::NotSupported("type not supported for primary key encoding");
     }
+
     // TODO: let `Chunk::column_from_field_type` and `Chunk::column_from_field` return a
     // `MutableColumnPtr` instead of `std::shared_ptr<Column>`, in order to reuse
     // its code here.
@@ -282,33 +301,28 @@ Status PrimaryKeyEncoder::create_column(const Schema& schema, MutableColumnPtr* 
         // simple encoding
         // integer's use fixed length original column
         // varchar use binary
-        auto type = schema.field(key_idxes[0])->type()->type();
-        switch (type) {
-#define M(TYPE)                                       \
-    case TYPE:                                        \
-        *pcolumn = RunTimeColumnType<TYPE>::create(); \
-        break;
-            APPLY_FOR_ALL_PK_SUPPORT_FIXED_TYPE(M)
-#undef M
-        case TYPE_VARCHAR:
-            if (large_column) {
-                *pcolumn = LargeBinaryColumn::create();
-            } else {
-                *pcolumn = BinaryColumn::create();
-            }
-            break;
-        default:
-            return Status::NotSupported(StringPrintf("primary key type not support: %s", logical_type_to_string(type)));
-        }
+        return schema.field(key_idxes[0])->type()->type();
     } else {
         // composite keys encoding to binary
         // TODO(cbl): support fixed length encoded keys, e.g. (int32, int32) => int64
-        if (large_column) {
-            *pcolumn = LargeBinaryColumn::create();
-        } else {
-            *pcolumn = BinaryColumn::create();
-        }
+        return TYPE_VARCHAR;
     }
+}
+
+StatusOr<LogicalType> PrimaryKeyEncoder::get_encoded_column_type(const Schema& schema,
+                                                                 PrimaryKeyEncodingType encoding_type) {
+    std::vector<ColumnId> key_idxes(schema.num_key_fields());
+    for (ColumnId i = 0; i < schema.num_key_fields(); ++i) {
+        key_idxes[i] = i;
+    }
+    return get_encoded_column_type(schema, key_idxes, encoding_type);
+}
+
+Status PrimaryKeyEncoder::create_column(const Schema& schema, MutableColumnPtr* pcolumn,
+                                        const std::vector<ColumnId>& key_idxes, PrimaryKeyEncodingType encoding_type,
+                                        bool large_column) {
+    ASSIGN_OR_RETURN(LogicalType type, get_encoded_column_type(schema, key_idxes, encoding_type));
+    ASSIGN_OR_RETURN(*pcolumn, create_column_with_type(type, large_column));
     return Status::OK();
 }
 

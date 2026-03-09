@@ -153,6 +153,11 @@ public:
     static Status create_column(const Schema& schema, MutableColumnPtr* pcolumn, PrimaryKeyEncodingType encoding_type,
                                 bool large_column = false);
 
+    static StatusOr<MutableColumnPtr> create_column_with_type(LogicalType lt, bool large_column = false);
+    static StatusOr<LogicalType> get_encoded_column_type(const Schema& schema, const std::vector<ColumnId>& key_idxes,
+                                                         PrimaryKeyEncodingType encoding_type);
+    static StatusOr<LogicalType> get_encoded_column_type(const Schema& schema, PrimaryKeyEncodingType encoding_type);
+
     // create suitable column to hold encoded key
     //   schema: schema of the table
     //   pcolumn: output column

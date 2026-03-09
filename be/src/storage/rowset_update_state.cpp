@@ -221,9 +221,8 @@ Status RowsetUpdateState::load_upserts(Rowset* rowset, uint32_t upsert_id) {
         pk_columns.push_back((uint32_t)i);
     }
     Schema pkey_schema = ChunkHelper::convert_schema(schema, pk_columns);
-    MutableColumnPtr pk_column;
-    RETURN_IF_ERROR(PrimaryKeyEncoder::create_column(pkey_schema, &pk_column,
-                                                     PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1, true));
+    ASSIGN_OR_RETURN(MutableColumnPtr pk_column,
+                     PrimaryKeyEncoder::create_column(pkey_schema, PrimaryKeyEncodingType::PK_ENCODING_TYPE_V1, true));
     return _load_upserts(rowset, upsert_id, pk_column.get());
 }
 
