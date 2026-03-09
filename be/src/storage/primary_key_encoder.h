@@ -150,7 +150,7 @@ public:
     //   pcolumn: output column
     //   large_column: some usage may fill the column with more than uint32_max elements, set true to support this
     //   encoding_type: encoding type of the primary key
-    static StatusOr<MutableColumnPtr> create_column(const Schema& schema, PrimaryKeyEncodingType encoding_type,
+    static Status create_column(const Schema& schema, MutableColumnPtr* pcolumn, PrimaryKeyEncodingType encoding_type,
                                 bool large_column = false);
 
     // create suitable column to hold encoded key
@@ -159,7 +159,7 @@ public:
     //   key_idxes: indexes of columns for encoding
     //   encoding_type: encoding type of the primary key
     //   large_column: some usage may fill the column with more than uint32_max elements, set true to support this
-    static StatusOr<MutableColumnPtr> create_column(const Schema& schema, const std::vector<ColumnId>& key_idxes,
+    static Status create_column(const Schema& schema, MutableColumnPtr* pcolumn, const std::vector<ColumnId>& key_idxes,
                                 PrimaryKeyEncodingType encoding_type, bool large_column = false);
 
     static void encode(const Schema& schema, const Chunk& chunk, size_t offset, size_t len, Column* dest,
