@@ -108,238 +108,306 @@ template <>
 struct RunTimeTypeTraits<TYPE_BOOLEAN> {
     using CppType = uint8_t;
     using ColumnType = BooleanColumn;
+    using LargeColumnType = BooleanColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_TINYINT> {
     using CppType = int8_t;
     using ColumnType = Int8Column;
+    using LargeColumnType = Int8Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_UNSIGNED_TINYINT> {
     using CppType = uint8_t;
     using ColumnType = UInt8Column;
+    using LargeColumnType = UInt8Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_SMALLINT> {
     using CppType = int16_t;
     using ColumnType = Int16Column;
+    using LargeColumnType = Int16Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_UNSIGNED_SMALLINT> {
     using CppType = uint16_t;
     using ColumnType = UInt16Column;
+    using LargeColumnType = UInt16Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_INT> {
     using CppType = int32_t;
     using ColumnType = Int32Column;
+    using LargeColumnType = Int32Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_UNSIGNED_INT> {
     using CppType = uint32_t;
     using ColumnType = UInt32Column;
+    using LargeColumnType = UInt32Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_BIGINT> {
     using CppType = int64_t;
     using ColumnType = Int64Column;
+    using LargeColumnType = Int64Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_UNSIGNED_BIGINT> {
     using CppType = uint64_t;
     using ColumnType = UInt64Column;
+    using LargeColumnType = UInt64Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_LARGEINT> {
     using CppType = int128_t;
     using ColumnType = Int128Column;
+    using LargeColumnType = Int128Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_FLOAT> {
     using CppType = float;
     using ColumnType = FloatColumn;
+    using LargeColumnType = FloatColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DOUBLE> {
     using CppType = double;
     using ColumnType = DoubleColumn;
+    using LargeColumnType = DoubleColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DECIMALV2> {
     using CppType = DecimalV2Value;
     using ColumnType = DecimalColumn;
+    using LargeColumnType = DecimalColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DECIMAL32> {
     using CppType = int32_t;
     using ColumnType = Decimal32Column;
+    using LargeColumnType = Decimal32Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DECIMAL64> {
     using CppType = int64_t;
     using ColumnType = Decimal64Column;
+    using LargeColumnType = Decimal64Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DECIMAL128> {
     using CppType = int128_t;
     using ColumnType = Decimal128Column;
+    using LargeColumnType = Decimal128Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DECIMAL256> {
     using CppType = int256_t;
     using ColumnType = Decimal256Column;
+    using LargeColumnType = Decimal256Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_INT256> {
     using CppType = int256_t;
     using ColumnType = Int256Column;
+    using LargeColumnType = Int256Column;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_NULL> {
     using CppType = uint8_t;
     using ColumnType = NullColumn;
+    using LargeColumnType = NullColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_CHAR> {
     using CppType = Slice;
     using ColumnType = BinaryColumn;
+    using LargeColumnType = LargeBinaryColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_VARCHAR> {
     using CppType = Slice;
     using ColumnType = BinaryColumn;
+    using LargeColumnType = LargeBinaryColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DATE> {
     using CppType = DateValue;
     using ColumnType = DateColumn;
+    using LargeColumnType = DateColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_DATETIME> {
     using CppType = TimestampValue;
     using ColumnType = TimestampColumn;
+    using LargeColumnType = TimestampColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_TIME> {
     using CppType = double;
     using ColumnType = DoubleColumn;
+    using LargeColumnType = DoubleColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_HLL> {
     using CppType = HyperLogLog*;
     using ColumnType = HyperLogLogColumn;
+    using LargeColumnType = HyperLogLogColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_OBJECT> {
     using CppType = BitmapValue*;
     using ColumnType = BitmapColumn;
+    using LargeColumnType = BitmapColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_PERCENTILE> {
     using CppType = PercentileValue*;
     using ColumnType = PercentileColumn;
+    using LargeColumnType = PercentileColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_JSON> {
     using CppType = JsonValue*;
     using ColumnType = JsonColumn;
+    using LargeColumnType = JsonColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_VARIANT> {
     using CppType = VariantRowValue*;
     using ColumnType = VariantColumn;
+    using LargeColumnType = VariantColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_BINARY> {
     using CppType = Slice;
     using ColumnType = BinaryColumn;
+    using LargeColumnType = LargeBinaryColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_VARBINARY> {
     using CppType = Slice;
     using ColumnType = BinaryColumn;
+    using LargeColumnType = LargeBinaryColumn;
     using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_STRUCT> {
     using CppType = DatumStruct;
     using ColumnType = StructColumn;
-    using ImmContainerType = ColumnType::Container;
+    using LargeColumnType = StructColumn;
+    using ImmContainerType = ColumnType::ImmContainer;
+    using ImmLargeContainerType = LargeColumnType::ImmContainer;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_MAP> {
     using CppType = DatumMap;
     using ColumnType = MapColumn;
+    using LargeColumnType = MapColumn;
     using ImmContainerType = void;
+    using ImmLargeContainerType = void;
 };
 
 template <>
 struct RunTimeTypeTraits<TYPE_ARRAY> {
     using CppType = DatumArray;
     using ColumnType = ArrayColumn;
+    using LargeColumnType = ArrayColumn;
     using ImmContainerType = void;
+    using ImmLargeContainerType = void;
 };
 
 template <LogicalType Type>
@@ -349,7 +417,13 @@ template <LogicalType Type>
 using RunTimeColumnType = typename RunTimeTypeTraits<Type>::ColumnType;
 
 template <LogicalType Type>
+using RunTimeLargeColumnType = typename RunTimeTypeTraits<Type>::LargeColumnType;
+
+template <LogicalType Type>
 using RunTimeImmContainerType = typename RunTimeTypeTraits<Type>::ImmContainerType;
+
+template <LogicalType Type>
+using RunTimeImmLargeContainerType = typename RunTimeTypeTraits<Type>::ImmLargeContainerType;
 
 // Movable: rvalue reference type
 template <LogicalType Type>

@@ -25,6 +25,7 @@ class StructColumn final : public CowFactory<ColumnFactory<Column, StructColumn>
 public:
     using ValueType = void;
     using Container = Buffer<std::string>;
+    using ImmContainer = std::span<const std::string>;
 
     // Used to construct an unnamed struct
     StructColumn(MutableColumns&& fields);
