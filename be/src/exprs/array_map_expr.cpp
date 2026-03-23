@@ -301,6 +301,7 @@ StatusOr<ColumnPtr> ArrayMapExpr::evaluate_checked(ExprContext* context, Chunk* 
 
     for (int i = 1; i < _children.size(); ++i) {
         ASSIGN_OR_RETURN(auto child_col, context->evaluate(_children[i], chunk));
+        LOG(ERROR) << "LXH: array_map child " << i << " evaluated column: " << child_col->get_name();
         // the column is a null literal.
         if (child_col->only_null()) {
             return ColumnHelper::align_return_type(std::move(child_col), type(), chunk->num_rows(), true);
