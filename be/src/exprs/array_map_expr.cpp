@@ -302,6 +302,16 @@ StatusOr<ColumnPtr> ArrayMapExpr::evaluate_checked(ExprContext* context, Chunk* 
     for (int i = 1; i < _children.size(); ++i) {
         ASSIGN_OR_RETURN(auto child_col, context->evaluate(_children[i], chunk));
         LOG(ERROR) << "LXH: array_map child " << i << " evaluated column: " << child_col->get_name();
+        {
+            auto* tmp_col1 = ColumnHelper::get_data_column(child_col);
+            if (tmp_col1->is_array()) {
+                auto& tmp_col2 = down_cast<const ArrayColumn*>(tmp_col1)->elements_column();
+                auto* tmp_col3 = ColumnHelper::get_data_column(tmp_col2);
+                if (tmp_col3->is_binary()) {
+                    LOG(ERROR) << "LXH: SIZE: " << down_cast<const BinaryColumn*>(tmp_col3)->get_immutable_bytes().size();
+                }
+            }
+        }
         // the column is a null literal.
         if (child_col->only_null()) {
             return ColumnHelper::align_return_type(std::move(child_col), type(), chunk->num_rows(), true);
