@@ -306,6 +306,7 @@ StatusOr<ColumnPtr> ArrayMapExpr::evaluate_checked(ExprContext* context, Chunk* 
             auto* tmp_col1 = ColumnHelper::get_data_column(child_col);
             if (tmp_col1->is_array()) {
                 auto& tmp_col2 = down_cast<const ArrayColumn*>(tmp_col1)->elements_column();
+                LOG(ERROR) << "LXH: ARRAY_SIZE: " << tmp_col2->size();
                 auto* tmp_col3 = ColumnHelper::get_data_column(tmp_col2);
                 if (tmp_col3->is_binary()) {
                     LOG(ERROR) << "LXH: SIZE: " << down_cast<const BinaryColumn*>(tmp_col3)->get_immutable_bytes().size();
