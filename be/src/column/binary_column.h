@@ -80,6 +80,18 @@ public:
         const BinaryColumnBase* _column = nullptr;
     };
 
+    struct ImmContainer2 {
+        ImmContainer2() = default;
+        explicit ImmContainer2(const BinaryColumnBase& column) : _column(&column) {}
+
+        Slice operator[](size_t index) const { return _column->get_slice2(index); }
+
+        size_t size() const { return _column->size(); }
+
+    private:
+        const BinaryColumnBase* _column = nullptr;
+    };
+
     using Container = Buffer<Slice>;
     using GermanStringContainer = Buffer<GermanString>;
 
@@ -172,6 +184,10 @@ public:
     Slice get_slice(size_t idx) const {
         const uint8_t* base = _data_base();
         return Slice(base + _offsets[idx], _offsets[idx + 1] - _offsets[idx]);
+    }
+
+    Slice get_slice2(size_t idx) const {
+        return Slice(_bytes.data() + _offsets[idx], _offsets[idx + 1] - _offsets[idx]);
     }
 
     const char* get_string_begin() const { return reinterpret_cast<const char*>(_data_base()); }
@@ -348,6 +364,7 @@ public:
     }
 
     ImmContainer immutable_data() const { return ImmContainer(*this); }
+    ImmContainer2 immutable_data2() const { return ImmContainer2(*this); }
 
     ProxyContainer get_proxy_data() const { return ProxyContainer(*this); }
 
