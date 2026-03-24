@@ -65,7 +65,7 @@ void BinaryColumnCopyBench::do_bench(benchmark::State& state) {
     auto column = _gen_binary_column();
     BinaryColumn dest_column;
 
-    if (_mode == 1) {
+    if (_mode == 3) {
         state.ResumeTiming();
 
         auto data = column->immutable_data();
@@ -83,7 +83,7 @@ void BinaryColumnCopyBench::do_bench(benchmark::State& state) {
         }
 
         state.PauseTiming();
-    } else if (_mode == 3) {
+    } else if (_mode == 1) {
         state.ResumeTiming();
         auto data = column->get_proxy_data();
 
