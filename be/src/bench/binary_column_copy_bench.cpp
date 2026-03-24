@@ -129,13 +129,13 @@ static void bench_func(benchmark::State& state) {
 }
 
 static void process_args(benchmark::internal::Benchmark* b) {
-    b->Args({1, 4096})->Iterations(10000);
-    b->Args({2, 4096})->Iterations(10000);
-    b->Args({3, 4096})->Iterations(10000);
+    b->Args({1, 4096})->Iterations(100000);
+    b->Args({2, 4096})->Iterations(100000);
+    b->Args({3, 4096})->Iterations(100000);
 
-    b->Args({1, 40960})->Iterations(1000);
-    b->Args({2, 40960})->Iterations(1000);
-    b->Args({3, 40960})->Iterations(1000);
+    b->Args({1, 40960})->Iterations(10000);
+    b->Args({2, 40960})->Iterations(10000);
+    b->Args({3, 40960})->Iterations(10000);
 
     b->Args({1, 409600})->Iterations(100);
     b->Args({2, 409600})->Iterations(100);
