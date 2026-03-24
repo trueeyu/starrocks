@@ -75,8 +75,8 @@ void BinaryColumnCopyBench::do_bench(benchmark::State& state) {
 
         state.PauseTiming();
     } else if (_mode == 2) {
-        auto data = column->immutable_data2();
         state.ResumeTiming();
+        auto data = column->immutable_data2();
 
         for (size_t i = 0; i < _chunk_size; i++) {
             dest_column.append(data[i]);
@@ -120,8 +120,8 @@ static void bench_func(benchmark::State& state) {
 }
 
 static void process_args(benchmark::internal::Benchmark* b) {
-    b->Args({1, 4096})->Iterations(100);
-    b->Args({2, 4096})->Iterations(100);
+    b->Args({1, 4096})->Iterations(1000);
+    b->Args({2, 4096})->Iterations(1000);
 
     b->Args({1, 40960})->Iterations(100);
     b->Args({2, 40960})->Iterations(100);
