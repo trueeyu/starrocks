@@ -83,6 +83,15 @@ void BinaryColumnCopyBench::do_bench(benchmark::State& state) {
         }
 
         state.PauseTiming();
+    } else if (_mode == 3) {
+        state.ResumeTiming();
+        auto data = column->get_proxy_data();
+
+        for (size_t i = 0; i < _chunk_size; i++) {
+            dest_column.append(data[i]);
+        }
+
+        state.PauseTiming();
     }
 }
 
