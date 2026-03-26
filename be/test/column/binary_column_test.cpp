@@ -669,4 +669,37 @@ PARALLEL_TEST(BinaryColumnTest, test_reference_memory_usage) {
     ASSERT_EQ(0, column->Column::reference_memory_usage());
 }
 
+// Regression test for crash in BinaryColumnBase::append(Column, offset, count) when source
+// _bytes is empty (all strings are empty strings, so _bytes.data() == nullptr).
+// binary_column.cpp:62: `&b._bytes[b._offsets[offset]]` is UB when _bytes.data() == nullptr.
+// The fix is to use b._bytes.data() + b._offsets[offset] instead of operator[].
+PARALLEL_TEST(BinaryColumnTest, test_append_range_from_all_empty_strings) {
+    // Build a source BinaryColumn whose _bytes vector is empty (no bytes allocated)
+    // because all appended strings are empty. _bytes.data() == nullptr in this state.
+    auto src = BinaryColumn::create();
+    src->append(Slice(""));
+    src->append(Slice(""));
+    src->append(Slice(""));
+    // _bytes is empty: all offsets are 0, no actual byte data
+    ASSERT_EQ(0u, src->get_bytes().size());
+    ASSERT_EQ(3u, src->size());
+
+    // dst->append(src, offset, count) must not crash or exhibit UB.
+    auto dst = BinaryColumn::create();
+    dst->append(*src, 0, 3);
+    ASSERT_EQ(3u, dst->size());
+    ASSERT_EQ(Slice(""), dst->get_slice(0));
+    ASSERT_EQ(Slice(""), dst->get_slice(1));
+    ASSERT_EQ(Slice(""), dst->get_slice(2));
+
+    // Also test partial range
+    auto dst2 = BinaryColumn::create();
+    dst2->append(Slice("prefix"));
+    dst2->append(*src, 1, 2);
+    ASSERT_EQ(3u, dst2->size());
+    ASSERT_EQ(Slice("prefix"), dst2->get_slice(0));
+    ASSERT_EQ(Slice(""), dst2->get_slice(1));
+    ASSERT_EQ(Slice(""), dst2->get_slice(2));
+}
+
 } // namespace starrocks

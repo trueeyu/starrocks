@@ -20,9 +20,12 @@
 #include <random>
 #include <utility>
 
+#include "column/array_column.h"
+#include "column/binary_column.h"
 #include "column/chunk.h"
 #include "column/column.h"
 #include "column/column_helper.h"
+#include "column/nullable_column.h"
 #include "column/vectorized_fwd.h"
 #include "exec/sorting/merge.h"
 #include "exec/sorting/merge_path.h"
@@ -603,6 +606,103 @@ TEST(SortingTest, compare) {
         CompareVector vector(1);
         EXPECT_EQ(1, compare_column(column, vector, rhs_value, SortDesc(1, 1)));
     }
+}
+
+// Regression test for SIGSEGV in materialize_by_permutation when the chunk contains a
+// NullableColumn(ArrayColumn<VARCHAR>) with rows whose string elements are all empty.
+// The crash path is:
+//   materialize_by_permutation
+//   → do_visit(NullableColumn*) [sort_permute.cpp:73]
+//   → materialize_column_by_permutation on the inner ArrayColumn
+//   → do_visit(ArrayColumn*) [sort_permute.cpp:151]
+//   → ArrayColumn::append [array_column.cpp:109]
+//   → BinaryColumnBase::append [binary_column.cpp:62]
+//   → &b._bytes[b._offsets[offset]]  ← UB when _bytes.data()==nullptr
+TEST(SortPermuteTest, materialize_nullable_array_varchar_with_empty_string_elements) {
+    // Build a BinaryColumn whose _bytes is empty (data()==nullptr):
+    // all string elements in all arrays are the empty string "".
+    auto elements = BinaryColumn::create();
+    auto offsets = UInt32Column::create();
+    offsets->get_data().push_back(0); // sentinel
+
+    // Row 0: ["", ""]
+    elements->append(Slice(""));
+    elements->append(Slice(""));
+    offsets->get_data().push_back(2);
+
+    // Row 1: [""]
+    elements->append(Slice(""));
+    offsets->get_data().push_back(3);
+
+    // Row 2: ["", "", ""]
+    elements->append(Slice(""));
+    elements->append(Slice(""));
+    elements->append(Slice(""));
+    offsets->get_data().push_back(6);
+
+    auto array_col = ArrayColumn::create(elements, offsets);
+    auto null_col = NullColumn::create(3, 0); // 3 non-null rows
+    auto nullable_array = NullableColumn::create(array_col, null_col);
+
+    Chunk::SlotHashMap slot_map = {{0, 0}};
+    auto src_chunk = std::make_shared<Chunk>(Columns{nullable_array}, slot_map);
+    auto dst_chunk = src_chunk->clone_empty();
+
+    // Permutation selects all rows in reverse order
+    Permutation perm = {{0, 2}, {0, 0}, {0, 1}};
+    materialize_by_permutation(dst_chunk.get(), {src_chunk}, perm);
+
+    ASSERT_EQ(3, dst_chunk->num_rows());
+    auto* out = down_cast<NullableColumn*>(dst_chunk->get_column_by_index(0).get());
+    auto* out_arr = down_cast<ArrayColumn*>(out->data_column().get());
+    // Row 0 of output = row 2 of input: ["", "", ""]
+    ASSERT_EQ(3u, out_arr->get_element_size(0));
+    // Row 1 of output = row 0 of input: ["", ""]
+    ASSERT_EQ(2u, out_arr->get_element_size(1));
+    // Row 2 of output = row 1 of input: [""]
+    ASSERT_EQ(1u, out_arr->get_element_size(2));
+}
+
+// Regression test for the bug in do_visit(NullableColumn* dst) [sort_permute.cpp:73]:
+// when source columns are non-nullable, lines 80-84 unconditionally down_cast them to
+// NullableColumn before checking is_nullable() at line 85. In the else branch (line 91),
+// data_columns contains garbage from the invalid cast instead of the original columns.
+// The fix is to use _columns directly in the else branch instead of data_columns.
+TEST(SortPermuteTest, materialize_column_nullable_dst_with_non_nullable_array_src) {
+    // Source: non-nullable ArrayColumn<VARCHAR>
+    auto src_elements = BinaryColumn::create();
+    auto src_offsets = UInt32Column::create();
+    src_offsets->get_data().push_back(0);
+    src_elements->append(Slice("hello"));
+    src_offsets->get_data().push_back(1); // row 0: ["hello"]
+    src_elements->append(Slice("world"));
+    src_offsets->get_data().push_back(2); // row 1: ["world"]
+    auto src_array = ArrayColumn::create(src_elements, src_offsets);
+
+    // Destination: NullableColumn wrapping the same schema (nullable version of src_array)
+    auto dst_elements = BinaryColumn::create();
+    auto dst_offsets = UInt32Column::create();
+    dst_offsets->get_data().push_back(0);
+    auto dst_array = ArrayColumn::create(dst_elements, dst_offsets);
+    auto dst_nullable = NullableColumn::create(dst_array, NullColumn::create());
+
+    Permutation perm = {{0, 1}, {0, 0}}; // reverse order
+    Columns src_cols = {src_array};
+
+    // This exercises the else branch in do_visit(NullableColumn* dst) where source
+    // columns are not nullable. Should not crash and should produce correct output.
+    materialize_column_by_permutation(dst_nullable.get(), src_cols, PermutationView(perm));
+
+    ASSERT_EQ(2, dst_nullable->size());
+    auto* out_arr = down_cast<ArrayColumn*>(dst_nullable->data_column().get());
+    // Row 0 of output = row 1 of src: ["world"]
+    ASSERT_EQ(1u, out_arr->get_element_size(0));
+    auto elem0 = down_cast<BinaryColumn*>(out_arr->elements_column().get())->get_slice(0);
+    ASSERT_EQ(Slice("world"), elem0);
+    // Row 1 of output = row 0 of src: ["hello"]
+    ASSERT_EQ(1u, out_arr->get_element_size(1));
+    auto elem1 = down_cast<BinaryColumn*>(out_arr->elements_column().get())->get_slice(1);
+    ASSERT_EQ(Slice("hello"), elem1);
 }
 
 } // namespace starrocks
