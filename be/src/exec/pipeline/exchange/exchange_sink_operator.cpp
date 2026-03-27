@@ -533,6 +533,7 @@ Status ExchangeSinkOperator::push_chunk(RuntimeState* state, const ChunkPtr& chu
             _current_request_bytes += pchunk->data().size();
             // 3. if request bytes exceede the threshold, send current request
             if (_current_request_bytes > config::max_transmit_batched_bytes) {
+                LOG(ERROR) << "LXH: request_chunk_size: " << _chunk_request->chunks_size();
                 butil::IOBuf attachment;
                 int64_t attachment_physical_bytes = construct_brpc_attachment(_chunk_request, attachment);
                 for (auto idx : _channel_indices) {
