@@ -617,18 +617,21 @@ Status Analytor::_add_chunk(const ChunkPtr& chunk) {
                 RETURN_IF_ERROR(_agg_intput_columns[i][j]->capacity_limit_reached());
             }
         }
+        LOG(ERROR) << "LXH: step 1";
 
         for (size_t i = 0; i < _partition_ctxs.size(); i++) {
             ASSIGN_OR_RETURN(ColumnPtr column, _partition_ctxs[i]->evaluate(chunk.get()));
             TRY_CATCH_BAD_ALLOC(_append_column(chunk_size, _partition_columns[i].get(), column));
             RETURN_IF_ERROR(_partition_columns[i]->capacity_limit_reached());
         }
+        LOG(ERROR) << "LXH: step 2";
 
         for (size_t i = 0; i < _order_ctxs.size(); i++) {
             ASSIGN_OR_RETURN(ColumnPtr column, _order_ctxs[i]->evaluate(chunk.get()));
             TRY_CATCH_BAD_ALLOC(_append_column(chunk_size, _order_columns[i].get(), column));
             RETURN_IF_ERROR(_order_columns[i]->capacity_limit_reached());
         }
+        LOG(ERROR) << "LXH: step 3";
     }
 
     _input_chunk_first_row_positions.emplace_back(_input_rows);
