@@ -83,6 +83,11 @@ public:
         return reinterpret_cast<uint8_t*>(_data.data());
     }
 
+    T* mutable_data() {
+        get_data();
+        return _data.data();
+    }
+
     size_t type_size() const override { return sizeof(T); }
 
     size_t size() const override { return immutable_data().size(); }

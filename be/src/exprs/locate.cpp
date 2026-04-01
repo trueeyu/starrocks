@@ -144,7 +144,7 @@ ColumnPtr haystack_vector_and_needle_const(const ColumnPtr& haystack_ptr, const 
 
     if (i < res->size()) {
         size_t type_size = res->type_size();
-        memset(res->mutable_raw_data() + i * type_size, 0, (res->size() - i) * type_size);
+        memset(res->mutable_data() + i, 0, (res->size() - i) * type_size);
     }
 
     if (res_null != nullptr) {
