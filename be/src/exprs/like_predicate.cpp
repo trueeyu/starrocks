@@ -379,8 +379,7 @@ StatusOr<ColumnPtr> LikePredicate::constant_substring_fn(FunctionContext* contex
         }
 
         if (i < res->size()) {
-            size_t type_size = res->type_size();
-            memset(res->mutable_raw_data() + i * type_size, 0, (res->size() - i) * type_size);
+            memset(res->mutable_data() + i, 0, (res->size() - i) * res->type_size());
         }
     }
 
