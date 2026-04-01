@@ -282,6 +282,8 @@ set(EXEC_FILES
     pipeline/pipeline_metrics.cpp
     pipeline/pipeline_driver_executor.cpp
     pipeline/pipeline_driver_queue.cpp
+    pipeline/lock_free_driver_queue.cpp
+    pipeline/lock_free_work_group_driver_queue.cpp
     pipeline/pipeline_driver_poller.cpp
     pipeline/pipeline_driver.cpp
     pipeline/audit_statistics_reporter.cpp
@@ -348,6 +350,8 @@ set(EXEC_FILES
     workgroup/mem_tracker_manager.cpp
     workgroup/scan_executor.cpp
     workgroup/scan_task_queue.cpp
+    workgroup/lock_free_scan_task_queue.cpp
+    workgroup/lock_free_work_group_scan_task_queue.cpp
     query_cache/multilane_operator.cpp
     query_cache/cache_operator.cpp
     query_cache/cache_manager.cpp
