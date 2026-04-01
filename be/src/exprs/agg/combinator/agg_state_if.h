@@ -97,7 +97,7 @@ public:
     void update_help(FunctionContext* ctx, size_t chunk_size, const Column** columns, const Column** replace_columns,
                      ColumnPtr& new_nullable_column) const {
         auto fake_null_column = NullColumn::create(columns[0]->size(), 0);
-        uint8_t* __restrict fake_null_column_raw_data = fake_null_column->mutable_raw_data();
+        uint8_t* __restrict fake_null_column_raw_data = fake_null_column->mutable_data();
 
         auto column_size = ctx->get_num_args() + 1;
         DCHECK(column_size >= 2);

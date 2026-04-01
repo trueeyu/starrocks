@@ -348,8 +348,7 @@ StatusOr<ColumnPtr> LikePredicate::constant_substring_fn(FunctionContext* contex
     if (needle.size == 0) {
         // if needle is empty string, every haystack can be matched.
         res->resize(haystack->size());
-        size_t type_size = res->type_size();
-        memset(res->mutable_raw_data(), 1, res->size() * type_size);
+        memset(res->mutable_data(), 1, res->size() * res->type_size());
     } else {
         const Buffer<uint32_t>& offsets = haystack->get_offset();
         res->resize(haystack->size());
