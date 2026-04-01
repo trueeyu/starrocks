@@ -31,7 +31,6 @@ static std::string kAlphaNumber =
 
 static void BM_DictDecoder(benchmark::State& state) {
     DictDecoder<Slice> dict_decoder;
-    static constexpr bool debug = false;
     {
         // create encoder and dict values.
         PlainEncoder<Slice> encoder;
@@ -46,12 +45,6 @@ static void BM_DictDecoder(benchmark::State& state) {
         PlainDecoder<Slice> decoder;
         (void)decoder.set_data(data);
         (void)dict_decoder.set_dict(kTestChunkSize, kDictSize, &decoder);
-
-        if (debug) {
-            MutableColumnPtr column = ColumnHelper::create_column(TypeDescriptor{TYPE_VARCHAR}, true);
-            (void)dict_decoder.get_dict_values(column.get());
-            std::cout << column->debug_string() << "\n";
-        }
     }
 
     auto null_score = state.range(0);
@@ -59,7 +52,7 @@ static void BM_DictDecoder(benchmark::State& state) {
             ColumnHelper::as_column<NullableColumn>(ColumnHelper::create_column(TypeDescriptor{TYPE_INT}, true));
     NullableColumn* nulls = nulls_ptr.get();
     nulls->resize(kTestChunkSize);
-    uint8_t* null_data = nulls->null_column_raw_ptr()->mutable_raw_data();
+    auto& null_data = nulls->null_column_raw_ptr()->get_data();
 
     std::random_device rd;
     std::mt19937 rng(rd());
@@ -77,10 +70,6 @@ static void BM_DictDecoder(benchmark::State& state) {
         dict_codes.push_back(random_number % kDictSize);
     }
     nulls->update_has_null();
-    if (debug) {
-        std::cout << "nulls. has_null = " << nulls->has_null() << ", null rate = " << count << "/" << kTestChunkSize
-                  << ".\n";
-    }
 
     MutableColumnPtr column = ColumnHelper::create_column(TypeDescriptor{TYPE_VARCHAR}, true);
     for (auto _ : state) {
@@ -88,9 +77,6 @@ static void BM_DictDecoder(benchmark::State& state) {
         column->reset_column();
         state.ResumeTiming();
         Status st = dict_decoder.get_dict_values(dict_codes, *nulls, column.get());
-        if (debug && !st.ok()) {
-            std::cout << "Fail to call `get_dict_values`: " << st.message() << "\n";
-        }
     }
 }
 
