@@ -35,6 +35,7 @@
 #pragma once
 
 #include "column/column.h"
+#include "column/column_raw_data.h"
 #include "storage/rowset/options.h"      // for PageBuilderOptions/PageDecoderOptions
 #include "storage/rowset/page_builder.h" // for PageBuilder
 #include "storage/rowset/page_decoder.h" // for PageDecoder
@@ -195,7 +196,8 @@ public:
             Range<> r = iter.next(to_read);
             const size_t ori_size = dst->size();
             dst->resize(ori_size + r.span_size());
-            auto* p = reinterpret_cast<CppType*>(dst->mutable_raw_data()) + ori_size;
+            ASSIGN_OR_RETURN(auto* raw_data_ptr, column_mutable_raw_data(dst));
+            auto* p = reinterpret_cast<CppType*>(raw_data_ptr) + ori_size;
             bool res = _decoder.get_batch(p, r.span_size());
             DCHECK(res);
             _cur_index += r.span_size();

@@ -22,6 +22,7 @@
 #include "base/string/slice.h"
 #include "column/column.h"
 #include "column/column_helper.h"
+#include "column_raw_data.h"
 #include "common/status.h"
 #include "formats/parquet/encoding.h"
 #include "formats/parquet/types.h"
@@ -152,7 +153,8 @@ public:
         } else {
             size_t cur_size = dst->size();
             dst->resize(cur_size + count);
-            T* data = reinterpret_cast<T*>(dst->mutable_raw_data()) + cur_size;
+            ASSIGN_OR_RETURN(auto* ptr, column_mutable_raw_data(dst));
+            T* data = reinterpret_cast<T*>(ptr) + cur_size;
             RETURN_IF_ERROR(Decode(data, count));
         }
         return Status::OK();

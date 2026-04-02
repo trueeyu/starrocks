@@ -20,7 +20,6 @@
 #include "column/const_column.h"
 #include "column/nullable_column.h"
 #include "column/vectorized_fwd.h"
-#include "common/status.h"
 
 namespace starrocks {
 
@@ -57,9 +56,9 @@ private:
     uint8_t* _result = nullptr;
 };
 
-inline uint8_t* column_mutable_raw_data(Column* column) {
+inline StatusOr<uint8_t*> column_mutable_raw_data(Column* column) {
     MutableRawDataVisitor visitor;
-    (void)column->accept_mutable(&visitor);
+    RETURN_IF_ERROR(column->accept_mutable(&visitor));
     return visitor.result();
 }
 
