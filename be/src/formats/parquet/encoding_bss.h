@@ -22,7 +22,7 @@
 #include "base/string/slice.h"
 #include "column/column.h"
 #include "column/column_helper.h"
-#include "column_raw_data.h"
+#include "column/column_raw_data.h"
 #include "common/status.h"
 #include "formats/parquet/encoding.h"
 #include "formats/parquet/types.h"
