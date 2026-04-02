@@ -20,6 +20,7 @@
 #include "column/const_column.h"
 #include "column/nullable_column.h"
 #include "column/vectorized_fwd.h"
+#include "fmt/format.h"
 
 namespace starrocks {
 
@@ -38,16 +39,17 @@ public:
         return Status::OK();
     }
 
-    Status do_visit(NullableColumn* column) {
-        return column->data_column_raw_ptr()->accept_mutable(this);
-    }
+    Status do_visit(NullableColumn* column) { return column->data_column_raw_ptr()->accept_mutable(this); }
 
-    Status do_visit(ArrayColumn* column) {
-        return column->elements_column_raw_ptr()->accept_mutable(this);
-    }
+    Status do_visit(ArrayColumn* column) { return column->elements_column_raw_ptr()->accept_mutable(this); }
 
-    Status do_visit(ConstColumn* column) {
-        return column->data_column_raw_ptr()->accept_mutable(this);
+    Status do_visit(ConstColumn* column) { return column->data_column_raw_ptr()->accept_mutable(this); }
+
+    // All other column types are not supported.
+    template <typename T>
+    Status do_visit(T* column) {
+        return Status::NotSupported(
+                fmt::format("mutable_raw_data not supported for column type: {}", column->get_name()));
     }
 
     uint8_t* result() const { return _result; }
