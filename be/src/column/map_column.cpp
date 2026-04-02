@@ -360,7 +360,7 @@ MutableColumnPtr MapColumn::clone_empty() const {
 
 size_t MapColumn::filter_range(const Filter& filter, size_t from, size_t to) {
     DCHECK_EQ(size(), to);
-    const auto& offsets = _offsets->immutable_data();
+    auto* offsets = reinterpret_cast<uint32_t*>(_offsets->mutable_raw_data());
     uint32_t elements_start = offsets[from];
     uint32_t elements_end = offsets[to];
     Filter element_filter(elements_end, 0);
