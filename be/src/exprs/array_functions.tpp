@@ -2226,9 +2226,9 @@ private:
                 down_cast<const NullableColumn*>(array_column->elements_column().get())->null_column();
         const auto& offsets_column = array_column->offsets_column();
 
-        const CppType* elements_data = reinterpret_cast<const CppType*>(elements_column->raw_data());
-        const NullColumn::ValueType* null_data = null_column->raw_data();
-        const UInt32Column::ValueType* offsets_data = offsets_column->immutable_data().data();
+        const auto& elements_data = GetContainer<LT>::get_data(elements_column);
+        const auto& null_data = null_column->immutable_data();
+        const auto& offsets_data = offsets_column->immutable_data();
         // column may be null
         size_t offset = offsets_data[0];
         size_t array_size = offsets_data[1] - offset;
@@ -2258,7 +2258,7 @@ private:
         result_column->resize(is_const_target ? 1 : num_rows);
         size_t result_size = result_column->size();
 
-        const CppType* target_data = reinterpret_cast<const CppType*>(targets->raw_data());
+        const auto& target_data = GetContainer<LT>::get_data(targets);
         auto* result_data = result_column->get_data().data();
 
         for (size_t i = 0; i < result_size; i++) {
@@ -2292,14 +2292,14 @@ private:
 
         const auto& elements_column = down_cast<const ArrayColumn*>(arrays.get())->elements_column();
         const auto& elements = down_cast<const NullableColumn*>(elements_column.get())->data_column();
-        const CppType* elements_data = reinterpret_cast<const CppType*>(elements->raw_data());
+        const auto& elements_data = GetContainer<LT>::get_data(elements);
         const NullColumn::ValueType* elements_null_data =
                 down_cast<const NullableColumn*>(elements_column.get())->immutable_null_column_data().data();
 
         const auto& offsets_column = down_cast<const ArrayColumn*>(arrays.get())->offsets_column();
         const auto offsets_data = offsets_column->immutable_data();
 
-        const CppType* targets_data = reinterpret_cast<const CppType*>(targets->raw_data());
+        const auto& targets_data = GetContainer<LT>::get_data(targets);
 
         // if both two columns are constant, we only compute the first row once
         size_t num_rows = (is_const_array && is_const_target) ? 1 : std::max(arrays->size(), targets->size());
@@ -2403,8 +2403,8 @@ public:
         }
         ColumnPtr array_column = FunctionHelper::get_data_column_of_const(column);
         const auto& [offsets_column, elements_column, null_column] = ColumnHelper::unpack_array_column(array_column);
-        const CppType* elements_data = reinterpret_cast<const CppType*>(elements_column->raw_data());
-        const NullColumn::ValueType* null_data = null_column->raw_data();
+        const auto& elements_data = GetContainer<LT>::get_data(elements_column);
+        const auto& null_data = null_column->immutable_data();
         const UInt32Column::ValueType* offsets_data = offsets_column->immutable_data().data();
         size_t offset = offsets_data[0];
         size_t array_size = offsets_data[1] - offset;
@@ -2423,8 +2423,8 @@ public:
             const auto& [target_offsets_column, target_elements_column, target_null_column] =
                     ColumnHelper::unpack_array_column(FunctionHelper::get_data_column_of_const(target_column));
 
-            const CppType* target_elements_data = reinterpret_cast<const CppType*>(target_elements_column->raw_data());
-            const NullColumn::ValueType* target_elements_null_data = target_null_column->raw_data();
+            const auto& target_elements_data = GetContainer<LT>::get_data(target_elements_column);
+            const auto& target_elements_null_data = target_null_column->immutable_data();
             const UInt32Column::ValueType* target_offsets_data = target_offsets_column->immutable_data().data();
 
             size_t target_offset = target_offsets_data[0];
@@ -2679,13 +2679,13 @@ private:
 
         const auto& [left_offsets_column, left_elements_column, left_elements_null_column] =
                 ColumnHelper::unpack_array_column(left_arrays);
-        const CppType* left_elements_data = reinterpret_cast<const CppType*>(left_elements_column->raw_data());
+        const auto& left_elements_data = GetContainer<LT>::get_data(left_elements_column);
         const NullColumn::ValueType* left_elements_null_data = left_elements_null_column->immutable_data().data();
         const auto* left_offsets_data = left_offsets_column->immutable_data().data();
 
         const auto& [right_offsets_column, right_elements_column, right_elements_null_column] =
                 ColumnHelper::unpack_array_column(right_arrays);
-        const CppType* right_elements_data = reinterpret_cast<const CppType*>(right_elements_column->raw_data());
+        const auto& right_elements_data = GetContainer<LT>::get_data(right_elements_column);
         const NullColumn::ValueType* right_elements_null_data = right_elements_null_column->immutable_data().data();
         const auto* right_offsets_data = right_offsets_column->immutable_data().data();
 
