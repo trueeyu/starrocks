@@ -485,18 +485,15 @@ public:
     ~BitsetInPredicate() override = default;
 
     Status evaluate(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const override {
-        _t_evaluate<ColumnPredicateAssignOp>(column, selection, from, to);
-        return Status::OK();
+        return _t_evaluate<ColumnPredicateAssignOp>(column, selection, from, to);
     }
 
     Status evaluate_and(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const override {
-        _t_evaluate<ColumnPredicateAndOp>(column, selection, from, to);
-        return Status::OK();
+        return _t_evaluate<ColumnPredicateAndOp>(column, selection, from, to);
     }
 
     Status evaluate_or(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const override {
-        _t_evaluate<ColumnPredicateOrOp>(column, selection, from, to);
-        return Status::OK();
+        return _t_evaluate<ColumnPredicateOrOp>(column, selection, from, to);
     }
 
     StatusOr<uint16_t> evaluate_branchless(const Column* column, uint16_t* sel, uint16_t sel_size) const override {
@@ -578,8 +575,10 @@ public:
 
 private:
     template <typename Op>
-    inline void _t_evaluate(const Column* column, uint8_t* sel, uint16_t from, uint16_t to) const {
-        auto* v = reinterpret_cast<const CppType*>(column->raw_data());
+    Status _t_evaluate(const Column* column, uint8_t* sel, uint16_t from, uint16_t to) const {
+        RawDataVisitor visitor;
+        RETURN_IF_ERROR(column->accept(&visitor));
+        auto* v = reinterpret_cast<const CppType*>(visitor.result());
         if (!column->has_null()) {
             for (size_t i = from; i < to; i++) {
                 const uint8_t res = _bitset.template contains<true /*CheckRange*/>(v[i], true);
@@ -592,6 +591,7 @@ private:
                 sel[i] = Op::apply(sel[i], res);
             }
         }
+        return Status::OK();
     }
 
     Bitset<LT> _bitset;
