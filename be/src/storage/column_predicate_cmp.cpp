@@ -18,6 +18,7 @@
 
 #include "base/string/string_parser.hpp"
 #include "column/column.h" // Column
+#include "column/column_helper.h"
 #include "common/object_pool.h"
 #include "olap_type_infra.h"
 #include "storage/column_predicate.h"
@@ -602,8 +603,8 @@ public:
     ~BinaryColumnPredicateCmpBase() override = default;
 
     template <typename Op>
-    inline void t_evaluate(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
-        auto* v = reinterpret_cast<const ValueType*>(column->raw_data());
+    void t_evaluate(const Column* column, uint8_t* selection, uint16_t from, uint16_t to) const {
+        const auto& v = GetContainer<field_type>::get_data(column);
         auto* sel = selection;
         auto eval = Eval();
         if (!column->has_null()) {
