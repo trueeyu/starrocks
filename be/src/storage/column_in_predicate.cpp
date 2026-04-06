@@ -477,6 +477,8 @@ class BitsetInPredicate final : public ColumnPredicate {
 public:
     using CppType = typename Bitset<LT>::CppType;
 
+    static_assert(!lt_is_string_or_binary<LT>, "BitsetInPredicate does not support string or binary types");
+
     BitsetInPredicate(const TypeInfoPtr& type_info, ColumnId id, const Bitset<LT>& bitset)
             : ColumnPredicate(type_info, id), _bitset(bitset) {}
     ~BitsetInPredicate() override = default;
