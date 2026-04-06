@@ -220,7 +220,8 @@ static ColumnPredicate* new_column_predicate(const TypeInfoPtr& type_info, Colum
 template <LogicalType field_type, class Eval>
 class ColumnPredicateCmpBase : public ColumnPredicate {
     using ValueType = StorageCppType<field_type>;
-    static_assert(!lt_is_string_or_binary<field_type>, "ColumnPredicateCmpBase does not support string or binary types");
+    static_assert(!lt_is_string_or_binary<field_type>,
+                  "ColumnPredicateCmpBase does not support string or binary types");
 
 public:
     ColumnPredicateCmpBase(PredicateType predicate, const TypeInfoPtr& type_info, ColumnId id, ValueType value)
