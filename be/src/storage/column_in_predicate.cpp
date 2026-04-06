@@ -17,6 +17,7 @@
 #include "column/column.h"
 #include "column/column_helper.h"
 #include "column/nullable_column.h"
+#include "column/raw_data_visitor.h"
 #include "column/vectorized_fwd.h"
 #include "gutil/casts.h"
 #include "roaring/roaring.hh"
@@ -499,7 +500,9 @@ public:
     }
 
     StatusOr<uint16_t> evaluate_branchless(const Column* column, uint16_t* sel, uint16_t sel_size) const override {
-        auto* v = reinterpret_cast<const CppType*>(column->raw_data());
+        RawDataVisitor visitor;
+        RETURN_IF_ERROR(column->accept(&visitor));
+        auto* v = reinterpret_cast<const CppType*>(visitor.result());
 
         uint16_t new_size = 0;
         if (!column->has_null()) {
