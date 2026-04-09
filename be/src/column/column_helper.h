@@ -708,6 +708,16 @@ public:
 
     // convert the mutable columns to immutable columns and reset the columns
     static Columns to_columns(MutableColumns&& columns);
+
+    // Build slices from a BinaryColumn or LargeBinaryColumn into |buf|.
+    // The column must be binary or large-binary; passing any other type is undefined behaviour.
+    static void build_slices(const Column* column, Buffer<Slice>& buf) {
+        if (column->is_large_binary()) {
+            down_cast<const LargeBinaryColumn*>(column)->build_slices(buf);
+        } else {
+            down_cast<const BinaryColumn*>(column)->build_slices(buf);
+        }
+    }
 };
 
 template <LogicalType ltype>
