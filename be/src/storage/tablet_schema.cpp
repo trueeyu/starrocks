@@ -306,7 +306,7 @@ void TabletSchema::append_column(TabletColumn column) {
         _num_key_columns++;
     }
     _unique_id_to_index[column.unique_id()] = _num_columns;
-    _name_to_index[column.name()] = _num_columns;
+    _name_to_index[std::string(column.name())] = _num_columns;
     _cols.push_back(std::move(column));
     if (_sort_key_uids_set.count(column.unique_id()) > 0) {
         _cols[_num_columns].set_is_sort_key(true);
@@ -493,7 +493,7 @@ void TabletSchema::_init_from_pb(const TabletSchemaPB& schema) {
             _num_key_columns++;
         }
         _unique_id_to_index[column.unique_id()] = _num_columns;
-        _name_to_index[column.name()] = _num_columns;
+        _name_to_index[std::string(column.name())] = _num_columns;
         _num_columns++;
     }
 
@@ -580,7 +580,7 @@ Status TabletSchema::_build_current_tablet_schema(int64_t schema_id, int32_t ver
             has_bf_columns = true;
         }
         _unique_id_to_index[column.unique_id()] = _num_columns;
-        _name_to_index[column.name()] = _num_columns;
+        _name_to_index[std::string(column.name())] = _num_columns;
         _cols.emplace_back(std::move(column));
         _num_columns++;
     }
