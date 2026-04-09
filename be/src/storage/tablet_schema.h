@@ -389,6 +389,7 @@ private:
     int _compression_level = -1;
 
     std::unordered_map<int32_t, int32_t> _unique_id_to_index;
+    std::unordered_map<std::string, int32_t> _name_to_index;
 
     bool _has_bf_fpp = false;
 

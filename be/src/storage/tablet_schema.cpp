@@ -306,6 +306,7 @@ void TabletSchema::append_column(TabletColumn column) {
         _num_key_columns++;
     }
     _unique_id_to_index[column.unique_id()] = _num_columns;
+    _name_to_index[column.name()] = _num_columns;
     _cols.push_back(std::move(column));
     if (_sort_key_uids_set.count(column.unique_id()) > 0) {
         _cols[_num_columns].set_is_sort_key(true);
@@ -315,6 +316,7 @@ void TabletSchema::append_column(TabletColumn column) {
 
 void TabletSchema::_clear_columns() {
     _unique_id_to_index.clear();
+    _name_to_index.clear();
     _num_columns = 0;
     _num_key_columns = 0;
     _cols.clear();
@@ -491,6 +493,7 @@ void TabletSchema::_init_from_pb(const TabletSchemaPB& schema) {
             _num_key_columns++;
         }
         _unique_id_to_index[column.unique_id()] = _num_columns;
+        _name_to_index[column.name()] = _num_columns;
         _num_columns++;
     }
 
@@ -562,6 +565,7 @@ Status TabletSchema::_build_current_tablet_schema(int64_t schema_id, int32_t ver
 
     _cols.clear();
     _unique_id_to_index.clear();
+    _name_to_index.clear();
     _sort_key_uids.clear();
 
     _schema_version = version;
@@ -576,6 +580,7 @@ Status TabletSchema::_build_current_tablet_schema(int64_t schema_id, int32_t ver
             has_bf_columns = true;
         }
         _unique_id_to_index[column.unique_id()] = _num_columns;
+        _name_to_index[column.name()] = _num_columns;
         _cols.emplace_back(std::move(column));
         _num_columns++;
     }
@@ -681,26 +686,17 @@ size_t TabletSchema::estimate_row_size(size_t variable_len) const {
 }
 
 size_t TabletSchema::field_index(std::string_view field_name) const {
-    int ordinal = -1;
-    for (auto& column : _cols) {
-        ordinal++;
-        if (column.name() == field_name) {
-            return ordinal;
-        }
-    }
-    return -1;
+    auto it = _name_to_index.find(std::string(field_name));
+    return (it == _name_to_index.end()) ? -1 : it->second;
 }
 
 size_t TabletSchema::field_index(std::string_view field_name, std::string_view extra_column_name) const {
-    int ordinal = -1;
-    for (auto& column : _cols) {
-        ordinal++;
-        if (column.name() == field_name) {
-            return ordinal;
-        }
+    auto it = _name_to_index.find(std::string(field_name));
+    if (it != _name_to_index.end()) {
+        return it->second;
     }
     if (field_name == extra_column_name) {
-        return ordinal + 1;
+        return _num_columns;
     }
     return -1;
 }
