@@ -52,7 +52,7 @@ namespace starrocks {
 
 OlapScanNode::OlapScanNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
         : ScanNode(pool, tnode, descs), _olap_scan_node(tnode.olap_scan_node), _status(Status::OK()) {
-    LOG(ERROR) << "LXH: " << _olap_scan_node.columns_desc.size();
+    //LOG(ERROR) << "LXH: " << _olap_scan_node.columns_desc.size();
     _name = "olap_scan";
 }
 
