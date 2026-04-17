@@ -2222,6 +2222,7 @@ struct ReverseFunction {
 };
 
 StatusOr<ColumnPtr> StringFunctions::reverse(FunctionContext* context, const Columns& columns) {
+    LOG(ERROR) << "LXH: type: " << columns[0]->get_name();
     return VectorizedUnaryFunction<ReverseFunction>::evaluate<TYPE_VARCHAR>(columns[0]);
 }
 
