@@ -270,6 +270,16 @@ public class DecimalTypeTest extends PlanTestBase {
     }
 
     @Test
+    public void testReverseOnDecimalScalar() throws Exception {
+        // reverse() on a scalar decimal column must cast to VARCHAR first, not pass DECIMAL to the BE
+        String sql = "select reverse(c_0_0) from tab0";
+        String plan = getFragmentPlan(sql);
+        // The plan should show reverse with VARCHAR args and result, with an implicit cast of the decimal argument
+        assertContains(plan, "reverse[(cast");
+        assertContains(plan, "args: VARCHAR; result: VARCHAR");
+    }
+
+    @Test
     public void testDateToDecimal() throws Exception {
         String sql = "select '1969-12-10 23:46:53' > c_0_0 from tab0";
         String plan = getFragmentPlan(sql);
