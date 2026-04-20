@@ -23,9 +23,11 @@ import com.starrocks.sql.optimizer.OptExpression;
 import com.starrocks.sql.optimizer.OptExpressionVisitor;
 import com.starrocks.sql.optimizer.base.ColumnRefFactory;
 import com.starrocks.sql.optimizer.base.DistributionCol;
+import com.starrocks.sql.optimizer.base.DistributionProperty;
 import com.starrocks.sql.optimizer.base.DistributionSpec;
 import com.starrocks.sql.optimizer.base.HashDistributionDesc;
 import com.starrocks.sql.optimizer.base.HashDistributionSpec;
+import com.starrocks.sql.optimizer.base.PhysicalPropertySet;
 import com.starrocks.sql.optimizer.operator.OperatorType;
 import com.starrocks.sql.optimizer.operator.physical.PhysicalDistributionOperator;
 import com.starrocks.sql.optimizer.operator.physical.PhysicalJoinOperator;
@@ -35,6 +37,7 @@ import com.starrocks.sql.optimizer.statistics.Statistics;
 import com.starrocks.sql.optimizer.statistics.StatisticsEstimateCoefficient;
 import com.starrocks.sql.optimizer.task.TaskContext;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -163,6 +166,23 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
                     d.getDistributionCols().clear();
                     d.getDistributionCols().add(x);
                 }
+                for (OptExpression joinExpr : childContext.joinOptExprs) {
+                    PhysicalPropertySet outputProp = joinExpr.getOutputProperty();
+                    if (outputProp == null || !outputProp.getDistributionProperty().isShuffle()) {
+                        continue;
+                    }
+                    HashDistributionDesc joinDesc =
+                            ((HashDistributionSpec) outputProp.getDistributionProperty().getSpec())
+                                    .getHashDistributionDesc();
+                    if (maxColumnIndex >= joinDesc.getDistributionCols().size()) {
+                        continue;
+                    }
+                    DistributionCol selected = joinDesc.getDistributionCols().get(maxColumnIndex);
+                    HashDistributionSpec newSpec = DistributionSpec.createHashDistributionSpec(
+                            new HashDistributionDesc(Collections.singletonList(selected),
+                                    HashDistributionDesc.SourceType.SHUFFLE_JOIN));
+                    outputProp.setDistributionProperty(DistributionProperty.createProperty(newSpec));
+                }
             }
         }
 
@@ -187,9 +207,11 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
 
             if (lc.isShuffle() && rc.isBroadcast()) {
                 context.add(lc);
+                context.joinOptExprs.add(optExpression);
             } else if (lc.isShuffle() && rc.isShuffle()) {
                 context.add(lc);
                 context.add(rc);
+                context.joinOptExprs.add(optExpression);
             }
             return optExpression;
         }
@@ -216,6 +238,7 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
     public static class DistributionContext {
         public final List<PhysicalDistributionOperator> distributionList = Lists.newArrayList();
         public final List<Statistics> statistics = Lists.newArrayList();
+        public final List<OptExpression> joinOptExprs = Lists.newArrayList();
 
         public void addDistribution(OptExpression optExpression) {
             Preconditions.checkState(optExpression.getOp().getOpType() == OperatorType.PHYSICAL_DISTRIBUTION);
@@ -226,6 +249,7 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
         public void add(DistributionContext other) {
             this.distributionList.addAll(other.distributionList);
             this.statistics.addAll(other.statistics);
+            this.joinOptExprs.addAll(other.joinOptExprs);
         }
 
         private boolean isShuffle() {
