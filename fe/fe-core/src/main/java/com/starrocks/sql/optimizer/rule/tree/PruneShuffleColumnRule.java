@@ -23,18 +23,20 @@ import com.starrocks.sql.optimizer.OptExpression;
 import com.starrocks.sql.optimizer.OptExpressionVisitor;
 import com.starrocks.sql.optimizer.base.ColumnRefFactory;
 import com.starrocks.sql.optimizer.base.DistributionCol;
+import com.starrocks.sql.optimizer.base.DistributionProperty;
 import com.starrocks.sql.optimizer.base.DistributionSpec;
 import com.starrocks.sql.optimizer.base.HashDistributionDesc;
 import com.starrocks.sql.optimizer.base.HashDistributionSpec;
+import com.starrocks.sql.optimizer.base.PhysicalPropertySet;
 import com.starrocks.sql.optimizer.operator.OperatorType;
 import com.starrocks.sql.optimizer.operator.physical.PhysicalDistributionOperator;
 import com.starrocks.sql.optimizer.operator.physical.PhysicalJoinOperator;
 import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
 import com.starrocks.sql.optimizer.statistics.ColumnStatistic;
-import com.starrocks.sql.optimizer.statistics.Statistics;
 import com.starrocks.sql.optimizer.statistics.StatisticsEstimateCoefficient;
 import com.starrocks.sql.optimizer.task.TaskContext;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -110,17 +112,17 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
         }
 
         private void prune(DistributionContext childContext) {
-            // only join can be return more distribution
+            // only join can return more than one distribution
             if (childContext.distributionList.size() < 2) {
                 return;
             }
 
             Preconditions.checkState(childContext.distributionList.stream()
-                    .allMatch(s -> s.getDistributionSpec().getType() == DistributionSpec.DistributionType.SHUFFLE));
+                    .allMatch(e -> operator(e).getDistributionSpec().getType() == DistributionSpec.DistributionType.SHUFFLE));
 
             List<HashDistributionDesc> descs = childContext.distributionList.stream()
-                    .map(s -> ((HashDistributionSpec) s.getDistributionSpec()).getHashDistributionDesc()).collect(
-                            Collectors.toList());
+                    .map(e -> ((HashDistributionSpec) operator(e).getDistributionSpec()).getHashDistributionDesc())
+                    .collect(Collectors.toList());
 
             Preconditions.checkState(descs.stream().mapToInt(d -> d.getDistributionCols().size()).distinct().count() == 1);
 
@@ -136,14 +138,14 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
             for (int i = 0; i < columnSize; i++) {
                 for (int j = 0; j < descs.size(); j++) {
                     ColumnRefOperator ref = factory.getColumnRef(descs.get(j).getDistributionCols().get(i).getColId());
-                    ColumnStatistic cs = childContext.statistics.get(j).getColumnStatistic(ref);
+                    ColumnStatistic cs = childContext.distributionList.get(j).getStatistics().getColumnStatistic(ref);
 
                     if (cs.isUnknown()) {
                         continue;
                     }
 
-                    double ratio =
-                            cs.getDistinctValuesCount() / childContext.statistics.get(j).getOutputRowCount();
+                    double ratio = cs.getDistinctValuesCount() /
+                            childContext.distributionList.get(j).getStatistics().getOutputRowCount();
                     if ((cs.getDistinctValuesCount() <
                             StatisticsEstimateCoefficient.DEFAULT_PRUNE_SHUFFLE_COLUMN_ROWS_LIMIT) ||
                             (ratio < sessionVariable.getCboPruneShuffleColumnRate())) {
@@ -158,12 +160,54 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
             }
 
             if (maxColumnIndex > -1) {
-                for (HashDistributionDesc d : descs) {
-                    DistributionCol x = d.getDistributionCols().get(maxColumnIndex);
-                    d.getDistributionCols().clear();
-                    d.getDistributionCols().add(x);
+                // Replace Exchange specs and their outputProperties explicitly.
+                // exchangeExpr.outputProperty == parentJoin.requiredProperties[i] (same object),
+                // so setting distributionProperty here also updates the parent join's required side.
+                for (int j = 0; j < childContext.distributionList.size(); j++) {
+                    OptExpression exchangeExpr = childContext.distributionList.get(j);
+                    HashDistributionDesc oldDesc = descs.get(j);
+                    DistributionCol selected = oldDesc.getDistributionCols().get(maxColumnIndex);
+
+                    HashDistributionSpec newSpec = DistributionSpec.createHashDistributionSpec(
+                            new HashDistributionDesc(Collections.singletonList(selected),
+                                    oldDesc.getSourceType()));
+                    DistributionProperty newDistProp = DistributionProperty.createProperty(newSpec);
+
+                    // 1. Update the Exchange operator itself
+                    operator(exchangeExpr).setDistributionSpec(newSpec);
+
+                    // 2. Update outputProperty (= parent join's requiredProperties[i], same object)
+                    PhysicalPropertySet outputProp = exchangeExpr.getOutputProperty();
+                    if (outputProp != null) {
+                        outputProp.setDistributionProperty(newDistProp);
+                    }
+                }
+
+                // Replace intermediate join outputProperties.
+                // These are independent copies created by OutputPropertyDeriver, not shared with
+                // any Exchange spec, so they must be updated explicitly.
+                for (OptExpression joinExpr : childContext.joinOptExprs) {
+                    PhysicalPropertySet outputProp = joinExpr.getOutputProperty();
+                    if (outputProp == null || !outputProp.getDistributionProperty().isShuffle()) {
+                        continue;
+                    }
+                    HashDistributionDesc joinDesc =
+                            ((HashDistributionSpec) outputProp.getDistributionProperty().getSpec())
+                                    .getHashDistributionDesc();
+                    if (maxColumnIndex >= joinDesc.getDistributionCols().size()) {
+                        continue;
+                    }
+                    DistributionCol selected = joinDesc.getDistributionCols().get(maxColumnIndex);
+                    HashDistributionSpec newSpec = DistributionSpec.createHashDistributionSpec(
+                            new HashDistributionDesc(Collections.singletonList(selected),
+                                    joinDesc.getSourceType()));
+                    outputProp.setDistributionProperty(DistributionProperty.createProperty(newSpec));
                 }
             }
+        }
+
+        private static PhysicalDistributionOperator operator(OptExpression exchangeExpr) {
+            return (PhysicalDistributionOperator) exchangeExpr.getOp();
         }
 
         @Override
@@ -187,9 +231,11 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
 
             if (lc.isShuffle() && rc.isBroadcast()) {
                 context.add(lc);
+                context.joinOptExprs.add(optExpression);
             } else if (lc.isShuffle() && rc.isShuffle()) {
                 context.add(lc);
                 context.add(rc);
+                context.joinOptExprs.add(optExpression);
             }
             return optExpression;
         }
@@ -214,18 +260,22 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
     }
 
     public static class DistributionContext {
-        public final List<PhysicalDistributionOperator> distributionList = Lists.newArrayList();
-        public final List<Statistics> statistics = Lists.newArrayList();
+        // Stores Exchange OptExpressions (not just operators) so prune() can access
+        // both the operator spec and the outputProperty for explicit replacement.
+        public final List<OptExpression> distributionList = Lists.newArrayList();
+        // Intermediate join OptExpressions whose outputProperty must be kept consistent
+        // with the pruned Exchange specs. These are independent copies created by
+        // OutputPropertyDeriver and are not reachable via the Exchange nodes.
+        public final List<OptExpression> joinOptExprs = Lists.newArrayList();
 
         public void addDistribution(OptExpression optExpression) {
             Preconditions.checkState(optExpression.getOp().getOpType() == OperatorType.PHYSICAL_DISTRIBUTION);
-            this.distributionList.add((PhysicalDistributionOperator) optExpression.getOp());
-            this.statistics.add(optExpression.getStatistics());
+            this.distributionList.add(optExpression);
         }
 
         public void add(DistributionContext other) {
             this.distributionList.addAll(other.distributionList);
-            this.statistics.addAll(other.statistics);
+            this.joinOptExprs.addAll(other.joinOptExprs);
         }
 
         private boolean isShuffle() {
@@ -233,7 +283,8 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
                 return false;
             }
 
-            for (PhysicalDistributionOperator d : distributionList) {
+            for (OptExpression e : distributionList) {
+                PhysicalDistributionOperator d = (PhysicalDistributionOperator) e.getOp();
                 if (d.getDistributionSpec().getType() != DistributionSpec.DistributionType.SHUFFLE) {
                     return false;
                 }
@@ -251,7 +302,8 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
                 return false;
             }
 
-            for (PhysicalDistributionOperator d : distributionList) {
+            for (OptExpression e : distributionList) {
+                PhysicalDistributionOperator d = (PhysicalDistributionOperator) e.getOp();
                 if (d.getDistributionSpec().getType() != DistributionSpec.DistributionType.BROADCAST) {
                     return false;
                 }
