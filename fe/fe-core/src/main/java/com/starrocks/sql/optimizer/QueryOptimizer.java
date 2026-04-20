@@ -1020,7 +1020,9 @@ public class QueryOptimizer extends Optimizer {
         result = new ExchangeSortToMergeRule().rewrite(result, rootTaskContext);
         result = new PruneAggregateNodeRule().rewrite(result, rootTaskContext);
         result = new PruneShuffleDistributionNodeRule().rewrite(result, rootTaskContext);
-        result = new PruneShuffleColumnRule().rewrite(result, rootTaskContext);
+        if (connectContext.getSessionVariable().isCboEnablePruneShuffleColumn()) {
+            result = new PruneShuffleColumnRule().rewrite(result, rootTaskContext);
+        }
         result = new PhysicalDistributionAggOptRule().rewrite(result, rootTaskContext);
         result = new AddDecodeNodeForDictStringRule().rewrite(result, rootTaskContext);
         result = new LowCardinalityRewriteRule().rewrite(result, rootTaskContext);

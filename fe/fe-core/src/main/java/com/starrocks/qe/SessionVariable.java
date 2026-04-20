@@ -506,6 +506,7 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
     public static final String ENABLE_SQL_DIGEST = "enable_sql_digest";
     public static final String CBO_MAX_REORDER_NODE = "cbo_max_reorder_node";
     public static final String CBO_PRUNE_SHUFFLE_COLUMN_RATE = "cbo_prune_shuffle_column_rate";
+    public static final String CBO_ENABLE_PRUNE_SHUFFLE_COLUMN = "cbo_enable_prune_shuffle_column";
     public static final String CBO_PUSH_DOWN_AGGREGATE_MODE = "cbo_push_down_aggregate_mode";
     public static final String CBO_PUSH_DOWN_AGGREGATE_ON_BROADCAST_JOIN = "cbo_push_down_aggregate_on_broadcast_join";
     public static final String CBO_PUSH_DOWN_AGGREGATE_ON_BROADCAST_JOIN_ROW_COUNT_LIMIT =
@@ -2060,6 +2061,9 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
     @VarAttr(name = CBO_PRUNE_SHUFFLE_COLUMN_RATE, flag = VariableMgr.INVISIBLE)
     private double cboPruneShuffleColumnRate = 0.1;
 
+    @VarAttr(name = CBO_ENABLE_PRUNE_SHUFFLE_COLUMN, flag = VariableMgr.INVISIBLE)
+    private boolean cboEnablePruneShuffleColumn = true;
+
     // 0: auto, 1: force push down, -1: don't push down, 2: push down medium, 3: push down high
     @VarAttr(name = "cboPushDownAggregateMode_v1", alias = CBO_PUSH_DOWN_AGGREGATE_MODE,
             show = CBO_PUSH_DOWN_AGGREGATE_MODE, flag = VariableMgr.INVISIBLE)
@@ -3608,6 +3612,14 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
 
     public void setCboPruneShuffleColumnRate(double cboPruneShuffleColumnRate) {
         this.cboPruneShuffleColumnRate = cboPruneShuffleColumnRate;
+    }
+
+    public boolean isCboEnablePruneShuffleColumn() {
+        return cboEnablePruneShuffleColumn;
+    }
+
+    public void setCboEnablePruneShuffleColumn(boolean cboEnablePruneShuffleColumn) {
+        this.cboEnablePruneShuffleColumn = cboEnablePruneShuffleColumn;
     }
 
     public boolean isEnableShowAllVariables() {
