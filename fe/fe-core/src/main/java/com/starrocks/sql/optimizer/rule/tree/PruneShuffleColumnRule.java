@@ -21,7 +21,6 @@ import com.starrocks.qe.SessionVariable;
 import com.starrocks.sql.ast.HintNode;
 import com.starrocks.sql.optimizer.OptExpression;
 import com.starrocks.sql.optimizer.OptExpressionVisitor;
-import com.starrocks.sql.optimizer.base.PhysicalPropertySet;
 import com.starrocks.sql.optimizer.base.ColumnRefFactory;
 import com.starrocks.sql.optimizer.base.DistributionCol;
 import com.starrocks.sql.optimizer.base.DistributionSpec;
@@ -36,9 +35,7 @@ import com.starrocks.sql.optimizer.statistics.Statistics;
 import com.starrocks.sql.optimizer.statistics.StatisticsEstimateCoefficient;
 import com.starrocks.sql.optimizer.task.TaskContext;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /*
@@ -161,45 +158,10 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
             }
 
             if (maxColumnIndex > -1) {
-                // Collect all selected colIds (left + right side) before modifying any desc.
-                Set<Integer> selectedColIds = new HashSet<>();
-                for (HashDistributionDesc d : descs) {
-                    selectedColIds.add(d.getDistributionCols().get(maxColumnIndex).getColId());
-                }
-
                 for (HashDistributionDesc d : descs) {
                     DistributionCol x = d.getDistributionCols().get(maxColumnIndex);
                     d.getDistributionCols().clear();
                     d.getDistributionCols().add(x);
-                }
-
-                // Intermediate join nodes' outputProperty is a separate HashDistributionDesc object
-                // (not shared with the Exchange specs), so it must be pruned independently to stay
-                // consistent. Since outputProperty is the same object as the parent join's
-                // requiredProperties entry for this child, updating it here fixes both.
-                for (OptExpression joinExpr : childContext.joinOptExprs) {
-                    pruneJoinOutputProperty(joinExpr, selectedColIds);
-                }
-            }
-        }
-
-        private static void pruneJoinOutputProperty(OptExpression joinExpr, Set<Integer> selectedColIds) {
-            PhysicalPropertySet outputProp = joinExpr.getOutputProperty();
-            if (outputProp == null || !outputProp.getDistributionProperty().isShuffle()) {
-                return;
-            }
-            HashDistributionDesc outputDesc =
-                    ((HashDistributionSpec) outputProp.getDistributionProperty().getSpec()).getHashDistributionDesc();
-            List<DistributionCol> outputCols = outputDesc.getDistributionCols();
-            if (outputCols.size() <= 1) {
-                return;
-            }
-            for (int i = 0; i < outputCols.size(); i++) {
-                if (selectedColIds.contains(outputCols.get(i).getColId())) {
-                    DistributionCol x = outputCols.get(i);
-                    outputCols.clear();
-                    outputCols.add(x);
-                    return;
                 }
             }
         }
@@ -228,9 +190,6 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
             } else if (lc.isShuffle() && rc.isShuffle()) {
                 context.add(lc);
                 context.add(rc);
-                context.joinOptExprs.addAll(lc.joinOptExprs);
-                context.joinOptExprs.addAll(rc.joinOptExprs);
-                context.joinOptExprs.add(optExpression);
             }
             return optExpression;
         }
@@ -257,7 +216,6 @@ public class PruneShuffleColumnRule implements TreeRewriteRule {
     public static class DistributionContext {
         public final List<PhysicalDistributionOperator> distributionList = Lists.newArrayList();
         public final List<Statistics> statistics = Lists.newArrayList();
-        public final List<OptExpression> joinOptExprs = Lists.newArrayList();
 
         public void addDistribution(OptExpression optExpression) {
             Preconditions.checkState(optExpression.getOp().getOpType() == OperatorType.PHYSICAL_DISTRIBUTION);
