@@ -203,7 +203,6 @@ import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
 import com.starrocks.sql.optimizer.operator.stream.PhysicalStreamAggOperator;
 import com.starrocks.sql.optimizer.operator.stream.PhysicalStreamJoinOperator;
 import com.starrocks.sql.optimizer.operator.stream.PhysicalStreamScanOperator;
-import com.starrocks.sql.optimizer.rule.tree.CloneDuplicateColRefRule;
 import com.starrocks.sql.optimizer.rule.tree.prunesubfield.SubfieldAccessPathNormalizer;
 import com.starrocks.sql.optimizer.rule.tree.prunesubfield.SubfieldExpressionCollector;
 import com.starrocks.sql.optimizer.statistics.Statistics;
@@ -3576,10 +3575,6 @@ public class PlanFragmentBuilder {
 
             Map<ColumnRefOperator, ScalarOperator> projectMap = Maps.newHashMap();
             projectMap.putAll(consume.getCteOutputColumnRefMap());
-            // CAST(c2 AS STRING) on a VARCHAR column simplifies to c2 at translator time, so two consumer
-            // slots can end up referencing the same producer ColumnRefOperator.  This projection is built
-            // after the optimizer's CloneDuplicateColRefRule pass, so we must apply the same dedup here.
-            CloneDuplicateColRefRule.substColumnRefOperatorWithCloneOperator(projectMap);
             consumeFragment = buildProjectNode(optExpression, new Projection(projectMap), consumeFragment, context);
             consumeFragment.setQueryGlobalDicts(cteFragment.getQueryGlobalDicts());
             consumeFragment.setQueryGlobalDictExprs(cteFragment.getQueryGlobalDictExprs());
