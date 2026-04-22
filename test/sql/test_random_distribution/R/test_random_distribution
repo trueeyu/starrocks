@@ -81,9 +81,8 @@ create materialized view tva REFRESH ASYNC as select k, sum(v) from t group by k
 insert into t values(1,1),(1,2);
 -- result:
 -- !result
-[UC]refresh materialized view tva;
+REFRESH MATERIALIZED VIEW tva WITH SYNC MODE;
 -- result:
-8f3247bb-dff2-11ed-b085-00163e05ba4a
 -- !result
 select * from tva;
 -- result:
