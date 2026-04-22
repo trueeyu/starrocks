@@ -175,7 +175,9 @@ public class PhysicalPartition extends MetaObject implements GsonPostProcessable
         List<Long> result = new ArrayList<>();
         idToVisibleRollupIndex.values().stream().map(MaterializedIndex::getShardGroupId).forEach(result::add);
         idToShadowIndex.values().stream().map(MaterializedIndex::getShardGroupId).forEach(result::add);
-        result.add(baseIndex.getShardGroupId());
+        if (baseIndex != null) {
+            result.add(baseIndex.getShardGroupId());
+        }
         return result;
     }
 
@@ -355,7 +357,7 @@ public class PhysicalPartition extends MetaObject implements GsonPostProcessable
     }
 
     public MaterializedIndex getIndex(long indexId) {
-        if (baseIndex.getId() == indexId) {
+        if (baseIndex != null && baseIndex.getId() == indexId) {
             return baseIndex;
         }
         if (idToVisibleRollupIndex.containsKey(indexId)) {
@@ -370,12 +372,16 @@ public class PhysicalPartition extends MetaObject implements GsonPostProcessable
         List<MaterializedIndex> indices = Lists.newArrayListWithExpectedSize(expectedSize);
         switch (extState) {
             case ALL:
-                indices.add(baseIndex);
+                if (baseIndex != null) {
+                    indices.add(baseIndex);
+                }
                 indices.addAll(idToVisibleRollupIndex.values());
                 indices.addAll(idToShadowIndex.values());
                 break;
             case VISIBLE:
-                indices.add(baseIndex);
+                if (baseIndex != null) {
+                    indices.add(baseIndex);
+                }
                 indices.addAll(idToVisibleRollupIndex.values());
                 break;
             case SHADOW:
