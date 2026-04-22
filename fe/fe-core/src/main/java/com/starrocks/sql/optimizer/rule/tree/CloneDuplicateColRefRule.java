@@ -14,20 +14,23 @@
 
 package com.starrocks.sql.optimizer.rule.tree;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.starrocks.sql.optimizer.OptExpression;
 import com.starrocks.sql.optimizer.OptExpressionVisitor;
+import com.starrocks.sql.optimizer.base.ColumnRefSet;
+import com.starrocks.sql.optimizer.operator.Operator;
 import com.starrocks.sql.optimizer.operator.Projection;
+import com.starrocks.sql.optimizer.operator.physical.PhysicalCTEConsumeOperator;
 import com.starrocks.sql.optimizer.operator.physical.PhysicalProjectOperator;
 import com.starrocks.sql.optimizer.operator.scalar.CloneOperator;
 import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
 import com.starrocks.sql.optimizer.operator.scalar.ScalarOperator;
+import com.starrocks.sql.optimizer.rewrite.ReplaceColumnRefRewriter;
 import com.starrocks.sql.optimizer.task.TaskContext;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 // ProjectOperator or Projection of Operator may have several ColumnRefs remapped to the same ColumnRef, for an example:
 // 1.ColumnRef(1)->ColumnRef(1);
@@ -53,11 +56,6 @@ public class CloneDuplicateColRefRule implements TreeRewriteRule {
                 return;
             }
 
-            List<Map.Entry<ColumnRefOperator, ScalarOperator>> entries =
-                    colRefMap.entrySet().stream()
-                            .sorted(Comparator.comparing(entry -> entry.getKey().getId()))
-                            .collect(Collectors.toList());
-
             Map<ScalarOperator, Integer> duplicateColRefs = Maps.newHashMap();
             colRefMap.forEach((k, v) -> {
                 if (!v.isColumnRef()) {
@@ -75,16 +73,90 @@ public class CloneDuplicateColRefRule implements TreeRewriteRule {
             }
         }
 
+        // PhysicalCTEConsumeOperator carries its consumer->producer mapping in cteOutputColumnRefMap, a separate
+        // Map<ColumnRefOperator, ColumnRefOperator> that is later materialized into a ProjectNode at plan-fragment
+        // build time. Its value type does not admit a CloneOperator, so duplicates are resolved by dedup'ing the map
+        // (keeping one consumer ref per producer ref) and re-emitting the demoted refs as CloneOperator(canonical)
+        // via the operator's Projection, which PlanFragmentBuilder.visit layers on top of the consume ProjectNode.
+        void substCteConsumeDuplicates(PhysicalCTEConsumeOperator consume) {
+            Map<ColumnRefOperator, ColumnRefOperator> cteMap = consume.getCteOutputColumnRefMap();
+            if (cteMap == null || cteMap.size() < 2) {
+                return;
+            }
+
+            Map<ColumnRefOperator, List<ColumnRefOperator>> byProducer = Maps.newHashMap();
+            cteMap.forEach((consumerRef, producerRef) ->
+                    byProducer.computeIfAbsent(producerRef, k -> Lists.newArrayList()).add(consumerRef));
+
+            if (byProducer.values().stream().noneMatch(l -> l.size() > 1)) {
+                return;
+            }
+
+            // The consume's local predicate runs directly on the consume ProjectNode, so any ref it references must
+            // survive in cteOutputColumnRefMap. Prefer predicate-referenced refs as canonical. If more than one such
+            // ref shares a producer ref, bail out to stay safe.
+            ColumnRefSet predicateCols = consume.getPredicate() != null
+                    ? consume.getPredicate().getUsedColumns() : new ColumnRefSet();
+
+            Map<ColumnRefOperator, ScalarOperator> replaceMap = Maps.newHashMap();
+            for (Map.Entry<ColumnRefOperator, List<ColumnRefOperator>> entry : byProducer.entrySet()) {
+                List<ColumnRefOperator> consumerRefs = entry.getValue();
+                if (consumerRefs.size() < 2) {
+                    continue;
+                }
+                long predUsesInGroup = consumerRefs.stream().filter(r -> predicateCols.contains(r.getId())).count();
+                if (predUsesInGroup > 1) {
+                    return;
+                }
+                ColumnRefOperator canonical = consumerRefs.stream()
+                        .filter(r -> predicateCols.contains(r.getId()))
+                        .findFirst()
+                        .orElse(consumerRefs.get(0));
+                for (ColumnRefOperator consumerRef : consumerRefs) {
+                    if (!consumerRef.equals(canonical)) {
+                        replaceMap.put(consumerRef, new CloneOperator(canonical));
+                    }
+                }
+            }
+
+            if (replaceMap.isEmpty()) {
+                return;
+            }
+
+            replaceMap.keySet().forEach(cteMap::remove);
+
+            Projection existing = consume.getProjection();
+            if (existing == null) {
+                Map<ColumnRefOperator, ScalarOperator> projMap = Maps.newHashMap();
+                cteMap.keySet().forEach(ref -> projMap.put(ref, ref));
+                projMap.putAll(replaceMap);
+                consume.setProjection(new Projection(projMap));
+            } else {
+                // Substitute the demoted refs anywhere they appear inside the existing projection. The projection
+                // is re-emitted on top of the (now dedup'd) consume ProjectNode, so the demoted refs must be
+                // replaced with CloneOperator(canonical) before they are evaluated.
+                ReplaceColumnRefRewriter rewriter = new ReplaceColumnRefRewriter(replaceMap);
+                existing.getColumnRefMap().replaceAll((k, v) -> rewriter.rewrite(v));
+                existing.getCommonSubOperatorMap().replaceAll((k, v) -> rewriter.rewrite(v));
+            }
+        }
+
         @Override
         public Void visit(OptExpression optExpression, Void context) {
-            if (optExpression.getOp() instanceof PhysicalProjectOperator) {
-                PhysicalProjectOperator projectOp = optExpression.getOp().cast();
+            Operator op = optExpression.getOp();
+            if (op instanceof PhysicalProjectOperator) {
+                PhysicalProjectOperator projectOp = op.cast();
                 substColumnRefOperatorWithCloneOperator(projectOp.getColumnRefMap());
                 substColumnRefOperatorWithCloneOperator(projectOp.getCommonSubOperatorMap());
-            } else if (optExpression.getOp().getProjection() != null) {
-                Projection projection = optExpression.getOp().getProjection();
-                substColumnRefOperatorWithCloneOperator(projection.getColumnRefMap());
-                substColumnRefOperatorWithCloneOperator(projection.getCommonSubOperatorMap());
+            } else {
+                if (op instanceof PhysicalCTEConsumeOperator) {
+                    substCteConsumeDuplicates(op.cast());
+                }
+                if (op.getProjection() != null) {
+                    Projection projection = op.getProjection();
+                    substColumnRefOperatorWithCloneOperator(projection.getColumnRefMap());
+                    substColumnRefOperatorWithCloneOperator(projection.getCommonSubOperatorMap());
+                }
             }
             optExpression.getInputs().forEach(input -> this.visit(input, context));
             return null;
