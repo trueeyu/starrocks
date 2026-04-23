@@ -94,7 +94,10 @@ Status SelectOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
             _curr_chunk->append_column(std::move(col), slot_id);
         }
     }
+    int64_t before_filter = _curr_chunk->num_rows();
     RETURN_IF_ERROR(eval_conjuncts_and_in_filters(_conjunct_ctxs, _curr_chunk.get()));
+    int64_t after_filter = _curr_chunk->num_rows();
+    LOG(ERROR) << "LXH: SelectOperator::push_chunk before_filter: " << before_filter << " after_filter: " << after_filter;
     {
         // common_exprs' slots are only needed inside this operator, no need to pass it downsteam
         for (const auto& [slot_id, _] : _common_exprs) {
