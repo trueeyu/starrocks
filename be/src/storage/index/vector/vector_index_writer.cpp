@@ -61,6 +61,7 @@ Status VectorIndexWriter::append(const Column& src) {
         SCOPED_RAW_TIMER(&duration);
 
         if (_index_builder == nullptr) {
+            LOG(ERROR) << "LXH: size: " << _row_size << ":" << src.size() << ":" << _start_vector_index_build_threshold;
             if (_row_size + src.size() >= _start_vector_index_build_threshold) {
                 RETURN_IF_ERROR(_prepare_index_builder());
             } else {
