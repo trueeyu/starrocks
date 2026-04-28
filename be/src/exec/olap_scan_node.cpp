@@ -455,8 +455,8 @@ StatusOr<pipeline::MorselQueuePtr> OlapScanNode::convert_scan_range_to_morsel_qu
         ss << "]";
         return ss.str();
     };
-    LOG(ERROR) << "[partition_prune] before prune_scan_ranges_by_partition_conjuncts pruned_scan_ranges="
-              << dump_scan_ranges(pruned_scan_ranges) << ", input scan_ranges=" << dump_scan_ranges(scan_ranges);
+    LOG(ERROR) << "[partition_prune] before prune_scan_ranges_by_partition_conjuncts , "
+                  "input scan_ranges=" << dump_scan_ranges(scan_ranges);
     if (!prune_scan_ranges_by_partition_conjuncts(runtime_state(), tuple_desc, _partition_exprs, scan_ranges,
                                                   &pruned_scan_ranges)
                  .ok()) {

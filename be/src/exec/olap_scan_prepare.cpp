@@ -118,6 +118,8 @@ Status prune_scan_ranges_by_partition_conjuncts(RuntimeState* state, const Tuple
                                                 const std::vector<ExprContext*>& partition_conjunct_ctxs,
                                                 const std::vector<TScanRangeParams>& scan_ranges,
                                                 std::vector<TScanRangeParams>* pruned_scan_ranges) {
+    LOG(INFO) << "[partition_prune] partition_conjunct_ctxs size=" << partition_conjunct_ctxs.size()
+              << ", exprs=" << Expr::debug_string(partition_conjunct_ctxs);
     if (partition_conjunct_ctxs.empty() || tuple_desc == nullptr) {
         *pruned_scan_ranges = scan_ranges;
         return Status::OK();
