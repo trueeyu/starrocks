@@ -81,6 +81,7 @@ Status ConnectorScanNode::init(const TPlanNode& tnode, RuntimeState* state) {
     if (query_options.__isset.connector_io_tasks_per_scan_operator) {
         _io_tasks_per_scan_operator = query_options.connector_io_tasks_per_scan_operator;
     }
+    LOG(ERROR) << "LXH: io_tasks_per_scan_operator: " << _io_tasks_per_scan_operator;
     _estimate_scan_row_bytes();
 
     if (tnode.__isset.lake_scan_node) {
