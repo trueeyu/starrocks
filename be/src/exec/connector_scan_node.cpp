@@ -686,7 +686,6 @@ Status ConnectorScanNode::set_scan_ranges(const std::vector<TScanRangeParams>& s
         // to create at least one data source
         _scan_ranges.emplace_back();
     }
-    LOG(ERROR) << "LXH[scan_ranges] node_id=" << id() << " on_this_be=" << _scan_ranges.size();
     return Status::OK();
 }
 
