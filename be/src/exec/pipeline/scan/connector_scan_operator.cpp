@@ -139,6 +139,7 @@ ConnectorScanOperatorFactory::ConnectorScanOperatorFactory(int32_t id, ScanNode*
         : ScanOperatorFactory(id, scan_node),
           _chunk_buffer(scan_node->is_shared_scan_enabled() ? BalanceStrategy::kRoundRobin : BalanceStrategy::kDirect,
                         dop, std::move(buffer_limiter)) {
+    LOG(ERROR) << "LXH: dop=" << dop;
     _io_tasks_mem_limiter = state->obj_pool()->add(
             new ConnectorScanOperatorIOTasksMemLimiter(dop, scan_node->is_shared_scan_enabled()));
 }
