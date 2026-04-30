@@ -332,6 +332,9 @@ Status ScanOperator::_try_to_trigger_next_scan(RuntimeState* state) {
     // because we want to update state based on raw data.
     int total_cnt = available_pickup_morsel_count();
 
+    if (dynamic_cast<ConnectorScanOperator*>(this) != nullptr) {
+        LOG(ERROR) << "LXH: num_running_io_task: " << _num_running_io_tasks;
+    }
     if (_num_running_io_tasks >= _io_tasks_per_scan_operator) {
         return Status::OK();
     }
