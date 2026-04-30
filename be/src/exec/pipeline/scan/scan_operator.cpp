@@ -332,8 +332,16 @@ Status ScanOperator::_try_to_trigger_next_scan(RuntimeState* state) {
     // because we want to update state based on raw data.
     int total_cnt = available_pickup_morsel_count();
 
-    if (dynamic_cast<ConnectorScanOperator*>(this) != nullptr) {
-        LOG(ERROR) << "LXH: num_running_io_task: " << _num_running_io_tasks;
+    bool is_connector = dynamic_cast<ConnectorScanOperator*>(this) != nullptr;
+    if (is_connector) {
+        LOG(ERROR) << "LXH[try_trigger] driver=" << get_driver_sequence()
+                   << " running_io=" << _num_running_io_tasks
+                   << " total_cnt=" << total_cnt
+                   << " io_tasks_limit=" << _io_tasks_per_scan_operator
+                   << " morsels_processed=" << COUNTER_VALUE(_morsels_counter)
+                   << " queue_empty=" << _morsel_queue->empty()
+                   << " queue_has_more=" << _morsel_queue->has_more()
+                   << " buffered_chunks=" << num_buffered_chunks();
     }
     if (_num_running_io_tasks >= _io_tasks_per_scan_operator) {
         return Status::OK();
@@ -390,6 +398,11 @@ Status ScanOperator::_try_to_trigger_next_scan(RuntimeState* state) {
     }
 
     _peak_io_tasks_counter->set(_num_running_io_tasks);
+    if (is_connector) {
+        LOG(ERROR) << "LXH[after_submit] driver=" << get_driver_sequence()
+                   << " running_io=" << _num_running_io_tasks
+                   << " scheduled_new=" << size;
+    }
     return Status::OK();
 }
 
@@ -438,6 +451,11 @@ Status ScanOperator::_trigger_next_scan(RuntimeState* state, int chunk_source_in
     _chunk_sources[chunk_source_index]->pin_chunk_token(std::move(buffer_token));
     _num_running_io_tasks++;
     _is_io_task_running[chunk_source_index] = true;
+    if (dynamic_cast<ConnectorScanOperator*>(this) != nullptr) {
+        LOG(ERROR) << "LXH[trigger] driver=" << get_driver_sequence()
+                   << " cs_idx=" << chunk_source_index
+                   << " running_io=" << _num_running_io_tasks;
+    }
 
     starrocks::debug::QueryTraceContext query_trace_ctx = starrocks::debug::tls_trace_ctx;
     query_trace_ctx.id = reinterpret_cast<int64_t>(_chunk_sources[chunk_source_index].get());
