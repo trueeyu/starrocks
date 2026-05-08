@@ -612,7 +612,7 @@ private:
     std::unique_ptr<std::ofstream> _rejected_record_file;
 
     // _error_log[_unreported_error_idx+] has been not reported to the coordinator.
-    int _unreported_error_idx;
+    int _unreported_error_idx = 0;
 
     // Username of user that is executing the query to which this RuntimeState belongs.
     std::string _user;
@@ -640,7 +640,7 @@ private:
     // if true, execution should stop with a CANCELLED status
     std::atomic<bool> _is_cancelled{false};
 
-    int _per_fragment_instance_idx;
+    int _per_fragment_instance_idx = 0;
     int _num_per_fragment_instances = 0;
 
     // used as send id

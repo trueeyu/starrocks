@@ -226,7 +226,6 @@ protected:
         ChunkPtr chunk(ChunkHelper::new_chunk(desc_tbl->get_tuple_descriptor(0)->slots(), num_rows).release());
         _fill_chunk_base_data(chunk, desc_tbl->get_tuple_descriptor(0)->slots(), num_rows, test_type);
 
-        auto* slot = desc_tbl->get_tuple_descriptor(0)->slots()[slot_index];
         // NOTE: slot_id->index mapping is setup later by _setup_chunk_slot_map(), so use column index here.
         auto* column = chunk->get_column_by_index(slot_index).get();
         fill_column(column);
