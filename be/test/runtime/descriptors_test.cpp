@@ -20,32 +20,18 @@
 #include "common/object_pool.h"
 #include "gen_cpp/Descriptors_types.h"
 #include "runtime/descriptors_ext.h"
-#include "runtime/exec_env.h"
-#include "runtime/mem_tracker.h"
-#include "runtime/runtime_state.h"
 
 namespace starrocks {
 
 class HiveTableDescriptorTest : public ::testing::Test {
 public:
     void SetUp() override {
-        _exec_env = ExecEnv::GetInstance();
         _query_pool = std::make_unique<ObjectPool>();
 
         TTableDescriptor tdesc;
         tdesc.id = 1;
         tdesc.tableType = TTableType::HDFS_TABLE;
         _table_desc = _query_pool->add(new HdfsTableDescriptor(tdesc, _query_pool.get()));
-    }
-
-    std::shared_ptr<RuntimeState> _make_runtime_state() {
-        TUniqueId fragment_id;
-        TQueryOptions query_options;
-        TQueryGlobals query_globals;
-        auto rs = std::make_shared<RuntimeState>(fragment_id, query_options, query_globals, _exec_env);
-        TUniqueId query_id;
-        rs->init_mem_trackers(query_id);
-        return rs;
     }
 
     static THdfsPartition _make_partition_value() {
@@ -56,52 +42,56 @@ public:
     }
 
 protected:
-    ExecEnv* _exec_env = nullptr;
     std::unique_ptr<ObjectPool> _query_pool;
     HdfsTableDescriptor* _table_desc = nullptr;
 };
 
 // Regression test for a heap-use-after-free in HiveTableDescriptor::add_partition_value.
 //
-// When two fragment instances of the same query share one HiveTableDescriptor (e.g. a
-// Hive/Iceberg table referenced multiple times via CTE), each fragment instance calls
-// add_partition_value, which stores the partition descriptor pointer in the
-// HiveTableDescriptor::_partition_id_to_desc_map shared across fragments.
+// _partition_id_to_desc_map is shared across all fragment instances of a query. The
+// previous implementation allocated HdfsPartitionDescriptor from a per-fragment
+// ObjectPool, so when fragment A finished and tore down its pool, the map kept a
+// dangling pointer. A sibling fragment then hit UAF on the duplicate-check
+// comparison `partition->thrift_partition_key_exprs() != old_partition->...`.
 //
-// The previous implementation used `runtime_state->obj_pool()` (per-fragment) to allocate
-// the descriptor. When fragment A finished and its pool destructed, the inserted
-// descriptor was freed, but the pointer remained in the shared map. Fragment B then read
-// the dangling pointer in the duplicate-check comparison, causing UAF.
-//
-// The fix uses `RuntimeStateHelper::global_obj_pool(runtime_state)` (per-query) so the descriptor's
-// lifetime matches the shared map. This test simulates that fixed behavior: both
-// fragments share the same query-level ObjectPool, so dropping a fragment's
-// RuntimeState does not free the partition descriptor. Under ASAN this exercises the
-// memory paths and must complete without errors.
-TEST_F(HiveTableDescriptorTest, AddPartitionValueLifetimeAcrossPools) {
+// The fix allocates the descriptor from the query-level ObjectPool (passed in
+// here as `_query_pool`). The descriptor stores only thrift (no opened
+// ExprContexts), so there is no fragment-scoped state on the descriptor to
+// trip on cross-fragment teardown. This test asserts: two sequential
+// "fragments" call add_partition_value with the same partition_id, the second
+// hits the dedup path, and after both are gone the entry is still accessible.
+TEST_F(HiveTableDescriptorTest, AddPartitionValueLifetimeAcrossFragments) {
     constexpr int64_t partition_id = 42;
     THdfsPartition thrift_partition = _make_partition_value();
 
-    {
-        // Fragment instance A: allocate from the shared query-level pool, then finish.
-        auto rs_a = _make_runtime_state();
-        ASSERT_OK(_table_desc->add_partition_value(rs_a.get(), _query_pool.get(), partition_id, thrift_partition));
-    }
-    // rs_a is destroyed here. Because the partition descriptor was allocated from
-    // _query_pool (the long-lived per-query pool), the map entry remains valid.
+    // Fragment instance A: register the partition into the shared query-level pool.
+    ASSERT_OK(_table_desc->add_partition_value(_query_pool.get(), partition_id, thrift_partition));
 
-    {
-        // Fragment instance B: same partition_id. add_partition_value finds the existing
-        // entry, compares thrift_partition_key_exprs against the (still-alive) old entry,
-        // and returns OK without inserting a duplicate.
-        auto rs_b = _make_runtime_state();
-        ASSERT_OK(_table_desc->add_partition_value(rs_b.get(), _query_pool.get(), partition_id, thrift_partition));
-    }
+    // Fragment instance B: same partition_id. add_partition_value finds the existing
+    // entry, compares thrift_partition_key_exprs against the (still-alive) old entry,
+    // and returns OK without inserting a duplicate.
+    ASSERT_OK(_table_desc->add_partition_value(_query_pool.get(), partition_id, thrift_partition));
 
-    // The partition descriptor must still be accessible after both fragment instances
-    // have been destroyed; it is owned by the query-level pool.
+    // The partition descriptor is owned by the query-level pool and must remain
+    // accessible regardless of fragment lifetime.
     HdfsPartitionDescriptor* partition = _table_desc->get_partition(partition_id);
     ASSERT_NE(nullptr, partition);
+    ASSERT_EQ(thrift_partition.partition_key_exprs, partition->thrift_partition_key_exprs());
+}
+
+// Conflicting thrift values for the same partition_id must surface as an error
+// rather than silently replace or coexist.
+TEST_F(HiveTableDescriptorTest, AddPartitionValueRejectsConflict) {
+    constexpr int64_t partition_id = 7;
+    THdfsPartition base = _make_partition_value();
+
+    THdfsPartition other = base;
+    TExpr expr;
+    expr.nodes.emplace_back();
+    other.partition_key_exprs.push_back(expr);
+
+    ASSERT_OK(_table_desc->add_partition_value(_query_pool.get(), partition_id, base));
+    ASSERT_FALSE(_table_desc->add_partition_value(_query_pool.get(), partition_id, other).ok());
 }
 
 } // namespace starrocks

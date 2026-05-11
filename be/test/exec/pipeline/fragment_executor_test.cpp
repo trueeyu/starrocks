@@ -75,17 +75,22 @@ protected:
 // therefore outlive any single fragment instance.
 //
 // Before the fix, add_scan_ranges_partition_values allocated partition descriptors
-// from `runtime_state->obj_pool()` (per-fragment). When one fragment finished and its
-// pool destructed, the descriptors it inserted into the shared map were freed,
+// from `runtime_state->obj_pool()` (per-fragment). When one fragment finished and
+// its pool destructed, the descriptors it inserted into the shared map were freed,
 // leaving dangling pointers. A sibling fragment then hit UAF on the duplicate-check
 // comparison `partition->thrift_partition_key_exprs() != old_partition->...`.
 //
 // The fix switched to `RuntimeStateHelper::global_obj_pool(runtime_state)`
-// (per-query). This test
-// asserts that contract: after a fragment-level RuntimeState (and its per-fragment
-// pool) is destroyed, the partition descriptor it inserted remains alive in the
-// query-level pool. Under ASAN, reading the descriptor's heap fields after the
-// fragment's pool dies would otherwise be reported as heap-use-after-free.
+// (per-query). HdfsPartitionDescriptor was also pared back to hold only thrift —
+// fragment-scoped ExprContexts are now built and closed by the connector (see
+// HiveDataSource::_init_partition_values / ::close), so there is no longer any
+// fragment-tied state living on a query-level allocation.
+//
+// This test asserts the lifetime contract: after a fragment RuntimeState (and
+// its per-fragment pool) is destroyed, the partition descriptor it inserted
+// remains alive in the query-level pool and its thrift fields are still
+// readable. Under ASAN, reading those fields after the fragment's pool dies
+// would otherwise be reported as heap-use-after-free.
 TEST_F(FragmentExecutorPartitionTest, PartitionDescriptorOutlivesFragmentPool) {
     constexpr TTableId kTableId = 100;
     constexpr int64_t kPartitionId = 42;

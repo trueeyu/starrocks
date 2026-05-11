@@ -25,9 +25,6 @@
 #include "common/status.h"
 #include "common/util/thrift_util.h"
 #include "exprs/base64.h"
-#include "exprs/expr.h"
-#include "exprs/expr_executor.h"
-#include "exprs/expr_factory.h"
 #include "gen_cpp/Descriptors_types.h"
 #include "gen_cpp/PlanNodes_types.h"
 #include "runtime/arena_allocator.h"
@@ -42,18 +39,9 @@ HdfsPartitionDescriptor::HdfsPartitionDescriptor(const THdfsPartition& thrift_pa
           _location(thrift_partition.location.suffix, mr),
           _thrift_partition_key_exprs(thrift_partition.partition_key_exprs) {}
 
-Status HdfsPartitionDescriptor::create_part_key_exprs(RuntimeState* state, ObjectPool* pool) {
-    RETURN_IF_ERROR(
-            ExprFactory::create_expr_trees(pool, _thrift_partition_key_exprs, &_partition_key_value_evals, state));
-    RETURN_IF_ERROR(ExprExecutor::prepare(_partition_key_value_evals, state));
-    RETURN_IF_ERROR(ExprExecutor::open(_partition_key_value_evals, state));
-    return Status::OK();
-}
-
 std::string HdfsPartitionDescriptor::debug_string() const {
     std::stringstream out;
-    out << "HdfsPartition(id=" << _id << ", location=" << _location << ", file_format=" << _file_format
-        << ", partition_key_value_evals=" << Expr::debug_string(_partition_key_value_evals);
+    out << "HdfsPartition(id=" << _id << ", location=" << _location << ", file_format=" << _file_format << ")";
     return out.str();
 }
 
@@ -381,10 +369,9 @@ StatusOr<TPartitionMap*> HiveTableDescriptor::deserialize_partition_map(
     return tPartitionMap;
 }
 
-Status HiveTableDescriptor::add_partition_value(RuntimeState* runtime_state, ObjectPool* pool, int64_t id,
+Status HiveTableDescriptor::add_partition_value(ObjectPool* pool, int64_t id,
                                                 const THdfsPartition& thrift_partition) {
     auto* partition = pool->add(new HdfsPartitionDescriptor(thrift_partition, _mr));
-    RETURN_IF_ERROR(partition->create_part_key_exprs(runtime_state, pool));
     {
         std::unique_lock lock(_map_mutex);
         const auto it = _partition_id_to_desc_map.find(id);
@@ -528,34 +515,24 @@ Status DescriptorTbl::create(RuntimeState* state, ObjectPool* pool, const TDescr
         case TTableType::ES_TABLE:
             desc = ALLOC_DESC(EsTableDescriptor, tdesc, mr);
             break;
-        case TTableType::HDFS_TABLE: {
-            auto* hdfs_desc = ALLOC_DESC(HdfsTableDescriptor, tdesc, pool, mr);
-            RETURN_IF_ERROR(hdfs_desc->create_key_exprs(state, pool));
-            desc = hdfs_desc;
+        case TTableType::HDFS_TABLE:
+            desc = ALLOC_DESC(HdfsTableDescriptor, tdesc, pool, mr);
             break;
-        }
         case TTableType::FILE_TABLE:
             desc = ALLOC_DESC(FileTableDescriptor, tdesc, pool, mr);
             break;
         case TTableType::ICEBERG_TABLE: {
             auto* iceberg_desc = ALLOC_DESC(IcebergTableDescriptor, tdesc, pool, mr);
             RETURN_IF_ERROR(iceberg_desc->set_partition_desc_map(tdesc.icebergTable, pool));
-            RETURN_IF_ERROR(iceberg_desc->create_key_exprs(state, pool));
             desc = iceberg_desc;
             break;
         }
-        case TTableType::DELTALAKE_TABLE: {
-            auto* delta_lake_desc = ALLOC_DESC(DeltaLakeTableDescriptor, tdesc, pool, mr);
-            RETURN_IF_ERROR(delta_lake_desc->create_key_exprs(state, pool));
-            desc = delta_lake_desc;
+        case TTableType::DELTALAKE_TABLE:
+            desc = ALLOC_DESC(DeltaLakeTableDescriptor, tdesc, pool, mr);
             break;
-        }
-        case TTableType::HUDI_TABLE: {
-            auto* hudi_desc = ALLOC_DESC(HudiTableDescriptor, tdesc, pool, mr);
-            RETURN_IF_ERROR(hudi_desc->create_key_exprs(state, pool));
-            desc = hudi_desc;
+        case TTableType::HUDI_TABLE:
+            desc = ALLOC_DESC(HudiTableDescriptor, tdesc, pool, mr);
             break;
-        }
         case TTableType::PAIMON_TABLE:
             desc = ALLOC_DESC(PaimonTableDescriptor, tdesc, pool, mr);
             break;
