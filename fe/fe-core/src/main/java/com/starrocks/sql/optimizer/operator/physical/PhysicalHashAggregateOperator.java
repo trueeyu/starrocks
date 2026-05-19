@@ -113,7 +113,6 @@ public class PhysicalHashAggregateOperator extends PhysicalOperator {
         this.usePerBucketOptmize = aggregateOperator.usePerBucketOptmize;
         this.withoutColocateRequirement = aggregateOperator.withoutColocateRequirement;
         this.distinctColumnDataSkew = aggregateOperator.distinctColumnDataSkew;
-        this.forcePreAggregation = aggregateOperator.forcePreAggregation;
         this.withLocalShuffle = aggregateOperator.withLocalShuffle;
         this.localLimit = aggregateOperator.localLimit;
     }
@@ -230,10 +229,6 @@ public class PhysicalHashAggregateOperator extends PhysicalOperator {
 
     public void setForcePreAggregation(boolean forcePreAggregation) {
         this.forcePreAggregation = forcePreAggregation;
-    }
-
-    public boolean isForcePreAggregation() {
-        return forcePreAggregation;
     }
 
     @Override
