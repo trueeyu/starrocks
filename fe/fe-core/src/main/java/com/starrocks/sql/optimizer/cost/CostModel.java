@@ -202,6 +202,10 @@ public class CostModel {
 
         @Override
         public CostEstimate visitPhysicalTopN(PhysicalTopNOperator node, ExpressionContext context) {
+            // DEBUG ONLY: force the pushed-down per-pipeline TopN to always win on cost.
+            if (node.isPerPipeline()) {
+                return CostEstimate.zero();
+            }
             // Disable one phased sort, Currently, we always use two phase sort
             if (!node.isEnforced() && !node.isSplit()
                     && node.getSortPhase().isFinal()
@@ -218,6 +222,10 @@ public class CostModel {
 
         @Override
         public CostEstimate visitPhysicalHashAggregate(PhysicalHashAggregateOperator node, ExpressionContext context) {
+            // DEBUG ONLY: force the pushed-down local agg (force-preaggregation) branch to win on cost.
+            if (node.isTopNLocalAgg()) {
+                return CostEstimate.zero();
+            }
             Optional<CostEstimate> cost;
             cost = invalidOneStageAggCost(node, context);
             if (cost.isPresent()) {
