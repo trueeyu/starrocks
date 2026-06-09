@@ -113,7 +113,18 @@ int64_t DataSketchesHll::estimate_cardinality() const {
     if (_sketch_union == nullptr) {
         return 0;
     }
-    return _sketch_union->get_estimate();
+    // The union maintains the HLL estimator state (kxq0_/kxq1_ and the HIP accumulator)
+    // incrementally as sketches are merged in. Because floating-point addition is not
+    // associative, those incrementally-accumulated values depend on the order in which
+    // sketches are merged, and that order is non-deterministic across runs (distributed
+    // scan / multi-rowset / multi-stage aggregation). Reading get_estimate() directly off
+    // the union therefore yields a jittering, non-reproducible cardinality.
+    //
+    // get_result(HLL_6) rebuilds the estimator from the final register array in canonical
+    // (register-index) order, which is independent of the merge order; get_composite_estimate()
+    // then derives the estimate purely from the registers/kxq and never from the order-dependent
+    // HIP accumulator. The result is thus a deterministic function of the merged registers.
+    return _sketch_union->get_result(datasketches::HLL_6).get_composite_estimate();
 }
 
 std::string DataSketchesHll::to_string() const {
