@@ -258,7 +258,10 @@ int main(int argc, char** argv) {
     }
 
     // Add logger for thrift internal.
-    apache::thrift::GlobalOutput.setOutputFunction(starrocks::thrift_output);
+    // [REPRO] temporarily disabled: installed thrift lacks apache::thrift::GlobalOutput
+    // (thirdparty/source thrift version mismatch); only thrift-internal log redirection.
+    // apache::thrift::GlobalOutput.setOutputFunction(starrocks::thrift_output);
+    (void)starrocks::thrift_output;
 
     // cn need to support all ops for cloudnative table, so just start_be
     starrocks::start_be(paths, as_cn);
