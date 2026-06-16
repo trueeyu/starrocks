@@ -196,10 +196,6 @@ public:
     Status _do_next_batch_with_nulls(size_t count, const NullInfos& null_infos, ColumnContentType content_type,
                                      Column* dst, const FilterData* filter) override {
         CHECK(dst->is_nullable());
-        LOG_FIRST_N(ERROR, 20) << "[REPRO] dispatch count=" << count << " num_ranges=" << null_infos.num_ranges
-                               << " num_nulls=" << null_infos.num_nulls << " content_type=" << (int)content_type
-                               << " dict_size=" << _get_dict_size()
-                               << " path=" << (null_infos.num_ranges <= 2 ? "base_fallback" : "dict");
         if (null_infos.num_ranges <= 2) {
             return Decoder::next_batch_with_nulls(count, null_infos, content_type, dst, filter);
         }
@@ -259,8 +255,9 @@ public:
 
         size_t read_count = count - null_cnt;
         Int32Column* data_column = down_cast<Int32Column*>(nullable_column->data_column().get());
-        // resize data
-        data_column->resize_uninitialized(cur_size + count);
+        // resize data: zero-initialize so null rows' dict-code slots are deterministic
+        // (not uninitialized memory), since assign_data_with_nulls only writes non-null positions.
+        data_column->resize(cur_size + count);
         int32_t* __restrict__ data = data_column->get_data().data() + cur_size;
 
         uint32_t read_dict_data[read_count + 1];
@@ -285,8 +282,10 @@ public:
         size_t null_cnt = null_infos.num_nulls;
         auto nullable_column = down_cast<NullableColumn*>(dst);
         FixedLengthColumn<T>* data_column = down_cast<FixedLengthColumn<T>*>(nullable_column->data_column().get());
-        // resize data
-        data_column->resize_uninitialized(cur_size + count);
+        // resize data: zero-initialize so null rows' data slots are deterministic
+        // (not uninitialized memory). A throw-checking narrowing cast reads all slots
+        // before consulting the null map and would otherwise spuriously reject garbage.
+        data_column->resize(cur_size + count);
         T* __restrict__ data = data_column->get_data().data() + cur_size;
 
         size_t read_count = count - null_cnt;
@@ -326,20 +325,6 @@ public:
             }
 
             assign_data_with_nulls(count, read_count, null_infos.nulls_data(), read_data, data);
-        }
-
-        if (null_cnt > 0) {
-            size_t fn = 0;
-            for (; fn < count && !is_nulls[fn]; ++fn) {
-            }
-            int64_t slot_val = 0;
-            if (fn < count) {
-                memcpy(&slot_val, &data[fn], sizeof(T) < sizeof(int64_t) ? sizeof(T) : sizeof(int64_t));
-            }
-            LOG_FIRST_N(ERROR, 20) << "[REPRO] value_batch count=" << count << " null_cnt=" << null_cnt
-                                   << " non_null=" << read_count
-                                   << " branch=" << (filter ? "filter" : (read_count < count / 10 ? "sparse" : "dense"))
-                                   << " first_null_idx=" << fn << " null_slot_value=" << slot_val;
         }
 
         return Status::OK();
