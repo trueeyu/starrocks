@@ -458,6 +458,8 @@ Status OptionalStoredColumnReader::_read_values_on_levels(size_t num_values,
                                                           starrocks::parquet::ColumnContentType content_type,
                                                           starrocks::Column* dst, bool append_default,
                                                           const FilterData* filter) {
+    LOG_FIRST_N(ERROR, 20) << "[REPRO] Optional::_read_values_on_levels num_values=" << num_values
+                           << " append_default=" << append_default << " content_type=" << (int)content_type;
     if (append_default) {
         _append_default_levels(num_values);
         dst->append_default(num_values);
@@ -476,6 +478,8 @@ Status OptionalStoredColumnReader::_read_values_on_levels(size_t num_values,
         assign_nulls(def_levels, max_def_level, num_values, is_nulls, &num_ranges, &num_nulls);
         _null_infos.num_ranges = num_ranges;
         _null_infos.num_nulls = num_nulls;
+        LOG_FIRST_N(ERROR, 20) << "[REPRO] Optional decode_values num_values=" << num_values
+                               << " num_nulls=" << num_nulls << " num_ranges=" << num_ranges;
         return _reader->decode_values(num_values, _null_infos, content_type, dst, filter);
     }
 }
