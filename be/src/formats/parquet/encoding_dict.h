@@ -196,6 +196,10 @@ public:
     Status _do_next_batch_with_nulls(size_t count, const NullInfos& null_infos, ColumnContentType content_type,
                                      Column* dst, const FilterData* filter) override {
         CHECK(dst->is_nullable());
+        LOG_FIRST_N(ERROR, 20) << "[REPRO] dispatch count=" << count << " num_ranges=" << null_infos.num_ranges
+                               << " num_nulls=" << null_infos.num_nulls << " content_type=" << (int)content_type
+                               << " dict_size=" << _get_dict_size()
+                               << " path=" << (null_infos.num_ranges <= 2 ? "base_fallback" : "dict");
         if (null_infos.num_ranges <= 2) {
             return Decoder::next_batch_with_nulls(count, null_infos, content_type, dst, filter);
         }
