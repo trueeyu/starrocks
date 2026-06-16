@@ -324,6 +324,17 @@ public:
             assign_data_with_nulls(count, read_count, null_infos.nulls_data(), read_data, data);
         }
 
+        if (null_cnt > 0) {
+            size_t fn = 0;
+            for (; fn < count && !is_nulls[fn]; ++fn) {
+            }
+            LOG_FIRST_N(ERROR, 20) << "[REPRO] value_batch count=" << count << " null_cnt=" << null_cnt
+                                     << " non_null=" << read_count
+                                     << " branch=" << (filter ? "filter" : (read_count < count / 10 ? "sparse" : "dense"))
+                                     << " first_null_idx=" << fn
+                                     << " null_slot_value=" << (fn < count ? static_cast<int64_t>(data[fn]) : 0);
+        }
+
         return Status::OK();
     }
 
