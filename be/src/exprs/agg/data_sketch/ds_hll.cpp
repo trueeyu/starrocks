@@ -58,6 +58,9 @@ void DataSketchesHll::merge(const DataSketchesHll& other) {
         return;
     }
     _sketch_union->update(*o_sketch);
+    // Merging another sketch invalidates the union's in-order HIP estimator; force the
+    // deterministic composite recompute path in estimate_cardinality().
+    _out_of_order = true;
     this->mark_changed();
 }
 
@@ -113,7 +116,29 @@ int64_t DataSketchesHll::estimate_cardinality() const {
     if (_sketch_union == nullptr) {
         return 0;
     }
-    return _sketch_union->get_estimate();
+    if (!_out_of_order) {
+        // In-order state: this sketch was built purely via update() (single-stage
+        // aggregation, no sketch merge). The union still carries a valid HIP estimator,
+        // whose relative standard error (factor 0.8326) is lower than the composite
+        // estimator's (1.039), so prefer it. Building is driven by stable local scan
+        // order, so this stays reproducible.
+        return _sketch_union->get_estimate();
+    }
+    // Out-of-order state: sketches have been merged in. The union maintains the HLL
+    // estimator state (kxq0_/kxq1_ and the HIP accumulator) incrementally as sketches are
+    // merged, and because floating-point addition is not associative, those values depend
+    // on the order in which sketches are merged. That order is non-deterministic across
+    // runs (distributed scan / multi-rowset / multi-stage aggregation), so reading the
+    // estimate directly off the union (which falls back to the composite estimate here)
+    // would yield a jittering, non-reproducible cardinality.
+    //
+    // get_result(HLL_6) rebuilds the estimator from the final register array in canonical
+    // (register-index) order, which is independent of the merge order; get_composite_estimate()
+    // then derives the estimate purely from the registers/kxq and never from the order-dependent
+    // HIP accumulator. The result is thus a deterministic function of the merged registers.
+    // (HLL_8 would hit copyAs()'s same-type shortcut and copy the order-dependent kxq verbatim,
+    // so HLL_6 is required to force the canonical-order rebuild.)
+    return _sketch_union->get_result(datasketches::HLL_6).get_composite_estimate();
 }
 
 std::string DataSketchesHll::to_string() const {

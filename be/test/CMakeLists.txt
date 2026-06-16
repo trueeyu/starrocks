@@ -128,6 +128,7 @@ set(EXEC_FILES
         ./exec/hdfs_scanner/hdfs_scanner_json_test.cpp
         ./exec/hdfs_scanner/hdfs_scanner_test.cpp
         ./exec/hdfs_scanner/jni_scanner_test.cpp
+        ./exprs/agg/data_sketch/ds_hll_test.cpp
         ./exprs/agg/data_sketch/ds_theta_test.cpp
         ./exprs/agg/json_each_test.cpp
         ./exprs/agg/aggregate_test.cpp

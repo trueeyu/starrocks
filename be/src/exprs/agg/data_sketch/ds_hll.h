@@ -47,12 +47,14 @@ public:
     DataSketchesHll(DataSketchesHll&& other) noexcept
             : _memory_usage(other._memory_usage),
               _sketch_union(std::move(other._sketch_union)),
-              _tgt_type(other._tgt_type) {}
+              _tgt_type(other._tgt_type),
+              _out_of_order(other._out_of_order) {}
     DataSketchesHll& operator=(DataSketchesHll&& other) noexcept {
         if (this != &other) {
             this->_memory_usage = other._memory_usage;
             this->_sketch_union = std::move(other._sketch_union);
             this->_tgt_type = other._tgt_type;
+            this->_out_of_order = other._out_of_order;
         }
         return *this;
     }
@@ -112,7 +114,8 @@ public:
     void clear() {
         if (_sketch_union != nullptr) {
             _sketch_union->reset();
-            _is_changed = true; // Mark as changed after reset
+            _is_changed = true;       // Mark as changed after reset
+            _out_of_order = false;    // reset() empties the union, restoring the in-order HIP estimator
         }
     }
 
@@ -137,6 +140,10 @@ private:
     // lazy value of union state
     mutable std::unique_ptr<hll_sketch_type> _sketch = nullptr;
     mutable bool _is_changed = true;
+    // True once another sketch has been merged in, which invalidates the union's in-order
+    // HIP estimator. Mirrors the library's out-of-order flag (which is not public), and
+    // selects the deterministic composite recompute in estimate_cardinality().
+    bool _out_of_order = false;
 };
 
 } // namespace starrocks
