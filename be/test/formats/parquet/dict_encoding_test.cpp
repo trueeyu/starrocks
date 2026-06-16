@@ -298,16 +298,22 @@ TEST(DictEncodingReadTest, NullSlotsAreZeroFilled) {
 
     // dict codes 1..9, dictionary values 0..9 (set up exactly like dict_encoding_test()).
     faststring fs;
-    RleEncoder<int32_t> encoder(&fs, 32);
-    for (size_t i = 0; i < 4096; ++i) {
-        encoder.Put(i % 9 + 1, 10);
+    int fs_len = 0;
+    {
+        RleEncoder<int32_t> encoder(&fs, 32);
+        for (size_t i = 0; i < 4096; ++i) {
+            encoder.Put(i % 9 + 1, 10);
+        }
+        // Flush the final pending run into fs; RleEncoder has no flushing destructor,
+        // so without this the trailing run is truncated (see DictEncoder::build()).
+        fs_len = encoder.Flush();
     }
     DictDecoder<TARGET_CXX_TYPE> decoder;
     FakeDictDecoder<TARGET_TYPE> inner_decoder;
     faststring fs2;
-    fs2.resize(fs.length() + 1);
+    fs2.resize(fs_len + 1);
     fs2.data()[0] = 32;
-    memcpy(fs2.data() + 1, fs.data(), fs.length());
+    memcpy(fs2.data() + 1, fs.data(), fs_len);
     ASSERT_OK(decoder.set_data(Slice(fs2.data(), fs2.length())));
     ASSERT_OK(decoder.set_dict(10, 10, &inner_decoder));
 
