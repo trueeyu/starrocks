@@ -77,6 +77,74 @@ public:
 };
 
 /**
+ * Like ProduceNullUnaryFunction driven by an input check, but the CHECK_OP is applied ONLY to
+ * non-null rows of a nullable input. This matters when CHECK_OP may throw (e.g. the overflow
+ * check used by strict-mode cast): the data stored at a null row is undefined, so feeding it to
+ * CHECK_OP could raise a spurious exception. Null rows are skipped entirely (neither the data OP
+ * nor the check runs) and keep their original null flag.
+ *
+ * Unlike ProduceNullUnaryFunction it handles const/nullable unwrapping itself, because the null
+ * column must stay available at the point where the check runs (an outer
+ * DealNullableColumnUnaryFunction would strip it before the check).
+ */
+template <typename OP, typename CHECK_OP>
+class NullAwareInputCheckUnaryFunction {
+public:
+    template <LogicalType Type, LogicalType ResultType>
+    static ColumnPtr evaluate(const ColumnPtr& v1) {
+        if (v1->only_null()) {
+            return v1;
+        }
+        if (v1->is_constant()) {
+            auto data = ColumnHelper::as_raw_column<ConstColumn>(v1)->data_column();
+            ColumnPtr result = evaluate<Type, ResultType>(data);
+            return ConstColumn::create(std::move(result), v1->size());
+        }
+
+        const int size = v1->size();
+        auto result = RunTimeColumnType<ResultType>::create();
+        result->resize(size);
+        auto* r3 = result->get_data().data();
+
+        // The (possibly throwing) check and the conversion for a single valid row. Defined once so
+        // the three paths below (nullable-with-nulls / nullable-without-nulls / non-nullable) share it.
+        auto apply_row = [&](const RunTimeCppType<Type>* r1, int i) {
+            (void)CHECK_OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]);
+            r3[i] = OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]);
+        };
+
+        if (v1->is_nullable()) {
+            auto* col = ColumnHelper::as_raw_column<NullableColumn>(v1);
+            const auto* r1 = ColumnHelper::cast_to_raw<Type>(col->data_column())->get_data().data();
+            if (col->has_null()) {
+                const auto& null_data = col->null_column()->get_data();
+                for (int i = 0; i < size; ++i) {
+                    // null row: data is undefined, do not run the (possibly throwing) check on it
+                    if (null_data[i]) {
+                        continue;
+                    }
+                    apply_row(r1, i);
+                }
+            } else {
+                // no nulls present: every row holds valid data, skip the per-row null check
+                for (int i = 0; i < size; ++i) {
+                    apply_row(r1, i);
+                }
+            }
+            auto nul = NullColumn::create();
+            nul->append(*col->null_column(), 0, col->null_column()->size());
+            return NullableColumn::create(std::move(result), std::move(nul));
+        }
+
+        const auto* r1 = ColumnHelper::cast_to_raw<Type>(v1)->get_data().data();
+        for (int i = 0; i < size; ++i) {
+            apply_row(r1, i);
+        }
+        return result;
+    }
+};
+
+/**
  * Execute operator function
  * @param OP: the operations impl, like NullMerge
  */

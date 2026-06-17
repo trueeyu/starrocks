@@ -112,7 +112,7 @@ struct CastFn {
                                                                                                          TO_TYPE>(     \
                             column);                                                                                   \
                 } else {                                                                                               \
-                    return VectorizedInputCheckUnaryFunction<                                                          \
+                    return NullAwareInputCheckUnaryFunction<                                                           \
                             UNARY_IMPL, NumberCheckWithThrowException>::template evaluate<FROM_TYPE, TO_TYPE>(column); \
                 }                                                                                                      \
             }                                                                                                          \
