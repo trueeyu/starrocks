@@ -57,7 +57,7 @@ DEFINE_UNARY_FN_WITH_IMPL(BenchNumberCheckThrow, value) {
 }
 
 using OldCastThrow = VectorizedInputCheckUnaryFunction<BenchImplicitToNumber, BenchNumberCheckThrow>;
-using NewCastThrow = NullAwareInputCheckUnaryFunction<BenchImplicitToNumber, BenchNumberCheckThrow>;
+using NewCastThrow = NullAwareInputCheckUnaryFunction<BenchImplicitToNumber, BenchNumberCheckThrow, BenchNumberCheck>;
 
 // Build a BIGINT column of `n` rows. When `nullable` is false a plain column is returned;
 // otherwise a NullableColumn with `null_percent`% of its rows flagged null. Every data slot
