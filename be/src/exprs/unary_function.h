@@ -106,11 +106,11 @@ public:
         result->resize(size);
         auto* r3 = result->get_data().data();
 
-        // The (possibly throwing) check and the conversion for a single valid row. Defined once so
-        // the three paths below (nullable-with-nulls / nullable-without-nulls / non-nullable) share it.
-        auto apply_row = [&](const RunTimeCppType<Type>* r1, int i) {
-            (void)CHECK_OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]);
-            r3[i] = OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]);
+        // The (possibly throwing) check and the conversion for a single value. Defined once so the
+        // three paths below (nullable-with-nulls / nullable-without-nulls / non-nullable) share it.
+        auto apply_value = [&](RunTimeCppType<Type> v, int i) {
+            (void)CHECK_OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(v);
+            r3[i] = OP::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(v);
         };
 
         if (v1->is_nullable()) {
@@ -119,16 +119,16 @@ public:
             if (col->has_null()) {
                 const auto& null_data = col->null_column()->get_data();
                 for (int i = 0; i < size; ++i) {
-                    // null row: data is undefined, do not run the (possibly throwing) check on it
-                    if (null_data[i]) {
-                        continue;
-                    }
-                    apply_row(r1, i);
+                    // Branchless: a null row's data is undefined, so substitute 0 (always in range)
+                    // before the check. This avoids a spurious throw and, unlike a per-row
+                    // `if (null) continue`, has no data-dependent branch to mispredict. The result
+                    // of a null row is masked out by the null column below anyway.
+                    apply_value(null_data[i] ? RunTimeCppType<Type>(0) : r1[i], i);
                 }
             } else {
                 // no nulls present: every row holds valid data, skip the per-row null check
                 for (int i = 0; i < size; ++i) {
-                    apply_row(r1, i);
+                    apply_value(r1[i], i);
                 }
             }
             auto nul = NullColumn::create();
@@ -138,7 +138,7 @@ public:
 
         const auto* r1 = ColumnHelper::cast_to_raw<Type>(v1)->get_data().data();
         for (int i = 0; i < size; ++i) {
-            apply_row(r1, i);
+            apply_value(r1[i], i);
         }
         return result;
     }
