@@ -19,13 +19,36 @@
 //          - DealNullableColumnUnaryFunction strips the null column, then
 //            ProduceNullUnaryFunction runs OP AND the check on EVERY row (including null rows).
 //
-//   * NEW: NullAwareInputCheckUnaryFunction<OP, CheckThrow>
-//          - keeps the null column, runs the (possibly throwing) check only on non-null rows,
-//            and takes a has_null() fast path when no nulls are present.
+//   * NEW: NullAwareInputCheckUnaryFunction<OP, CheckThrow, CheckNoThrow>
+//          - keeps the null column; the hot loop stays branchless (convert every row, detect
+//            overflow with the NON-throwing check AND-ed with the not-null mask and OR-accumulated)
+//            so it vectorizes; the throwing check runs only on a cold path entered when a genuine
+//            non-null row overflowed. It also avoids materializing/scanning a separate NULL mask
+//            column the way the old ProduceNullUnaryFunction path does.
 //
 // The goal is to confirm the new implementation does not regress against the old one. All input
 // values are kept inside the INT range so neither implementation throws (a fair, throw-free
 // comparison of the per-row work).
+//
+// Results (Release, single core; cast BIGINT -> INT, 4096 rows):
+//
+//   --------------------------------------------------------------------------------------
+//   Benchmark                            Time             CPU   Iterations UserCounters...
+//   --------------------------------------------------------------------------------------
+//   BM_New_NonNullable/4096           2870 ns         2870 ns       243895 items_per_second=1.42707G/s
+//   BM_Old_NonNullable/4096           4023 ns         4023 ns       173994 items_per_second=1.01807G/s
+//   BM_New_Nullable_NoNull/4096       3193 ns         3193 ns       219406 items_per_second=1.28277G/s
+//   BM_Old_Nullable_NoNull/4096       4434 ns         4433 ns       157783 items_per_second=923.89M/s
+//   BM_New_Nullable_30/4096           2719 ns         2719 ns       257483 items_per_second=1.50636G/s
+//   BM_Old_Nullable_30/4096           4408 ns         4408 ns       159118 items_per_second=929.254M/s
+//   BM_New_Nullable_90/4096           2719 ns         2719 ns       257638 items_per_second=1.50662G/s
+//   BM_Old_Nullable_90/4096           4413 ns         4412 ns       158922 items_per_second=928.291M/s
+//
+// The NEW implementation is ~1.4-1.6x faster than OLD across every shape, and its nullable-with-
+// nulls cases are independent of the null ratio (no branch misprediction). Note the with-nulls
+// case (2719 ns) even beats the non-nullable case (2870 ns): the with-nulls hot loop uses the
+// non-throwing check and vectorizes, whereas the non-nullable path still inlines the throwing
+// check, which blocks vectorization.
 
 #include <benchmark/benchmark.h>
 
