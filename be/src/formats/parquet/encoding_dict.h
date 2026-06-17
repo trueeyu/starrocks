@@ -154,9 +154,8 @@ public:
 
         size_t read_count = count - null_cnt;
         Int32Column* data_column = down_cast<Int32Column*>(nullable_column->data_column_raw_ptr());
-        // resize data: zero-initialize so null rows' dict-code slots are deterministic
-        // (not uninitialized memory), since assign_data_with_nulls only writes non-null positions.
-        data_column->resize(cur_size + count);
+        // resize data
+        data_column->resize_uninitialized(cur_size + count);
         int32_t* __restrict__ data = data_column->get_data().data() + cur_size;
 
         if (read_count == 0) {
@@ -258,10 +257,8 @@ public:
         size_t null_cnt = null_infos.num_nulls;
         auto nullable_column = down_cast<NullableColumn*>(dst);
         FixedLengthColumn<T>* data_column = down_cast<FixedLengthColumn<T>*>(nullable_column->data_column_raw_ptr());
-        // resize data: zero-initialize so null rows' data slots are deterministic
-        // (not uninitialized memory). A throw-checking narrowing cast reads all slots
-        // before consulting the null map and would otherwise spuriously reject garbage.
-        data_column->resize(cur_size + count);
+        // resize data
+        data_column->resize_uninitialized(cur_size + count);
         T* __restrict__ data = data_column->get_data().data() + cur_size;
 
         size_t read_count = count - null_cnt;

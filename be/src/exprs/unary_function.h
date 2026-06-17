@@ -275,6 +275,47 @@ template <typename OP, typename NULL_OP>
 using VectorizedOutputCheckUnaryFunction = DealNullableColumnUnaryFunction<
         UnpackConstColumnUnaryFunction<ProduceNullUnaryFunction<OP, NopCheck, NULL_OP>>>;
 
+// Like VectorizedInputCheckUnaryFunction, but the (possibly throwing) input CHECK is applied
+// only to NON-NULL rows. NULL rows' data slots may hold uninitialized memory (e.g. the parquet
+// dict decoder only writes non-null positions); the default path range-checks every slot before
+// the null map is consulted (see DealNullableColumnUnaryFunction, which feeds the whole data
+// column to the check first and merges nulls afterwards) and would throw on that garbage. Here
+// the value conversion (OP) still runs over the whole column and never throws; NULL rows are
+// masked by the null map afterwards regardless of their data bytes. Intended for the
+// sql_mode='ALLOW_THROW_EXCEPTION' narrowing-cast path only.
+template <typename OP, typename CHECK>
+class VectorizedInputCheckRespectNullUnaryFunction {
+public:
+    template <LogicalType Type, LogicalType ResultType, typename... Args>
+    static ColumnPtr evaluate(const ColumnPtr& v1, Args&&... args) {
+        // only_null / const inputs have no per-row null slots to skip; the standard path handles
+        // them (including throwing on a genuinely out-of-range constant value).
+        if (v1->only_null() || v1->is_constant()) {
+            return VectorizedInputCheckUnaryFunction<OP, CHECK>::template evaluate<Type, ResultType, Args...>(
+                    v1, std::forward<Args>(args)...);
+        }
+
+        Column* data = v1.get();
+        const uint8_t* nulls = nullptr;
+        if (v1->is_nullable()) {
+            auto* nullable = down_cast<NullableColumn*>(v1.get());
+            data = nullable->data_column().get();
+            nulls = nullable->immutable_null_column_data().data();
+        }
+
+        // Range-check only the live rows (nulls == nullptr means non-nullable: check every row).
+        const auto* r1 = ColumnHelper::cast_to_raw<Type>(data)->get_data().data();
+        for (size_t i = 0, n = data->size(); i < n; ++i) {
+            if (nulls == nullptr || !nulls[i]) {
+                (void)CHECK::template apply<RunTimeCppType<Type>, RunTimeCppType<ResultType>>(r1[i]); // may throw
+            }
+        }
+        // Live values verified in range -> plain (non-throwing) conversion, then null-map merge.
+        return VectorizedStrictUnaryFunction<OP>::template evaluate<Type, ResultType, Args...>(
+                v1, std::forward<Args>(args)...);
+    }
+};
+
 /**
  * Define a unary function use FN(),
  * FN's signature must be a `ResultType FN(Type a)`
