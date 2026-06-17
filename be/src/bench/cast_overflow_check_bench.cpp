@@ -144,14 +144,14 @@ static void BM_New_Nullable_90(benchmark::State& state) {
 
 static constexpr int kRows = 4096;
 
-BENCHMARK(BM_Old_NonNullable)->Arg(kRows);
 BENCHMARK(BM_New_NonNullable)->Arg(kRows);
-BENCHMARK(BM_Old_Nullable_NoNull)->Arg(kRows);
+BENCHMARK(BM_Old_NonNullable)->Arg(kRows);
 BENCHMARK(BM_New_Nullable_NoNull)->Arg(kRows);
-BENCHMARK(BM_Old_Nullable_30)->Arg(kRows);
+BENCHMARK(BM_Old_Nullable_NoNull)->Arg(kRows);
 BENCHMARK(BM_New_Nullable_30)->Arg(kRows);
-BENCHMARK(BM_Old_Nullable_90)->Arg(kRows);
+BENCHMARK(BM_Old_Nullable_30)->Arg(kRows);
 BENCHMARK(BM_New_Nullable_90)->Arg(kRows);
+BENCHMARK(BM_Old_Nullable_90)->Arg(kRows);
 
 } // namespace starrocks
 
