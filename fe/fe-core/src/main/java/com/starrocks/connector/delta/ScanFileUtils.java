@@ -28,6 +28,7 @@ import io.delta.kernel.types.StructField;
 import io.delta.kernel.utils.FileStatus;
 import org.apache.commons.collections4.map.CaseInsensitiveMap;
 
+import java.net.URI;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -68,6 +69,32 @@ public class ScanFileUtils {
         return new DeltaLakeAddFileStatsSerDe(estimateRowCount, null, null, null);
     }
 
+    /**
+     * Rebuild the URI-encoded full file path that {@code getAddFileStatus} returned before
+     * delta-kernel 4.2.0 (which now URL-decodes it). The raw {@code add.path} ({@code rawEncodedPath})
+     * is encoded per the Delta protocol; we splice it back onto the table-root prefix of the decoded
+     * full path, so encoded slashes inside a segment and table roots with special characters are
+     * preserved. Returns {@code decodedFullPath} unchanged when nothing needs re-encoding.
+     */
+    static String restoreEncodedFilePath(String decodedFullPath, String rawEncodedPath) {
+        if (rawEncodedPath == null || rawEncodedPath.isEmpty()) {
+            return decodedFullPath;
+        }
+        URI rawUri = URI.create(rawEncodedPath);
+        // Absolute add.path (e.g. delta shallow clone) is used by the kernel as-is, so the encoded
+        // form is already the full path.
+        if (rawUri.isAbsolute() || rawEncodedPath.startsWith("/")) {
+            return rawEncodedPath;
+        }
+        // Decode the relative add.path the same way the kernel does, then swap the decoded suffix of
+        // the full path for the still-encoded one.
+        String decodedRelative = rawUri.getPath();
+        if (decodedFullPath.endsWith(decodedRelative)) {
+            return decodedFullPath.substring(0, decodedFullPath.length() - decodedRelative.length()) + rawEncodedPath;
+        }
+        return decodedFullPath;
+    }
+
     private static Row getAddFileEntry(Row scanFileInfo) {
         if (scanFileInfo.isNullAt(ADD_FILE_ORDINAL)) {
             throw new IllegalArgumentException("There is no `add` entry in the scan file row");
@@ -89,6 +116,15 @@ public class ScanFileUtils {
         Map<String, StructField> schema = buildCaseInsensitiveSchema(metadata.getSchema().fields());
 
         FileStatus fileStatus = InternalScanFileUtils.getAddFileStatus(file);
+        // Since delta-kernel 4.2.0, getAddFileStatus() URL-decodes the file path (e.g. a timestamp
+        // partition dir "col_timestamp=2023-01-01%2001%3A01%3A01" becomes "...01:01:01"), whereas the
+        // physical object key keeps the percent-encoded form. Restore the raw encoded path from the
+        // add action so the scan range matches the stored key; DeltaConnectorScanRangeSource decodes
+        // it again before handing it to the BE.
+        String encodedPath = restoreEncodedFilePath(fileStatus.getPath(), InternalScanFileUtils.getFilePath(file));
+        if (!encodedPath.equals(fileStatus.getPath())) {
+            fileStatus = FileStatus.of(encodedPath, fileStatus.getSize(), fileStatus.getModificationTime());
+        }
         Map<String, String> partitionValues = InternalScanFileUtils.getPartitionValues(file);
         Map<String, String> physicalNameToPartitionNameMap = Maps.newHashMap();
         // partition Values use column physical name(using in column mapping) as key, we need to convert it to logical name
