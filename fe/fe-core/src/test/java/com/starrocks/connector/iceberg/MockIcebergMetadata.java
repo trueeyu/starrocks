@@ -84,6 +84,8 @@ public class MockIcebergMetadata implements ConnectorMetadata {
     public static final String MOCKED_PARTITIONED_HOUR_TABLE_NAME = "t0_hour";
     public static final String MOCKED_PARTITIONED_BUCKET_TABLE_NAME = "t0_bucket";
     public static final String MOCKED_PARTITIONED_TRUNCATE_TABLE_NAME = "t0_truncate";
+    // bucket on an int column, whose type supports bucket-aware execution (unlike t0_bucket which is bucketed on ts)
+    public static final String MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME = "t0_bucket_id";
     // partition table with transforms and partition column type is timestamp with timezone
     public static final String MOCKED_PARTITIONED_YEAR_TZ_TABLE_NAME = "t0_year_tz";
     public static final String MOCKED_PARTITIONED_MONTH_TZ_TABLE_NAME = "t0_month_tz";
@@ -102,6 +104,7 @@ public class MockIcebergMetadata implements ConnectorMetadata {
                     MOCKED_PARTITIONED_DAY_WITH_NULL_PARTITION_TABLE_NAME,
                     MOCKED_PARTITIONED_HOUR_TABLE_NAME,
                     MOCKED_PARTITIONED_BUCKET_TABLE_NAME,
+                    MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME,
                     MOCKED_PARTITIONED_TRUNCATE_TABLE_NAME,
                     MOCKED_PARTITIONED_YEAR_TZ_TABLE_NAME, MOCKED_PARTITIONED_MONTH_TZ_TABLE_NAME,
                     MOCKED_PARTITIONED_DAY_TZ_TABLE_NAME, MOCKED_PARTITIONED_HOUR_TZ_TABLE_NAME,
@@ -320,6 +323,14 @@ public class MockIcebergMetadata implements ConnectorMetadata {
                                 + MOCKED_PARTITIONED_BUCKET_TABLE_NAME), MOCKED_PARTITIONED_BUCKET_TABLE_NAME,
                         schema, spec, 1);
             }
+            case MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME: {
+                PartitionSpec spec =
+                        PartitionSpec.builderFor(schema).bucket("id", 10).build();
+                return TestTables.create(
+                        new File(getStarRocksHome() + "/" + MOCKED_PARTITIONED_TRANSFORMS_DB_NAME + "/"
+                                + MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME), MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME,
+                        schema, spec, 1);
+            }
             case MOCKED_PARTITIONED_TRUNCATE_TABLE_NAME: {
                 PartitionSpec spec =
                         PartitionSpec.builderFor(schema).truncate("data", 5).build();
@@ -411,6 +422,9 @@ public class MockIcebergMetadata implements ConnectorMetadata {
             case MOCKED_PARTITIONED_BUCKET_TABLE_NAME:
                 return Lists.newArrayList("ts_bucket=0", "ts_bucket=1",
                         "ts_bucket=2", "ts_bucket=3", "ts_bucket=4");
+            case MOCKED_PARTITIONED_BUCKET_ID_TABLE_NAME:
+                return Lists.newArrayList("id_bucket=0", "id_bucket=1",
+                        "id_bucket=2", "id_bucket=3", "id_bucket=4");
             case MOCKED_PARTITIONED_TRUNCATE_TABLE_NAME:
                 return Lists.newArrayList("data_trunc=aaaaa", "data_trunc=bbbbb",
                         "data_trunc=ccccc", "data_trunc=ddddd", "data_trunc=eeeee");

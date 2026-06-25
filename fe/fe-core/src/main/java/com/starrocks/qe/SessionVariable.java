@@ -2392,6 +2392,10 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
         return enableBucketAwareExecutionOnLake;
     }
 
+    public void setEnableBucketAwareExecutionOnLake(boolean enableBucketAwareExecutionOnLake) {
+        this.enableBucketAwareExecutionOnLake = enableBucketAwareExecutionOnLake;
+    }
+
     public String getLakeBucketAssignMode() {
         return lakeBucketAssignMode;
     }

@@ -549,7 +549,14 @@ public class OutputPropertyDeriver extends PropertyDeriverBase<PhysicalPropertyS
         if (ConnectContext.get().getSessionVariable().isEnableBucketAwareExecutionOnLake() &&
                 distributionSpec instanceof HashDistributionSpec hashDistribution) {
             IcebergTable table = (IcebergTable) node.getTable();
-            if (table.hasBucketProperties()) {
+            // Bucket-aware execution on lake does not yet pin buckets to pipeline drivers (see the
+            // `&& isNative` gate in LocalFragmentAssignmentStrategy). With pipeline_dop > 1, a single bucket's
+            // rows can be spread across drivers, so an aggregation that relies on this LOCAL distribution to
+            // elide the shuffle (e.g. count(distinct)/group-by on the bucket column) would produce wrong
+            // results. Only trust the bucket-aware distribution for join-sourced requirements; force
+            // aggregation-sourced requirements to redistribute until per-driver co-location is implemented.
+            if (table.hasBucketProperties() &&
+                    hashDistribution.getHashDistributionDesc().getSourceType() != SHUFFLE_AGG) {
                 List<BucketProperty> properties = table.getBucketProperties();
                 Optional<HashDistributionDesc> hashDistributionDesc = computeLakeHashDistributionDesc(
                         hashDistribution.getHashDistributionDesc(), properties, node.getColRefToColumnMetaMap());
