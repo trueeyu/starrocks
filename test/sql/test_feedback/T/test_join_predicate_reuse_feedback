@@ -1,0 +1,55 @@
+-- name: test_join_predicate_reuse_feedback
+-- Regression for: JoinTuningGuide must keep predicateCommonOperators when it rebuilds a join.
+-- A join whose post-join predicate reuses a common sub expression carries predicateCommonOperators
+-- (shown as "common sub expr" in the plan). When a plan-advisor join tuning guide rebuilds the join,
+-- it must preserve predicateCommonOperators; otherwise the rebuilt join keeps a predicate that
+-- references columns only defined in predicateCommonOperators, and the plan fails with
+-- "Invalid plan ... required cols {..} cannot obtain from input cols {..}".
+CREATE TABLE `repro_la` (
+  `id` int(11) NULL COMMENT "",
+  `x` int(11) NULL COMMENT ""
+) ENGINE=OLAP
+DUPLICATE KEY(`id`)
+DISTRIBUTED BY HASH(`id`) BUCKETS 3
+PROPERTIES (
+"replication_num" = "1"
+);
+
+CREATE TABLE `repro_lb` (
+  `id` int(11) NULL COMMENT "",
+  `v` int(11) NULL COMMENT "",
+  `k` varchar(20) NULL COMMENT ""
+) ENGINE=OLAP
+DUPLICATE KEY(`id`)
+DISTRIBUTED BY HASH(`id`) BUCKETS 3
+PROPERTIES (
+"replication_num" = "1"
+);
+
+insert into repro_la select generate_series, generate_series from TABLE(generate_series(1, 8));
+insert into repro_lb select generate_series, generate_series * 10, cast(generate_series as varchar) from TABLE(generate_series(1, 8));
+analyze table repro_la;
+analyze table repro_lb;
+
+set enable_plan_advisor_blacklist = false;
+-- force a SHUFFLE join so the RIGHT_INPUT_OVERESTIMATED guide can apply
+set broadcast_row_limit = 0;
+-- keep the plan skeleton stable so the recorded guide matches on re-optimize
+set cbo_enable_low_cardinality_optimize = false;
+
+-- The right child (lower(k) = 'zznotexist') returns 0 rows at runtime but is estimated > 0,
+-- so a RightChildEstimationErrorTuningGuide (RIGHT_INPUT_OVERESTIMATED) gets recorded on this join.
+-- The join's WHERE predicate repeats abs(a.id + b.v), which is reused as a common sub expression.
+alter plan advisor add SELECT a.id, b.v FROM (SELECT * FROM repro_la WHERE x > 0) a LEFT JOIN (SELECT id, v FROM repro_lb WHERE lower(k) = 'zznotexist') b ON abs(a.id) = abs(b.id) WHERE abs(a.id + b.v) = 10 OR abs(a.id + b.v) = 20;
+
+-- On re-optimize the guide rebuilds the join. The plan must still be valid and keep the reused
+-- "common sub expr" on the join (before the fix the EXPLAIN throws "Invalid plan").
+function: assert_explain_contains("SELECT a.id, b.v FROM (SELECT * FROM repro_la WHERE x > 0) a LEFT JOIN (SELECT id, v FROM repro_lb WHERE lower(k) = 'zznotexist') b ON abs(a.id) = abs(b.id) WHERE abs(a.id + b.v) = 10 OR abs(a.id + b.v) = 20", "RightChildEstimationErrorTuningGuide", "common sub expr")
+
+-- the query itself should still run (returns empty set) rather than fail with Invalid plan
+SELECT a.id, b.v FROM (SELECT * FROM repro_la WHERE x > 0) a LEFT JOIN (SELECT id, v FROM repro_lb WHERE lower(k) = 'zznotexist') b ON abs(a.id) = abs(b.id) WHERE abs(a.id + b.v) = 10 OR abs(a.id + b.v) = 20;
+
+set broadcast_row_limit = 15000000;
+set cbo_enable_low_cardinality_optimize = true;
+set enable_plan_advisor_blacklist = true;
+truncate plan advisor;
