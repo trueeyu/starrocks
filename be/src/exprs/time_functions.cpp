@@ -1024,6 +1024,18 @@ DateValue date_value_add(DateValue dv, int count) {
 DEFINE_DATE_ADD_FN(days_add_date, TimeUnit::DAY);
 DEFINE_DATE_SUB_FN(days_sub_date, TimeUnit::DAY);
 
+// months_add / months_sub for DATE input
+DEFINE_DATE_ADD_FN(months_add_date, TimeUnit::MONTH);
+DEFINE_DATE_SUB_FN(months_sub_date, TimeUnit::MONTH);
+
+// years_add / years_sub for DATE input
+DEFINE_DATE_ADD_FN(years_add_date, TimeUnit::YEAR);
+DEFINE_DATE_SUB_FN(years_sub_date, TimeUnit::YEAR);
+
+// weeks_add / weeks_sub for DATE input
+DEFINE_DATE_ADD_FN(weeks_add_date, TimeUnit::WEEK);
+DEFINE_DATE_SUB_FN(weeks_sub_date, TimeUnit::WEEK);
+
 #undef DEFINE_DATE_ADD_FN
 #undef DEFINE_DATE_SUB_FN
 

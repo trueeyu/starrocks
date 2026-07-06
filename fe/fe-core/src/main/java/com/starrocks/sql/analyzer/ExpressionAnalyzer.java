@@ -783,10 +783,28 @@ public class ExpressionAnalyzer {
 
         @Override
         public Void visitTimestampArithmeticExpr(TimestampArithmeticExpr node, Scope scope) {
-            node.setChild(0, TypeManager.addCastExpr(node.getChild(0), DateType.DATETIME));
+            // For `DATE ± INTERVAL n {DAY|MONTH}` keep the result in the DATE domain instead of promoting
+            // the operand to DATETIME, so a folded `current_date() - interval '1' day` stays '2026-07-05'
+            // (no '00:00:00') and connector push-down / partition pruning on string date columns matches
+            // correctly. Only units that have a DATE-typed builtin overload are enabled here; keep this
+            // list in sync with the (DATE, INT) -> DATE overloads registered in functions.py. Diff
+            // functions and sub-day units still promote the operand to DATETIME.
+            TimestampArithmeticExpr.TimeUnit unit =
+                    TimestampArithmeticExpr.TimeUnit.fromName(node.getTimeUnitIdent());
+            boolean keepDateResult = node.getChild(0).getType().isDate()
+                    && !ExprUtils.requiresTimestampDiffCast(node.getFuncName())
+                    && (unit == TimestampArithmeticExpr.TimeUnit.DAY
+                            || unit == TimestampArithmeticExpr.TimeUnit.MONTH
+                            || unit == TimestampArithmeticExpr.TimeUnit.YEAR
+                            || unit == TimestampArithmeticExpr.TimeUnit.WEEK);
 
-            if (node.getFuncName() != null && ExprUtils.requiresTimestampDiffCast(node.getFuncName())) {
-                node.setChild(1, TypeManager.addCastExpr(node.getChild(1), DateType.DATETIME));
+            if (keepDateResult) {
+                node.setChild(1, TypeManager.addCastExpr(node.getChild(1), IntegerType.INT));
+            } else {
+                node.setChild(0, TypeManager.addCastExpr(node.getChild(0), DateType.DATETIME));
+                if (node.getFuncName() != null && ExprUtils.requiresTimestampDiffCast(node.getFuncName())) {
+                    node.setChild(1, TypeManager.addCastExpr(node.getChild(1), DateType.DATETIME));
+                }
             }
 
             Type[] argumentTypes = node.getChildren().stream().map(Expr::getType)
