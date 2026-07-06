@@ -142,6 +142,85 @@ TEST_F(TimeFunctionsTest, yearAddTest) {
     }
 }
 
+TEST_F(TimeFunctionsTest, yearsAddDateTest) {
+    Columns columns;
+
+    auto tc = DateColumn::create();
+    auto year = Int32Column::create();
+    for (int j = 0; j < 20; ++j) {
+        tc->append(DateValue::create(2000, 1, 1));
+        year->append(j);
+    }
+
+    columns.emplace_back(tc);
+    columns.emplace_back(year);
+
+    ColumnPtr result = TimeFunctions::years_add_date(_utils->get_fn_ctx(), columns).value();
+
+    // DATE input keeps a DATE result (no promotion to DATETIME).
+    ASSERT_TRUE(result->is_nullable());
+
+    auto v = ColumnHelper::cast_to<TYPE_DATE>(ColumnHelper::as_column<NullableColumn>(result)->data_column());
+    for (int k = 0; k < 20; ++k) {
+        ASSERT_EQ(DateValue::create(2000 + k, 1, 1), v->immutable_data()[k]);
+        ASSERT_FALSE(result->is_null(k));
+    }
+}
+
+TEST_F(TimeFunctionsTest, yearsSubDateTest) {
+    Columns columns;
+
+    auto tc = DateColumn::create();
+    auto year = Int32Column::create();
+    for (int j = 0; j < 20; ++j) {
+        tc->append(DateValue::create(2020, 6, 15));
+        year->append(j);
+    }
+
+    columns.emplace_back(tc);
+    columns.emplace_back(year);
+
+    ColumnPtr result = TimeFunctions::years_sub_date(_utils->get_fn_ctx(), columns).value();
+
+    ASSERT_TRUE(result->is_nullable());
+
+    auto v = ColumnHelper::cast_to<TYPE_DATE>(ColumnHelper::as_column<NullableColumn>(result)->data_column());
+    for (int k = 0; k < 20; ++k) {
+        ASSERT_EQ(DateValue::create(2020 - k, 6, 15), v->immutable_data()[k]);
+        ASSERT_FALSE(result->is_null(k));
+    }
+}
+
+TEST_F(TimeFunctionsTest, yearsAddSubDateLeapDayTest) {
+    // Feb 29 clamps to Feb 28 on non-leap target years, stays Feb 29 on leap ones.
+    auto tc = DateColumn::create();
+    auto year = Int32Column::create();
+    tc->append(DateValue::create(2000, 2, 29)); // + 1 year  -> 2001-02-28 (non-leap)
+    year->append(1);
+    tc->append(DateValue::create(2000, 2, 29)); // + 4 years -> 2004-02-29 (leap)
+    year->append(4);
+
+    Columns add_columns = {tc, year};
+    ColumnPtr add_result = TimeFunctions::years_add_date(_utils->get_fn_ctx(), add_columns).value();
+    auto av = ColumnHelper::cast_to<TYPE_DATE>(ColumnHelper::as_column<NullableColumn>(add_result)->data_column());
+    ASSERT_EQ(DateValue::create(2001, 2, 28), av->immutable_data()[0]);
+    ASSERT_EQ(DateValue::create(2004, 2, 29), av->immutable_data()[1]);
+
+    // 2004-02-29 - 4 years -> 2000-02-29 (leap); 2004-02-29 - 1 year -> 2003-02-28 (non-leap)
+    auto tc2 = DateColumn::create();
+    auto year2 = Int32Column::create();
+    tc2->append(DateValue::create(2004, 2, 29));
+    year2->append(4);
+    tc2->append(DateValue::create(2004, 2, 29));
+    year2->append(1);
+
+    Columns sub_columns = {tc2, year2};
+    ColumnPtr sub_result = TimeFunctions::years_sub_date(_utils->get_fn_ctx(), sub_columns).value();
+    auto sv = ColumnHelper::cast_to<TYPE_DATE>(ColumnHelper::as_column<NullableColumn>(sub_result)->data_column());
+    ASSERT_EQ(DateValue::create(2000, 2, 29), sv->immutable_data()[0]);
+    ASSERT_EQ(DateValue::create(2003, 2, 28), sv->immutable_data()[1]);
+}
+
 TEST_F(TimeFunctionsTest, quarterAddTest) {
     Columns columns;
 

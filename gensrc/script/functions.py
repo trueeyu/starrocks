@@ -534,14 +534,18 @@ vectorized_functions = [
     [50113, 'years_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::years_sub_date'],
     [50115, 'quarters_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::quarters_add'],
     [50116, 'quarters_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::quarters_sub'],
+    [50117, 'quarters_add', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::quarters_add_date'],
+    [50118, 'quarters_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::quarters_sub_date'],
     [50120, 'months_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::months_add'],
     [50121, 'months_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::months_sub'],
     [50122, 'add_months', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::months_add'],
     [50123, 'months_add', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::months_add_date'],
     [50124, 'months_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::months_sub_date'],
     [50125, 'add_months', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::months_add_date'],
+
     [50130, 'weeks_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::weeks_add'],
     [50131, 'weeks_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::weeks_sub'],
+
     [50132, 'weeks_add', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::weeks_add_date'],
     [50133, 'weeks_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::weeks_sub_date'],
 

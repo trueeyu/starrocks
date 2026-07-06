@@ -796,7 +796,8 @@ public class ExpressionAnalyzer {
                     && (unit == TimestampArithmeticExpr.TimeUnit.DAY
                             || unit == TimestampArithmeticExpr.TimeUnit.MONTH
                             || unit == TimestampArithmeticExpr.TimeUnit.YEAR
-                            || unit == TimestampArithmeticExpr.TimeUnit.WEEK);
+                            || unit == TimestampArithmeticExpr.TimeUnit.WEEK
+                            || unit == TimestampArithmeticExpr.TimeUnit.QUARTER);
 
             if (keepDateResult) {
                 node.setChild(1, TypeManager.addCastExpr(node.getChild(1), IntegerType.INT));

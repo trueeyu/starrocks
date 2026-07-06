@@ -1036,6 +1036,10 @@ DEFINE_DATE_SUB_FN(years_sub_date, TimeUnit::YEAR);
 DEFINE_DATE_ADD_FN(weeks_add_date, TimeUnit::WEEK);
 DEFINE_DATE_SUB_FN(weeks_sub_date, TimeUnit::WEEK);
 
+// quarters_add / quarters_sub for DATE input
+DEFINE_DATE_ADD_FN(quarters_add_date, TimeUnit::QUARTER);
+DEFINE_DATE_SUB_FN(quarters_sub_date, TimeUnit::QUARTER);
+
 #undef DEFINE_DATE_ADD_FN
 #undef DEFINE_DATE_SUB_FN
 
