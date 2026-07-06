@@ -486,6 +486,16 @@ public:
     DEFINE_VECTORIZED_FN(days_sub);
 
     /**
+     * @param: [date, days]
+     * @paramType columns: [DateColumn, IntColumn]
+     * @return DateColumn
+     * DATE input keeps DATE result (no promotion to DATETIME), so lexicographic/temporal
+     * order is preserved for downstream connector push-down and partition pruning.
+     */
+    DEFINE_VECTORIZED_FN(days_add_date);
+    DEFINE_VECTORIZED_FN(days_sub_date);
+
+    /**
      * @param: [timestmap, hours]
      * @paramType columns: [TimestampColumn, IntColumn]
      * @return TimestampColumn

@@ -537,17 +537,25 @@ vectorized_functions = [
     [50122, 'add_months', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::months_add'],
     [50130, 'weeks_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::weeks_add'],
     [50131, 'weeks_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::weeks_sub'],
+
     [50140, 'days_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_add'],
     [50141, 'days_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_sub'],
-
     [50142, 'date_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_add'],
     [50143, 'date_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_sub'],
-
     [50144, 'adddate', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_add'],
     [50145, 'subdate', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::days_sub'],
 
     [50150, 'hours_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::hours_add'],
     [50151, 'hours_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::hours_sub'],
+
+    # DATE variants of the days/date add-sub family: DATE input keeps DATE result
+    [50152, 'days_add', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_add_date'],
+    [50153, 'days_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_sub_date'],
+    [50154, 'date_add', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_add_date'],
+    [50155, 'date_sub', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_sub_date'],
+    [50156, 'adddate', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_add_date'],
+    [50157, 'subdate', True, False, 'DATE', ['DATE', 'INT'], 'TimeFunctions::days_sub_date'],
+
     [50160, 'minutes_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::minutes_add'],
     [50161, 'minutes_sub', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::minutes_sub'],
     [50170, 'seconds_add', True, False, 'DATETIME', ['DATETIME', 'INT'], 'TimeFunctions::seconds_add'],
