@@ -96,6 +96,7 @@ import com.starrocks.sql.ast.expression.StringLiteral;
 import com.starrocks.sql.ast.expression.SubfieldExpr;
 import com.starrocks.sql.ast.expression.Subquery;
 import com.starrocks.sql.ast.expression.TimestampArithmeticExpr;
+import com.starrocks.sql.ast.expression.TimestampArithmeticExpr.TimeUnit;
 import com.starrocks.sql.ast.expression.UserVariableExpr;
 import com.starrocks.sql.ast.expression.VariableExpr;
 import com.starrocks.sql.common.LargeInPredicateException;
@@ -126,6 +127,7 @@ import com.starrocks.type.VarcharType;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -441,6 +443,11 @@ public class ExpressionAnalyzer {
     }
 
     public static class Visitor implements AstVisitorExtendInterface<Void, Scope> {
+        // Date-granularity interval units: `DATE ± INTERVAL n <unit>` stays in the DATE domain for these.
+        // Keep in sync with the (DATE, INT) -> DATE overloads registered in functions.py.
+        private static final EnumSet<TimeUnit> DATE_GRANULARITY_UNITS =
+                EnumSet.of(TimeUnit.YEAR, TimeUnit.QUARTER, TimeUnit.MONTH, TimeUnit.WEEK, TimeUnit.DAY);
+
         private final AnalyzeState analyzeState;
         private final ConnectContext session;
 
@@ -786,17 +793,11 @@ public class ExpressionAnalyzer {
             // For `DATE ± INTERVAL n {DAY|WEEK|MONTH|QUARTER|YEAR}` keep the result in the DATE domain
             // instead of promoting the operand to DATETIME, so a folded `current_date() - interval '1' day`
             // stays '2026-07-05' (no '00:00:00') and connector push-down / partition pruning on string date
-            // columns matches correctly. Match on the time-unit identifier string (not TimestampArithmeticExpr
-            // .TimeUnit, whose enum lacks QUARTER even though `INTERVAL ... QUARTER` is valid syntax); keep
-            // this list in sync with the (DATE, INT) -> DATE overloads registered in functions.py. Diff
-            // functions and sub-day units still promote the operand to DATETIME.
-            String timeUnitIdent = node.getTimeUnitIdent();
-            boolean dateGranularityUnit = timeUnitIdent != null
-                    && (timeUnitIdent.equalsIgnoreCase("DAY")
-                            || timeUnitIdent.equalsIgnoreCase("WEEK")
-                            || timeUnitIdent.equalsIgnoreCase("MONTH")
-                            || timeUnitIdent.equalsIgnoreCase("QUARTER")
-                            || timeUnitIdent.equalsIgnoreCase("YEAR"));
+            // columns matches correctly. Sub-day units resolve to null / a non-date-granularity unit here and
+            // fall through to the DATETIME path, as do diff functions. TimeUnit.fromName returns null for
+            // units absent from the enum (e.g. MILLISECOND), which EnumSet.contains treats as not-a-member.
+            TimeUnit timeUnit = TimeUnit.fromName(node.getTimeUnitIdent());
+            boolean dateGranularityUnit = DATE_GRANULARITY_UNITS.contains(timeUnit);
             boolean keepDateResult = node.getChild(0).getType().isDate()
                     && !ExprUtils.requiresTimestampDiffCast(node.getFuncName())
                     && dateGranularityUnit;
