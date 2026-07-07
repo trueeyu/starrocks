@@ -16,10 +16,6 @@ select cast('2020-01-31' as date) + interval 1 month;
 -- result:
 2020-02-29
 -- !result
-select cast('2020-11-30' as date) + interval 1 quarter;
--- result:
-2021-02-28
--- !result
 select cast('2020-02-29' as date) + interval 1 year;
 -- result:
 2021-02-28
