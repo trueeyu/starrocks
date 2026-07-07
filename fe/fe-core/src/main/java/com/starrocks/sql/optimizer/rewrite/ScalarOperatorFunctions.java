@@ -426,8 +426,15 @@ public class ScalarOperatorFunctions {
         }
     }
 
-    @ConstantFunction(name = "quarters_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "quarters_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "quarters_add", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator quartersAdd(ConstantOperator date, ConstantOperator quarter) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(
+                    date.getDatetime().plus(quarter.getInt(), IsoFields.QUARTER_YEARS));
+        }
         return ConstantOperator.createDatetimeOrNull(
                 date.getDatetime().plus(quarter.getInt(), IsoFields.QUARTER_YEARS));
     }
@@ -448,17 +455,29 @@ public class ScalarOperatorFunctions {
         }
     }
 
-    @ConstantFunction(name = "weeks_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "weeks_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "weeks_add", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator weeksAdd(ConstantOperator date, ConstantOperator week) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().plusWeeks(week.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().plusWeeks(week.getInt()));
     }
 
     @ConstantFunction.List(list = {
             @ConstantFunction(name = "adddate", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
             @ConstantFunction(name = "date_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
-            @ConstantFunction(name = "days_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+            @ConstantFunction(name = "days_add", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "adddate", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true),
+            @ConstantFunction(name = "date_add", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true),
+            @ConstantFunction(name = "days_add", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
     })
     public static ConstantOperator daysAdd(ConstantOperator date, ConstantOperator day) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().plusDays(day.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().plusDays(day.getInt()));
     }
 
@@ -695,33 +714,64 @@ public class ScalarOperatorFunctions {
         return ConstantOperator.createDateOrNull(newDt);
     }
 
-    @ConstantFunction(name = "years_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "years_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "years_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator yearsSub(ConstantOperator date, ConstantOperator year) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().minusYears(year.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().minusYears(year.getInt()));
     }
 
-    @ConstantFunction(name = "quarters_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "quarters_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "quarters_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator quartersSub(ConstantOperator date, ConstantOperator quarter) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(
+                    date.getDatetime().minus(quarter.getInt(), IsoFields.QUARTER_YEARS));
+        }
         return ConstantOperator.createDatetimeOrNull(
                 date.getDatetime().minus(quarter.getInt(), IsoFields.QUARTER_YEARS));
     }
 
-    @ConstantFunction(name = "months_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "months_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "months_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator monthsSub(ConstantOperator date, ConstantOperator month) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().minusMonths(month.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().minusMonths(month.getInt()));
     }
 
     @ConstantFunction.List(list = {
             @ConstantFunction(name = "subdate", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
             @ConstantFunction(name = "date_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
-            @ConstantFunction(name = "days_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+            @ConstantFunction(name = "days_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "subdate", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true),
+            @ConstantFunction(name = "date_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true),
+            @ConstantFunction(name = "days_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
     })
     public static ConstantOperator daysSub(ConstantOperator date, ConstantOperator day) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().minusDays(day.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().minusDays(day.getInt()));
     }
 
-    @ConstantFunction(name = "weeks_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true)
+    @ConstantFunction.List(list = {
+            @ConstantFunction(name = "weeks_sub", argTypes = {DATETIME, INT}, returnType = DATETIME, isMonotonic = true),
+            @ConstantFunction(name = "weeks_sub", argTypes = {DATE, INT}, returnType = DATE, isMonotonic = true)
+    })
     public static ConstantOperator weeksSub(ConstantOperator date, ConstantOperator week) {
+        if (date.getType().isDate()) {
+            return ConstantOperator.createDateOrNull(date.getDatetime().minusWeeks(week.getInt()));
+        }
         return ConstantOperator.createDatetimeOrNull(date.getDatetime().minusWeeks(week.getInt()));
     }
 

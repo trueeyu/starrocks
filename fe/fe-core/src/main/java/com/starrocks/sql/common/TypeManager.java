@@ -314,7 +314,11 @@ public class TypeManager {
         BiFunction<Type, Type, Boolean> isDataAndString =
                 (a, b) -> a.isDateType() && (b.isStringType() || b.isDateType());
         if (isDataAndString.apply(type1, type2) || isDataAndString.apply(type2, type1)) {
-            return DateType.DATETIME;
+            // Compare in the DATE domain when neither operand is DATETIME, so a STRING date column vs a
+            // DATE value stays 'yyyy-MM-dd' (no spurious '00:00:00'), which lets connector push-down and
+            // partition pruning match string date columns. Promote to DATETIME only when a DATETIME
+            // operand is actually involved (matches MySQL: DATE vs string compares in the DATE domain).
+            return (type1.isDatetime() || type2.isDatetime()) ? DateType.DATETIME : DateType.DATE;
         }
 
         // number type

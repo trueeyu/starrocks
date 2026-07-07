@@ -23,9 +23,12 @@ select c1, c2 from t_datestr where c2 = cast('2020-06-14' as date) + interval 1 
 -- operator form, WEEK
 select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) + interval 1 week order by c1;
 select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 week order by c1;
--- operator form, MONTH / YEAR
+-- operator form, MONTH (add and sub)
+select c1, c2 from t_datestr where c2 = cast('2020-05-15' as date) + interval 1 month order by c1;
 select c1, c2 from t_datestr where c2 = cast('2020-07-15' as date) - interval 1 month order by c1;
+-- operator form, YEAR (add and sub)
 select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year order by c1;
+select c1, c2 from t_datestr where c2 = cast('2021-06-15' as date) - interval 1 year order by c1;
 -- date_add / date_sub (interval), DAY
 select c1, c2 from t_datestr where c2 = date_add(cast('2020-06-15' as date), interval 7 day) order by c1;
 select c1, c2 from t_datestr where c2 = date_sub(cast('2020-06-15' as date), interval 7 day) order by c1;

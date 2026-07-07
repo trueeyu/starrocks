@@ -36,11 +36,19 @@ select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 
 -- result:
 2	2020-06-08
 -- !result
+select c1, c2 from t_datestr where c2 = cast('2020-05-15' as date) + interval 1 month order by c1;
+-- result:
+4	2020-06-15
+-- !result
 select c1, c2 from t_datestr where c2 = cast('2020-07-15' as date) - interval 1 month order by c1;
 -- result:
 4	2020-06-15
 -- !result
 select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year order by c1;
+-- result:
+4	2020-06-15
+-- !result
+select c1, c2 from t_datestr where c2 = cast('2021-06-15' as date) - interval 1 year order by c1;
 -- result:
 4	2020-06-15
 -- !result
