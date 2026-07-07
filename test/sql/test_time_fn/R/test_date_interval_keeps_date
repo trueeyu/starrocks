@@ -1,0 +1,66 @@
+-- name: test_date_interval_keeps_date
+-- description: DATE +/- INTERVAL {DAY,WEEK,MONTH,QUARTER,YEAR} keeps the DATE type (rendered without
+-- '00:00:00'), aligning with MySQL/Impala. The date_add/date_sub/adddate/subdate/days_sub forms follow
+-- the same path. Sub-day units and DATETIME operands still yield DATETIME.
+
+-- operator form: DATE +/- INTERVAL <date-granularity> keeps DATE
+select cast('2020-06-15' as date) - interval 1 day;
+-- result:
+2020-06-14
+-- !result
+select cast('2020-06-15' as date) + interval 1 week;
+-- result:
+2020-06-22
+-- !result
+select cast('2020-01-31' as date) + interval 1 month;
+-- result:
+2020-02-29
+-- !result
+select cast('2020-11-30' as date) + interval 1 quarter;
+-- result:
+2021-02-28
+-- !result
+select cast('2020-02-29' as date) + interval 1 year;
+-- result:
+2021-02-28
+-- !result
+select date_add(cast('2020-06-15' as date), interval 2 day);
+-- result:
+2020-06-17
+-- !result
+select date_sub(cast('2020-06-15' as date), interval 2 month);
+-- result:
+2020-04-15
+-- !result
+select adddate(cast('2020-06-15' as date), 5);
+-- result:
+2020-06-20
+-- !result
+select subdate(cast('2020-06-15' as date), 5);
+-- result:
+2020-06-10
+-- !result
+select days_sub(cast('2020-06-15' as date), 3);
+-- result:
+2020-06-12
+-- !result
+select cast('2020-12-31' as date) + interval 1 day;
+-- result:
+2021-01-01
+-- !result
+select cast('2021-01-31' as date) + interval 1 month;
+-- result:
+2021-02-28
+-- !result
+select cast('2020-06-15' as date) + interval 1 hour;
+-- result:
+2020-06-15 01:00:00
+-- !result
+select cast('2020-06-15' as date) - interval 30 minute;
+-- result:
+2020-06-14 23:30:00
+-- !result
+select cast('2020-06-15 08:30:00' as datetime) - interval 1 day;
+-- result:
+2020-06-14 08:30:00
+-- !result

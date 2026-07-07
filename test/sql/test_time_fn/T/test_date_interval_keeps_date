@@ -1,0 +1,29 @@
+-- name: test_date_interval_keeps_date
+-- description: DATE +/- INTERVAL {DAY,WEEK,MONTH,QUARTER,YEAR} keeps the DATE type (rendered without
+-- '00:00:00'), aligning with MySQL/Impala. The date_add/date_sub/adddate/subdate/days_sub forms follow
+-- the same path. Sub-day units and DATETIME operands still yield DATETIME.
+
+-- operator form: DATE +/- INTERVAL <date-granularity> keeps DATE
+select cast('2020-06-15' as date) - interval 1 day;
+select cast('2020-06-15' as date) + interval 1 week;
+select cast('2020-01-31' as date) + interval 1 month;
+select cast('2020-11-30' as date) + interval 1 quarter;
+select cast('2020-02-29' as date) + interval 1 year;
+
+-- date_add/date_sub/adddate/subdate/days_sub keep DATE
+select date_add(cast('2020-06-15' as date), interval 2 day);
+select date_sub(cast('2020-06-15' as date), interval 2 month);
+select adddate(cast('2020-06-15' as date), 5);
+select subdate(cast('2020-06-15' as date), 5);
+select days_sub(cast('2020-06-15' as date), 3);
+
+-- boundary: year crossing + month-end clamp still stay DATE
+select cast('2020-12-31' as date) + interval 1 day;
+select cast('2021-01-31' as date) + interval 1 month;
+
+-- contrast: sub-day units on a DATE promote to DATETIME (time part kept)
+select cast('2020-06-15' as date) + interval 1 hour;
+select cast('2020-06-15' as date) - interval 30 minute;
+
+-- contrast: a DATETIME operand stays DATETIME
+select cast('2020-06-15 08:30:00' as datetime) - interval 1 day;
