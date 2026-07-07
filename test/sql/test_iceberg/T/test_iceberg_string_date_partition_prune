@@ -42,6 +42,14 @@ select c1, c2 from t_datestr where c2 >= cast('2020-06-15' as date) - interval 1
 -- control: bare 'yyyy-MM-dd' literal (always worked); interval forms above must agree with it
 select c1, c2 from t_datestr where c2 = '2020-06-14' order by c1;
 
+-- verify partitions are actually pruned (not a full scan that merely filters at the BE):
+-- equality selects exactly 1 of the 5 partitions; the >= range selects 3.
+function: assert_explain_contains("select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year", "partitions=1/5")
+function: assert_explain_contains("select c1, c2 from t_datestr where c2 = cast('2021-06-15' as date) - interval 1 year", "partitions=1/5")
+function: assert_explain_contains("select c1, c2 from t_datestr where c2 = cast('2020-05-15' as date) + interval 1 month", "partitions=1/5")
+function: assert_explain_contains("select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 day", "partitions=1/5")
+function: assert_explain_contains("select c1, c2 from t_datestr where c2 >= cast('2020-06-15' as date) - interval 1 day", "partitions=3/5")
+
 drop table t_datestr force;
 drop database ice_cat_${uuid0}.ice_db_${uuid0};
 drop catalog ice_cat_${uuid0};
