@@ -1,0 +1,44 @@
+-- name: test_iceberg_string_date_partition_prune
+-- description: A STRING date partition column compared with DATE-arithmetic (operator +/- INTERVAL and
+-- the date_add/date_sub/adddate/subdate/days_sub builtins, across day/week/month/year) must prune to the
+-- matching partition and return the row. Before DATE arithmetic kept the DATE type, the folded constant
+-- was a DATETIME '... 00:00:00' that never matched the stored 'yyyy-MM-dd' partition value, so Iceberg
+-- pruned every data file and these queries wrongly returned an empty set.
+
+create external catalog ice_cat_${uuid0} PROPERTIES ("type"="iceberg", "iceberg.catalog.type"="hive", "iceberg.catalog.hive.metastore.uris"="${iceberg_catalog_hive_metastore_uris}");
+create database ice_cat_${uuid0}.ice_db_${uuid0};
+set catalog ice_cat_${uuid0};
+use ice_cat_${uuid0}.ice_db_${uuid0};
+
+create table t_datestr (
+    c1 int,
+    c2 string
+) partition by (c2);
+
+insert into t_datestr values (1, '2020-01-02'), (2, '2020-06-08'), (3, '2020-06-14'), (4, '2020-06-15'), (5, '2020-06-22');
+
+-- operator form, DAY
+select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 day order by c1;
+select c1, c2 from t_datestr where c2 = cast('2020-06-14' as date) + interval 1 day order by c1;
+-- operator form, WEEK
+select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) + interval 1 week order by c1;
+select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 week order by c1;
+-- operator form, MONTH / YEAR
+select c1, c2 from t_datestr where c2 = cast('2020-07-15' as date) - interval 1 month order by c1;
+select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year order by c1;
+-- date_add / date_sub (interval), DAY
+select c1, c2 from t_datestr where c2 = date_add(cast('2020-06-15' as date), interval 7 day) order by c1;
+select c1, c2 from t_datestr where c2 = date_sub(cast('2020-06-15' as date), interval 7 day) order by c1;
+-- adddate / subdate (bare int -> DAY)
+select c1, c2 from t_datestr where c2 = adddate(cast('2020-06-14' as date), 1) order by c1;
+select c1, c2 from t_datestr where c2 = subdate(cast('2020-06-15' as date), 1) order by c1;
+-- days_sub
+select c1, c2 from t_datestr where c2 = days_sub(cast('2020-06-15' as date), 1) order by c1;
+-- range comparison prunes correctly and stays consistent
+select c1, c2 from t_datestr where c2 >= cast('2020-06-15' as date) - interval 1 day order by c1;
+-- control: bare 'yyyy-MM-dd' literal (always worked); interval forms above must agree with it
+select c1, c2 from t_datestr where c2 = '2020-06-14' order by c1;
+
+drop table t_datestr force;
+drop database ice_cat_${uuid0}.ice_db_${uuid0};
+drop catalog ice_cat_${uuid0};
