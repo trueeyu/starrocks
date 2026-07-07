@@ -1,9 +1,4 @@
 -- name: test_date_interval_keeps_date
--- description: DATE +/- INTERVAL {DAY,WEEK,MONTH,QUARTER,YEAR} keeps the DATE type (rendered without
--- '00:00:00'), aligning with MySQL/Impala. The date_add/date_sub/adddate/subdate/days_sub forms follow
--- the same path. Sub-day units and DATETIME operands still yield DATETIME.
-
--- operator form: DATE +/- INTERVAL <date-granularity> keeps DATE
 select cast('2020-06-15' as date) - interval 1 day;
 -- result:
 2020-06-14
