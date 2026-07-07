@@ -29,6 +29,9 @@ select c1, c2 from t_datestr where c2 = cast('2020-07-15' as date) - interval 1 
 -- operator form, YEAR (add and sub)
 select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year order by c1;
 select c1, c2 from t_datestr where c2 = cast('2021-06-15' as date) - interval 1 year order by c1;
+-- operator form, QUARTER (add and sub); QUARTER has no TimeUnit enum but is valid interval syntax
+select c1, c2 from t_datestr where c2 = cast('2020-03-15' as date) + interval 1 quarter order by c1;
+select c1, c2 from t_datestr where c2 = cast('2020-09-15' as date) - interval 1 quarter order by c1;
 -- date_add / date_sub (interval), DAY
 select c1, c2 from t_datestr where c2 = date_add(cast('2020-06-15' as date), interval 7 day) order by c1;
 select c1, c2 from t_datestr where c2 = date_sub(cast('2020-06-15' as date), interval 7 day) order by c1;
@@ -46,6 +49,7 @@ select c1, c2 from t_datestr where c2 = '2020-06-14' order by c1;
 -- equality selects exactly 1 of the 5 partitions; the >= range selects 3.
 function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 = cast('2019-06-15' as date) + interval 1 year", "partitions=1/5")
 function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 = cast('2021-06-15' as date) - interval 1 year", "partitions=1/5")
+function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 = cast('2020-09-15' as date) - interval 1 quarter", "partitions=1/5")
 function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 = cast('2020-05-15' as date) + interval 1 month", "partitions=1/5")
 function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 = cast('2020-06-15' as date) - interval 1 day", "partitions=1/5")
 function: assert_explain_verbose_contains("select c1, c2 from t_datestr where c2 >= cast('2020-06-15' as date) - interval 1 day", "partitions=3/5")

@@ -783,20 +783,23 @@ public class ExpressionAnalyzer {
 
         @Override
         public Void visitTimestampArithmeticExpr(TimestampArithmeticExpr node, Scope scope) {
-            // For `DATE ± INTERVAL n {DAY|MONTH}` keep the result in the DATE domain instead of promoting
-            // the operand to DATETIME, so a folded `current_date() - interval '1' day` stays '2026-07-05'
-            // (no '00:00:00') and connector push-down / partition pruning on string date columns matches
-            // correctly. Only units that have a DATE-typed builtin overload are enabled here; keep this
-            // list in sync with the (DATE, INT) -> DATE overloads registered in functions.py. Diff
+            // For `DATE ± INTERVAL n {DAY|WEEK|MONTH|QUARTER|YEAR}` keep the result in the DATE domain
+            // instead of promoting the operand to DATETIME, so a folded `current_date() - interval '1' day`
+            // stays '2026-07-05' (no '00:00:00') and connector push-down / partition pruning on string date
+            // columns matches correctly. Match on the time-unit identifier string (not TimestampArithmeticExpr
+            // .TimeUnit, whose enum lacks QUARTER even though `INTERVAL ... QUARTER` is valid syntax); keep
+            // this list in sync with the (DATE, INT) -> DATE overloads registered in functions.py. Diff
             // functions and sub-day units still promote the operand to DATETIME.
-            TimestampArithmeticExpr.TimeUnit unit =
-                    TimestampArithmeticExpr.TimeUnit.fromName(node.getTimeUnitIdent());
+            String timeUnitIdent = node.getTimeUnitIdent();
+            boolean dateGranularityUnit = timeUnitIdent != null
+                    && (timeUnitIdent.equalsIgnoreCase("DAY")
+                            || timeUnitIdent.equalsIgnoreCase("WEEK")
+                            || timeUnitIdent.equalsIgnoreCase("MONTH")
+                            || timeUnitIdent.equalsIgnoreCase("QUARTER")
+                            || timeUnitIdent.equalsIgnoreCase("YEAR"));
             boolean keepDateResult = node.getChild(0).getType().isDate()
                     && !ExprUtils.requiresTimestampDiffCast(node.getFuncName())
-                    && (unit == TimestampArithmeticExpr.TimeUnit.DAY
-                            || unit == TimestampArithmeticExpr.TimeUnit.MONTH
-                            || unit == TimestampArithmeticExpr.TimeUnit.YEAR
-                            || unit == TimestampArithmeticExpr.TimeUnit.WEEK);
+                    && dateGranularityUnit;
 
             if (keepDateResult) {
                 node.setChild(1, TypeManager.addCastExpr(node.getChild(1), IntegerType.INT));

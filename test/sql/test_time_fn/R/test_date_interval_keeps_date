@@ -31,6 +31,14 @@ select cast('2020-02-29' as date) + interval 1 year;
 -- result:
 2021-02-28
 -- !result
+select cast('2020-06-15' as date) + interval 1 quarter;
+-- result:
+2020-09-15
+-- !result
+select cast('2020-06-15' as date) - interval 1 quarter;
+-- result:
+2020-03-15
+-- !result
 select date_add(cast('2020-06-15' as date), interval 7 day);
 -- result:
 2020-06-22
