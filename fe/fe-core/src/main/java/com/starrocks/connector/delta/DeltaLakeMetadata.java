@@ -31,6 +31,7 @@ import com.starrocks.connector.ConnectorProperties;
 import com.starrocks.connector.GetRemoteFilesParams;
 import com.starrocks.connector.HdfsEnvironment;
 import com.starrocks.connector.MetastoreType;
+import com.starrocks.connector.PartitionCastPredicatePruner;
 import com.starrocks.connector.PredicateSearchKey;
 import com.starrocks.connector.RemoteFileInfo;
 import com.starrocks.connector.RemoteFileInfoSource;
@@ -63,6 +64,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -217,14 +219,27 @@ public class DeltaLakeMetadata implements ConnectorMetadata {
         Set<String> partitionColumns = metadata.getPartitionColNames();
 
         List<ScalarOperator> scalarOperators = Utils.extractConjuncts(operator);
+        // CAST(string-partition-column AS DATETIME) = <ts> style conjuncts are pruned unsoundly by Delta's
+        // native string comparison (it unwraps the cast and renders the constant back to a string), so keep
+        // them out of the pushed filter and evaluate them below against each file's partition values.
+        Set<String> stringPartitionColumns = new HashSet<>();
+        for (String partitionColumn : partitionColumns) {
+            Column column = deltaLakeTable.getColumn(partitionColumn);
+            if (column != null && column.getType().isStringType()) {
+                stringPartitionColumns.add(partitionColumn.toLowerCase(Locale.ROOT));
+            }
+        }
+        PartitionCastPredicatePruner.PartitionResidual residual =
+                PartitionCastPredicatePruner.split(scalarOperators, stringPartitionColumns);
+
         ScalarOperationToDeltaLakeExpr.DeltaLakeContext deltaLakeContext =
                 new ScalarOperationToDeltaLakeExpr.DeltaLakeContext(schema, partitionColumns);
-        Predicate deltaLakePredicate = new ScalarOperationToDeltaLakeExpr().convert(scalarOperators, deltaLakeContext);
+        Predicate deltaLakePredicate = new ScalarOperationToDeltaLakeExpr().convert(residual.pushable, deltaLakeContext);
 
         ScanBuilderImpl scanBuilder = (ScanBuilderImpl) snapshot.getScanBuilder();
         ScanImpl scan = (ScanImpl) scanBuilder.withFilter(deltaLakePredicate).build();
         long estimateRowSize = table.getColumns().stream().mapToInt(column -> column.getType().getTypeSize()).sum();
-        return new CloseableIterator<>() {
+        CloseableIterator<Pair<FileScanTask, DeltaLakeAddFileStatsSerDe>> baseIterator = new CloseableIterator<>() {
             CloseableIterator<FilteredColumnarBatch> scanFilesAsBatches;
             CloseableIterator<Row> scanFileRows;
             boolean hasMore = true;
@@ -288,6 +303,44 @@ public class DeltaLakeMetadata implements ConnectorMetadata {
                     scanFilesAsBatches = null;
                     hasMore = false;
                 }
+            }
+        };
+
+        if (!residual.hasResidual()) {
+            return baseIterator;
+        }
+        // Drop files whose partition values cannot satisfy the residual (cast-on-string-partition) conjuncts,
+        // evaluated with the same CAST semantics as the backend filter.
+        return new CloseableIterator<>() {
+            private Pair<FileScanTask, DeltaLakeAddFileStatsSerDe> next;
+
+            private void advance() {
+                while (next == null && baseIterator.hasNext()) {
+                    Pair<FileScanTask, DeltaLakeAddFileStatsSerDe> candidate = baseIterator.next();
+                    if (PartitionCastPredicatePruner.partitionMayMatch(
+                            residual.residual, candidate.first.getPartitionValues())) {
+                        next = candidate;
+                    }
+                }
+            }
+
+            @Override
+            public boolean hasNext() {
+                advance();
+                return next != null;
+            }
+
+            @Override
+            public Pair<FileScanTask, DeltaLakeAddFileStatsSerDe> next() {
+                advance();
+                Pair<FileScanTask, DeltaLakeAddFileStatsSerDe> result = next;
+                next = null;
+                return result;
+            }
+
+            @Override
+            public void close() throws IOException {
+                baseIterator.close();
             }
         };
     }
