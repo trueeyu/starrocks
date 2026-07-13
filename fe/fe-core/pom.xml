@@ -990,13 +990,14 @@ under the License.
 
     <build>
         <plugins>
-            <!-- temporary: surface raw-type usages as compiler warnings (no -Werror, build still succeeds) -->
+            <!-- temporary: fail the build on raw-type usages -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <configuration>
                     <compilerArgs>
                         <arg>-Xlint:rawtypes</arg>
+                        <arg>-Werror</arg>
                     </compilerArgs>
                 </configuration>
             </plugin>
