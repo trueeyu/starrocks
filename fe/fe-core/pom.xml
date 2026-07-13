@@ -990,6 +990,16 @@ under the License.
 
     <build>
         <plugins>
+            <!-- temporary: surface raw-type usages as compiler warnings (no -Werror, build still succeeds) -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <compilerArgs>
+                        <arg>-Xlint:rawtypes</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
             <!-- fe proto precompile plugin-->
             <plugin>
                 <groupId>com.baidu</groupId>
