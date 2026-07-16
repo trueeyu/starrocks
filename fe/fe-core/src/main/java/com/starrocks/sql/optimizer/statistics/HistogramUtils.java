@@ -43,6 +43,16 @@ public class HistogramUtils {
             return Collections.emptyList();
         }
 
+        // Histogram buckets are estimated by double interpolation over a continuous numeric/date
+        // axis (see Bucket#getRowCountInBucket, and the Double.parseDouble of the bounds below).
+        // CHAR/VARCHAR bounds cannot be mapped back to that axis, so buckets are unusable for string
+        // columns - only MCV (see convertMCV) is. Skip them instead of parsing, which used to throw
+        // NumberFormatException on every stats-cache refresh. Collection no longer emits string
+        // buckets, but this guard also covers histograms already persisted before that fix.
+        if (type.isStringType()) {
+            return Collections.emptyList();
+        }
+
         JsonArray histogramObj = (JsonArray) jsonElement;
         List<Bucket> buckets = Lists.newArrayList();
         for (int i = 0; i < histogramObj.size(); ++i) {

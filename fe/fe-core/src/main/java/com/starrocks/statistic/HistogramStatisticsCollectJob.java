@@ -73,6 +73,15 @@ public class HistogramStatisticsCollectJob extends StatisticsCollectJob {
                     " and $columnName is not null $MCVExclude" +
                     " ORDER BY $columnName LIMIT $totalRows) t";
 
+    // Emit only MCV (buckets = NULL) for CHAR/VARCHAR columns: string bucket bounds cannot be
+    // mapped onto the continuous double axis the optimizer interpolates over, so buckets are dead
+    // weight for strings (see HistogramUtils#convertBuckets). Single-row constant select - no scan.
+    private static final String COLLECT_MCV_ONLY_STATISTIC_TEMPLATE =
+            "SELECT $tableId, '$columnNameStr', $dbId, '$dbName.$tableName'," +
+                    " NULL," +
+                    " $mcv," +
+                    " NOW()";
+
     private static final String COLLECT_MCV_STATISTIC_TEMPLATE =
             "select cast(version as INT), cast(db_id as BIGINT), cast(table_id as BIGINT), " +
                     "cast(column_key as varchar), cast(column_value as varchar) from (" +
@@ -124,7 +133,11 @@ public class HistogramStatisticsCollectJob extends StatisticsCollectJob {
                 }
             }
 
-            if (ndvMode == StatsConstants.HistogramCollectBucketNdvMode.NONE) {
+            if (columnType.isStringType()) {
+                // Buckets are unusable for CHAR/VARCHAR (see COLLECT_MCV_ONLY_STATISTIC_TEMPLATE);
+                // persist MCV only and leave the buckets column NULL regardless of ndvMode.
+                sql = buildCollectMcvOnly(db, table, mostCommonValues, columnName);
+            } else if (ndvMode == StatsConstants.HistogramCollectBucketNdvMode.NONE) {
                 sql = buildCollectHistogram(db, table, sampleRatio, bucketNum, mostCommonValues, columnName,
                         columnType, false);
             } else if (ndvMode == StatsConstants.HistogramCollectBucketNdvMode.SAMPLE) {
@@ -290,6 +303,13 @@ public class HistogramStatisticsCollectJob extends StatisticsCollectJob {
         addMcvExcludeToContext(context, mostCommonValues, columnName, columnType);
 
         return buildInsertIntoHistogramStatistics(build(context, COLLECT_HISTOGRAM_STATISTIC_TEMPLATE));
+    }
+
+    private String buildCollectMcvOnly(Database database, Table table, Map<String, String> mostCommonValues,
+                                       String columnName) {
+        VelocityContext context = buildBaseContext(database, table, columnName);
+        addMcvToContext(context, mostCommonValues);
+        return buildInsertIntoHistogramStatistics(build(context, COLLECT_MCV_ONLY_STATISTIC_TEMPLATE));
     }
 
     private String buildCollectHistogramWithHllNdv(Database database, Table table, Map<String, String> mostCommonValues,

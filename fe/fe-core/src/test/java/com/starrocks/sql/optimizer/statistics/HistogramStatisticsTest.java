@@ -22,6 +22,7 @@ import com.starrocks.sql.optimizer.operator.scalar.ColumnRefOperator;
 import com.starrocks.sql.optimizer.operator.scalar.ConstantOperator;
 import com.starrocks.type.BooleanType;
 import com.starrocks.type.IntegerType;
+import com.starrocks.type.VarcharType;
 import com.starrocks.utframe.UtFrameUtils;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -647,5 +648,31 @@ public class HistogramStatisticsTest {
         Assertions.assertEquals(joinBucket.getUpper(), 9D, 0.001);
         Assertions.assertEquals(joinBucket.getCount().longValue(), 833);
         Assertions.assertEquals(joinBucket.getUpperRepeats().longValue(), 20L * 14L);
+    }
+
+    @Test
+    public void testConvertBucketsSkipsStringType() throws Exception {
+        // String bucket bounds cannot be parsed onto the double axis; the guard must skip them
+        // (returning empty) instead of throwing NumberFormatException, while MCV stays available.
+        String histogram = "{\"buckets\": [[\"value_001\",\"value_010\",\"100\",\"10\"],"
+                + "[\"value_011\",\"value_020\",\"200\",\"10\"]], \"mcv\": [[\"hot\",\"130\"]]}";
+        List<Bucket> buckets = HistogramUtils.convertBuckets(histogram, VarcharType.VARCHAR);
+        Assertions.assertTrue(buckets.isEmpty());
+
+        Map<String, Long> mcv = HistogramUtils.convertMCV(histogram);
+        Assertions.assertEquals(130L, mcv.get("hot").longValue());
+    }
+
+    @Test
+    public void testConvertBucketsParsesNumericType() throws Exception {
+        // Non-string columns must still parse normally - the string guard must not over-skip.
+        String histogram = "{\"buckets\": [[\"1\",\"10\",\"100\",\"20\"],"
+                + "[\"15\",\"20\",\"200\",\"20\"]], \"mcv\": null}";
+        List<Bucket> buckets = HistogramUtils.convertBuckets(histogram, IntegerType.BIGINT);
+        Assertions.assertEquals(2, buckets.size());
+        Assertions.assertEquals(1D, buckets.get(0).getLower(), 0.001);
+        Assertions.assertEquals(10D, buckets.get(0).getUpper(), 0.001);
+        Assertions.assertEquals(100L, buckets.get(0).getCount().longValue());
+        Assertions.assertEquals(20L, buckets.get(0).getUpperRepeats().longValue());
     }
 }

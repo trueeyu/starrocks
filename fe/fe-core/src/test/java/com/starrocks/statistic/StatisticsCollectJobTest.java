@@ -584,6 +584,14 @@ public class StatisticsCollectJobTest extends PlanTestNoneDBBase {
                         "'test.t0_stats', histogram_hll_ndv(`v6`, '[[\"3\",\"5\",\"10\",\"2\"],[\"6\",\"9\",\"10\",\"3\"]]'),  " +
                         "'[[\"1\",\"10\"],[\"2\",\"20\"]]', NOW() FROM `test`.`t0_stats`;",
                 t0StatsTableId, dbid)), normalize.apply(sql));
+
+        // String columns persist MCV only: the buckets column is NULL and there is no scan / histogram().
+        sql = Deencapsulation.invoke(histogramStatisticsCollectJob, "buildCollectMcvOnly",
+                db, olapTable, mostCommonValues, "v3");
+        Assertions.assertEquals(normalize.apply(String.format("INSERT INTO histogram_statistics(" +
+                        "table_id, column_name, db_id, table_name, buckets, mcv, update_time) SELECT %s, 'v3', %d, " +
+                        "'test.t0_stats', NULL, '[[\"1\",\"10\"],[\"2\",\"20\"]]', NOW()",
+                t0StatsTableId, dbid)), normalize.apply(sql));
     }
 
     @Test

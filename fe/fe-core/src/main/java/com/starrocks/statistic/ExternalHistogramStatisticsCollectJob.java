@@ -48,6 +48,14 @@ public class ExternalHistogramStatisticsCollectJob extends StatisticsCollectJob 
                     " and $columnName is not null $MCVExclude" +
                     " ORDER BY $columnName LIMIT $totalRows) t";
 
+    // MCV only (buckets = NULL) for CHAR/VARCHAR: string bucket bounds are unusable to the optimizer
+    // (see HistogramUtils#convertBuckets). Single-row constant select - no scan of the external table.
+    private static final String COLLECT_MCV_ONLY_STATISTIC_TEMPLATE =
+            "SELECT '$tableUUID', '$columnNameStr', '$catalogName', '$dbName', '$tableName'," +
+                    " NULL," +
+                    " $mcv," +
+                    " NOW()";
+
     private static final String COLLECT_MCV_STATISTIC_TEMPLATE =
             "select cast(version as INT), " +
                     "cast(column_key as varchar), cast(column_value as varchar) from (" +
@@ -101,7 +109,13 @@ public class ExternalHistogramStatisticsCollectJob extends StatisticsCollectJob 
                 mostCommonValues.put(tStatisticData.columnName, tStatisticData.histogram);
             }
 
-            sql = buildCollectHistogram(db, table, sampleRatio, bucketNum, mostCommonValues, columnName, columnType);
+            if (columnType.isStringType()) {
+                // Buckets are unusable for CHAR/VARCHAR (see COLLECT_MCV_ONLY_STATISTIC_TEMPLATE);
+                // persist MCV only and leave the buckets column NULL.
+                sql = buildCollectMcvOnly(db, table, mostCommonValues, columnName);
+            } else {
+                sql = buildCollectHistogram(db, table, sampleRatio, bucketNum, mostCommonValues, columnName, columnType);
+            }
             collectStatisticSync(sql, context, analyzeStatus);
             // Best-effort: remove the stale raw-keyed row this column's fresh hashed-keyed row just
             // superseded. The read side no longer depends on this for correctness (it dedups by
@@ -126,6 +140,36 @@ public class ExternalHistogramStatisticsCollectJob extends StatisticsCollectJob 
         context.put("topN", topN);
 
         return build(context, COLLECT_MCV_STATISTIC_TEMPLATE);
+    }
+
+    private String buildCollectMcvOnly(Database database, Table table, Map<String, String> mostCommonValues,
+                                       String columnName) {
+        List<String> targetColumnNames = StatisticUtils.buildStatsColumnDef(EXTERNAL_HISTOGRAM_STATISTICS_TABLE_NAME).stream()
+                .map(ColumnDef::getName)
+                .collect(Collectors.toList());
+        String columnNames = "(" + String.join(", ", targetColumnNames) + ")";
+        StringBuilder builder = new StringBuilder("INSERT INTO ").append(EXTERNAL_HISTOGRAM_STATISTICS_TABLE_NAME)
+                .append(columnNames).append(" ");
+
+        VelocityContext context = new VelocityContext();
+        context.put("tableUUID", StatisticUtils.hashTableUuidForPkStorage(table.getUUID()));
+        context.put("columnNameStr", columnName);
+        context.put("catalogName", catalogName);
+        context.put("dbName", database.getOriginName());
+        context.put("tableName", table.getName());
+
+        List<String> mcvList = new ArrayList<>();
+        for (Map.Entry<String, String> entry : mostCommonValues.entrySet()) {
+            mcvList.add("[\"" + entry.getKey() + "\",\"" + entry.getValue() + "\"]");
+        }
+        if (mostCommonValues.isEmpty()) {
+            context.put("mcv", "NULL");
+        } else {
+            context.put("mcv", "'[" + Joiner.on(",").join(mcvList) + "]'");
+        }
+
+        builder.append(build(context, COLLECT_MCV_ONLY_STATISTIC_TEMPLATE));
+        return builder.toString();
     }
 
     private String buildCollectHistogram(Database database, Table table, double sampleRatio,
