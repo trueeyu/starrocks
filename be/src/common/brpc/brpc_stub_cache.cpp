@@ -181,6 +181,9 @@ std::shared_ptr<PInternalService_RecoverableStub> BrpcStubCache::StubPool::get_o
         const butil::EndPoint& endpoint) {
     if (UNLIKELY(_stubs.size() < config::brpc_max_connections_per_server)) {
         auto stub = std::make_shared<PInternalService_RecoverableStub>(endpoint, "");
+        // TEMP DEBUG: remove before merging.
+        LOG(INFO) << "[cg-debug] StubPool creating stub #" << _stubs.size() << "/"
+                  << config::brpc_max_connections_per_server << " endpoint=" << endpoint << " stub=" << stub.get();
         if (!stub->reset_channel().ok()) {
             return nullptr;
         }
@@ -190,6 +193,9 @@ std::shared_ptr<PInternalService_RecoverableStub> BrpcStubCache::StubPool::get_o
     if (++_idx >= config::brpc_max_connections_per_server) {
         _idx = 0;
     }
+    // TEMP DEBUG: remove before merging.
+    LOG(INFO) << "[cg-debug] StubPool reusing stub #" << _idx << " endpoint=" << endpoint
+              << " stub=" << _stubs[_idx].get();
     return _stubs[_idx];
 }
 

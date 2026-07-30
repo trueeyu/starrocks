@@ -68,6 +68,10 @@ Status PInternalService_RecoverableStub::reset_channel(int64_t next_connection_g
         options.connection_type = config::brpc_connection_type;
         options.connection_group = std::to_string(next_connection_group);
     }
+    // TEMP DEBUG: remove before merging.
+    LOG(INFO) << "[cg-debug] reset_channel endpoint=" << _endpoint << " stub=" << this
+              << " epoch=" << next_connection_group << " connection_type=" << config::brpc_connection_type
+              << " connection_group=\"" << options.connection_group << "\"";
     options.max_retry = 3;
     std::unique_ptr<brpc::Channel> channel(new brpc::Channel());
     if (channel->Init(_endpoint, &options)) {
