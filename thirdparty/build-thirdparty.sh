@@ -1357,10 +1357,11 @@ build_jemalloc() {
     # the build system's _SC_PAGESIZE, which in many architectures can vary. Set
     # this to 64K (2^16) for arm architecture, and default 4K on x86 for performance.
     local addition_opts=" --with-lg-page=12"
-    if [[ $MACHINE_TYPE == "aarch64" ]] ; then
-        # change to 64K for arm architecture
-        addition_opts=" --with-lg-page=16"
-    fi
+    addition_opts=" --with-lg-page=16"
+    #if [[ $MACHINE_TYPE == "aarch64" ]] ; then
+    #    # change to 64K for arm architecture
+    #    addition_opts=" --with-lg-page=16"
+    #fi
     # build jemalloc with release
     CFLAGS="-O3 -fno-omit-frame-pointer -fPIC -g" \
     ./configure --prefix=${TP_INSTALL_DIR}/jemalloc --with-jemalloc-prefix=je --enable-prof --disable-cxx --disable-libdl $addition_opts
