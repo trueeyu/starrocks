@@ -54,6 +54,13 @@ if [ ! -f ${TP_DIR}/vars.sh ]; then
 fi
 . ${TP_DIR}/vars.sh
 
+if [[ ! -f "${TP_DIR}/package-manifest.sh" ]]; then
+    echo "package-manifest.sh is missing".
+    exit 1
+fi
+. "${TP_DIR}/package-manifest.sh"
+starrocks_set_default_packages "${MACHINE_TYPE}"
+
 # Check args
 usage() {
     echo "
@@ -68,6 +75,17 @@ Usage: $0 [options...] [packages...]
     --clean                Clean extracted source before building
     --continue <package>   Continue building from specified package
     -h, --help             Show this help message
+
+  Environment variables:
+    STARROCKS_THIRDPARTY_ARCHIVES
+                           Archive keys of vars.sh to download, unpack and patch,
+                           e.g. \"JEMALLOC ROCKSDB\". Only needed to override the
+                           set derived from the requested packages.
+
+  Notes:
+    When packages are given (also with --continue), only the archives those
+    packages are built from are downloaded, unpacked and patched. A full build
+    still processes every archive.
 
   Examples:
     # Build all packages with default parallelism
@@ -221,7 +239,13 @@ if [[ "${CLEAN}" -eq 1 ]]; then
     clean_sources
 fi
 
-# Download thirdparties.
+# Download thirdparties. A partial build only needs its own archives, so limit
+# the download/unpack/patch pass accordingly.
+if [[ "${#packages[@]}" -ne 0 ]]; then
+    starrocks_restrict_archives "${packages[@]}"
+elif [[ "${CONTINUE}" -eq 1 ]]; then
+    starrocks_restrict_archives $(starrocks_packages_from "${start_package}")
+fi
 ${TP_DIR}/download-thirdparty.sh
 
 # set COMPILER
@@ -1770,13 +1794,6 @@ export GLOBAL_CXXFLAGS="-O3 -fno-omit-frame-pointer -Wno-class-memaccess -fPIC -
 export CPPFLAGS=$GLOBAL_CPPFLAGS
 export CXXFLAGS=$GLOBAL_CXXFLAGS
 export CFLAGS=$GLOBAL_CFLAGS
-
-if [[ ! -f "${TP_DIR}/package-manifest.sh" ]]; then
-    echo "package-manifest.sh is missing".
-    exit 1
-fi
-. "${TP_DIR}/package-manifest.sh"
-starrocks_set_default_packages "${MACHINE_TYPE}"
 
 # Initialize packages array - if none specified, build all
 if [[ "${#packages[@]}" -eq 0 ]]; then

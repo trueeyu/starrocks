@@ -125,3 +125,84 @@ starrocks_set_default_packages() {
         starrocks_filter_default_packages "${DARWIN_UNSUPPORTED_PACKAGES:-}"
     fi
 }
+
+# Print the packages of the default order starting from the given one, i.e. the
+# packages a `--continue <package>` run is going to build.
+starrocks_packages_from() {
+    local start="$1"
+    local package
+    local found=0
+
+    for package in "${STARROCKS_THIRDPARTY_ALL_PACKAGES[@]}"; do
+        if [[ "${package}" == "${start}" ]]; then
+            found=1
+        fi
+        if [[ "${found}" -eq 1 ]]; then
+            echo "${package}"
+        fi
+    done
+}
+
+# Map package names to the archive keys of vars.sh, so that building a subset of
+# the packages does not have to download, unpack and patch everything else.
+#
+# The mapping is derived from the build scripts instead of being hardcoded here:
+# whatever *_SOURCE variables the body of build_<package> refers to are the
+# archives that package is built from. Keys that vars.sh does not declare in
+# TP_ARCHIVES are dropped, and a package that resolves to nothing fails the whole
+# call, so callers can fall back to downloading everything.
+starrocks_package_archives() {
+    local scripts=()
+    local script
+    local package
+    local key
+    local resolved
+    local keys=""
+
+    for script in "${TP_DIR}/build-thirdparty.sh" "${TP_DIR}/build-thirdparty-darwin.sh"; do
+        if [[ -f "${script}" ]]; then
+            scripts+=("${script}")
+        fi
+    done
+    if [[ "${#scripts[@]}" -eq 0 ]]; then
+        return 1
+    fi
+
+    for package in "$@"; do
+        resolved=""
+        for key in $(awk -v fn="build_${package}()" '
+                index($0, fn) == 1 { inside = 1; next }
+                inside && $0 == "}" { inside = 0 }
+                inside { print }
+            ' "${scripts[@]}" | grep -oE '[A-Z][A-Z0-9_]*_SOURCE' | sed 's/_SOURCE$//' | sort -u); do
+            if [[ " ${TP_ARCHIVES} " == *" ${key} "* ]]; then
+                resolved="${resolved} ${key}"
+            fi
+        done
+        if [[ -z "${resolved}" ]]; then
+            return 1
+        fi
+        keys="${keys}${resolved}"
+    done
+
+    echo ${keys} | tr ' ' '\n' | sort -u | tr '\n' ' '
+}
+
+# Narrow the download/unpack/patch pass down to the archives the given packages
+# need. A STARROCKS_THIRDPARTY_ARCHIVES coming from the environment always wins.
+starrocks_restrict_archives() {
+    local archives
+
+    if [[ -n "${STARROCKS_THIRDPARTY_ARCHIVES:-}" ]] || [[ "$#" -eq 0 ]]; then
+        return 0
+    fi
+
+    if archives="$(starrocks_package_archives "$@")" && [[ -n "${archives}" ]]; then
+        export STARROCKS_THIRDPARTY_ARCHIVES="${archives}"
+        echo "Thirdparty archives needed by [$*]: ${archives}"
+    else
+        echo "Warning: cannot resolve the archives of [$*], downloading all archives"
+    fi
+
+    return 0
+}
