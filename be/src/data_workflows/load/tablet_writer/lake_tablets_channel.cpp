@@ -17,6 +17,7 @@
 #include <bthread/mutex.h>
 #include <fmt/format.h>
 
+#include <algorithm>
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -320,6 +321,12 @@ private:
     mutable StackTraceMutex<bthread::Mutex> _chunk_meta_lock;
     serde::ProtobufChunkMeta _chunk_meta;
     std::atomic<bool> _has_chunk_meta;
+    // DEBUG ONLY: handshake between a parked add_chunk and abort().
+    // Enabled by config::load_fp_tablets_channel_add_chunk_block_ms > 0, whose value is the cap
+    // (in milliseconds) for both waits.
+    std::atomic<int> _debug_parked{0};
+    std::atomic<bool> _debug_aborted{false};
+    static constexpr int64_t kDebugPollUs = 10000; // 10ms
 
     // shared mutex to protect the unordered_map
     // * open/incremental_open needs to modify the map
@@ -558,6 +565,20 @@ void LakeTabletsChannel::add_chunk(Chunk* chunk, const PTabletWriterAddChunkRequ
 
     int64_t wait_memtable_flush_time_ns = 0;
     int32_t total_row_num = 0;
+    // DEBUG ONLY: park here, holding the channel and its delta writers, until abort() closes them,
+    // so the caller is guaranteed to be using writers that were closed under it.
+    if (int64_t cap_ms = config::load_fp_tablets_channel_add_chunk_block_ms; cap_ms > 0) {
+        LOG(INFO) << "DEBUG park add_chunk txn_id=" << _txn_id << " sender=" << request.sender_id()
+                  << " eos=" << request.eos();
+        _debug_parked.fetch_add(1);
+        for (int64_t i = 0, rounds = std::max<int64_t>(1, cap_ms * 1000 / kDebugPollUs);
+             i < rounds && !_debug_aborted.load(); i++) {
+            bthread_usleep(kDebugPollUs);
+        }
+        _debug_parked.fetch_sub(1);
+        LOG(INFO) << "DEBUG resume add_chunk txn_id=" << _txn_id << " sender=" << request.sender_id()
+                  << " aborted=" << _debug_aborted.load();
+    }
     // Open and write AsyncDeltaWriter
     for (int i = 0; i < channel_size; ++i) {
         size_t from = channel_row_idx_start_points[i];
@@ -1005,10 +1026,22 @@ Status LakeTabletsChannel::_create_delta_writers(const PTabletWriterOpenRequest&
 }
 
 void LakeTabletsChannel::abort() {
+    // DEBUG ONLY: wait for a parked add_chunk first, so close() below is guaranteed to pull the
+    // writers out from under a sender that is already holding them.
+    if (int64_t cap_ms = config::load_fp_tablets_channel_add_chunk_block_ms; cap_ms > 0) {
+        for (int64_t i = 0, rounds = std::max<int64_t>(1, cap_ms * 1000 / kDebugPollUs);
+             i < rounds && _debug_parked.load() == 0; i++) {
+            bthread_usleep(kDebugPollUs);
+        }
+        LOG(INFO) << "DEBUG abort txn_id=" << _txn_id << " parked=" << _debug_parked.load();
+    }
     std::shared_lock<bthreads::BThreadSharedMutex> l(_rw_mtx);
     for (auto& it : _delta_writers) {
         it.second->close();
     }
+    // DEBUG ONLY: release parked callers only AFTER the writers are closed -- releasing earlier
+    // would reintroduce the race this patch exists to remove.
+    _debug_aborted.store(true);
 }
 
 void LakeTabletsChannel::cancel(const std::string& reason) {
