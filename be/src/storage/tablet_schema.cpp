@@ -161,6 +161,36 @@ TabletSchemaSPtr TabletSchema::copy(const TabletSchema& tablet_schema) {
     return std::make_shared<TabletSchema>(tablet_schema);
 }
 
+// TEMPORARY DIAGNOSTIC -- NOT FOR MERGE.
+//
+// The FE-provided column list replaces the tablet's own columns with no validation whatsoever
+// (see the two copy() overloads below). When a query was planned against a schema older than the
+// tablet's -- e.g. an ALTER ... MODIFY COLUMN whose metadata swap landed between planning and
+// execution -- the resulting read schema silently disagrees with what the segments actually store:
+// the column is read (and cast) as the type FE believes in, not the type on disk. The mismatch is
+// invisible until something downstream trips over it, so log it here, where it is still cheap to
+// attribute.
+static void debug_report_schema_override(const TabletSchema& src_schema, const TabletSchema& dst_schema) {
+    for (size_t i = 0; i < dst_schema.num_columns(); ++i) {
+        const TabletColumn& dst_col = dst_schema.column(i);
+        const int32_t src_idx = src_schema.field_index(dst_col.unique_id());
+        if (src_idx < 0) {
+            // A column FE knows about that the tablet does not: normal for a light schema change.
+            continue;
+        }
+        const TabletColumn& src_col = src_schema.column(src_idx);
+        if (src_col.type() != dst_col.type() || src_col.is_nullable() != dst_col.is_nullable()) {
+            LOG(WARNING) << "[schema-probe] FE column list disagrees with the tablet schema"
+                         << ", column=" << dst_col.name() << " unique_id=" << dst_col.unique_id()
+                         << ", tablet_type=" << logical_type_to_string(src_col.type())
+                         << " tablet_nullable=" << src_col.is_nullable()
+                         << ", fe_type=" << logical_type_to_string(dst_col.type())
+                         << " fe_nullable=" << dst_col.is_nullable()
+                         << ", tablet_schema_id=" << src_schema.id();
+        }
+    }
+}
+
 TabletSchemaSPtr TabletSchema::copy(const TabletSchema& src_schema, const std::vector<TabletColumn>& cols) {
     auto dst_schema = std::make_unique<TabletSchema>(src_schema);
     dst_schema->_clear_columns();
@@ -168,6 +198,8 @@ TabletSchemaSPtr TabletSchema::copy(const TabletSchema& src_schema, const std::v
         dst_schema->append_column(TabletColumn(col));
     }
     dst_schema->_generate_sort_key_idxes();
+    // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE.
+    debug_report_schema_override(src_schema, *dst_schema);
     return dst_schema;
 }
 
@@ -178,6 +210,8 @@ TabletSchemaCSPtr TabletSchema::copy(const TabletSchema& src_schema, const std::
         dst_schema->append_column(TabletColumn(col));
     }
     dst_schema->_generate_sort_key_idxes();
+    // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE.
+    debug_report_schema_override(src_schema, *dst_schema);
     return dst_schema;
 }
 
