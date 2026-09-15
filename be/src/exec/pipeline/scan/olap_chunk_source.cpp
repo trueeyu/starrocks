@@ -27,8 +27,8 @@
 #include "column/chunk_factory.h"
 #include "column/column.h"
 #include "column/column_access_path.h"
+#include "column/debug_column_check.h"
 #include "column/field.h"
-#include "column/nullable_column.h"
 #include "common/runtime_profile.h"
 #include "common/status.h"
 #include "common/statusor.h"
@@ -751,49 +751,6 @@ Status OlapChunkSource::_init_glm(TabletReaderParams* params) {
     return Status::OK();
 }
 
-namespace {
-
-// TEMPORARY DIAGNOSTIC -- NOT FOR MERGE.
-//
-// Validate every column the storage layer just produced, at the boundary where it is produced.
-// A structurally broken column (a BinaryColumn whose offsets run ahead of its byte buffer, a
-// column shorter than the chunk, a NullableColumn whose data and null columns disagree) is not
-// detected anywhere in a RELEASE build: Chunk::check_or_die() compiles to a no-op under NDEBUG
-// and every down_cast on the read path is unchecked. Such a column survives all the way into an
-// expression, where the first dereference faults -- e.g. char_length() reading a Slice whose base
-// is null -- and by then the stack no longer names whoever wrote the column.
-//
-// BinaryColumnBase::check_or_die() uses CHECK_EQ, so it still aborts in a RELEASE build; the two
-// looser invariants are only logged, because a false abort here would be worse than a missed one.
-void debug_validate_scan_output(const Chunk* chunk, int64_t tablet_id) {
-    const size_t num_rows = chunk->num_rows();
-    const auto& schema = chunk->schema();
-    for (size_t i = 0; i < chunk->num_columns(); ++i) {
-        const ColumnPtr& column = chunk->get_column_by_index(i);
-        const std::string_view name = (schema != nullptr && i < schema->num_fields())
-                                              ? schema->field(i)->name()
-                                              : std::string_view("?");
-
-        if (!column->is_constant() && column->size() != num_rows) {
-            LOG(ERROR) << "[scan-probe] column size != chunk rows, tablet=" << tablet_id << " column=" << name
-                       << " column_type=" << column->get_name() << " column_size=" << column->size()
-                       << " chunk_rows=" << num_rows;
-        }
-        if (column->is_nullable()) {
-            const auto* nullable = down_cast<const NullableColumn*>(column.get());
-            if (nullable->data_column()->size() != nullable->null_column()->size()) {
-                LOG(ERROR) << "[scan-probe] nullable data/null size mismatch, tablet=" << tablet_id
-                           << " column=" << name << " data_size=" << nullable->data_column()->size()
-                           << " null_size=" << nullable->null_column()->size();
-            }
-        }
-        // Aborts here, at the producer, when the byte buffer does not match the offsets.
-        column->check_or_die();
-    }
-}
-
-} // namespace
-
 Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, Chunk* chunk) {
     if (state->is_cancelled()) {
         return Status::Cancelled("canceled state");
@@ -808,8 +765,8 @@ Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, Chunk* chu
             return status;
         }
 
-        // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE.
-        debug_validate_scan_output(chunk, _tablet->tablet_id());
+        // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE. Straight out of the storage layer.
+        debug_probe::validate_chunk(chunk, "scan-probe/storage", _tablet->tablet_id());
 
         TRY_CATCH_ALLOC_SCOPE_START()
 
@@ -835,6 +792,10 @@ Status OlapChunkSource::_read_chunk_from_storage(RuntimeState* state, Chunk* chu
             COUNTER_UPDATE(_expr_filter_counter, before_rows - after_rows);
             DCHECK_CHUNK(chunk);
         }
+        // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE. After the in-place filtering above, so a
+        // column broken by filter()/eval_conjuncts() is attributed here and not to the reader.
+        debug_probe::validate_chunk(chunk, "scan-probe/filtered", _tablet->tablet_id());
+
         TRY_CATCH_ALLOC_SCOPE_END()
 
     } while (chunk->num_rows() == 0);

@@ -16,6 +16,7 @@
 
 #include "column/chunk.h"
 #include "column/column_helper.h"
+#include "column/debug_column_check.h"
 #include "column/nullable_column.h"
 #include "compute_env/global_dict/parser.h"
 #include "exprs/expr.h"
@@ -40,6 +41,10 @@ StatusOr<ChunkPtr> ProjectOperator::pull_chunk(RuntimeState* state) {
 }
 
 Status ProjectOperator::push_chunk(RuntimeState* state, const ChunkPtr& chunk) {
+    // TEMPORARY DIAGNOSTIC -- NOT FOR MERGE. Brackets the other end: if the chunk is clean leaving
+    // the scan but broken here, whatever sits in between (chunk buffering, the pipeline chunk
+    // accumulator that merges small chunks) is the producer.
+    debug_probe::validate_chunk(chunk.get(), "project-probe/input", _plan_node_id);
     if (chunk->is_empty()) {
         DCHECK(chunk->owner_info().is_last_chunk());
         _cur_chunk = chunk;
