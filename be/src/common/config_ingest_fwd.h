@@ -29,6 +29,10 @@ CONF_mInt32(download_buffer_size, "4194304");
 // Number of http workers in BE
 CONF_Int32(be_http_num_workers, "48");
 
+// DEBUG ONLY: in EvHttpServer::join(), wait up to this many ms for the closed listen fd numbers
+// to be reused by another thread before evhttp_free(). 0 disables it.
+CONF_mInt32(debug_http_join_wait_fd_reuse_ms, "0");
+
 // Used for mini Load. mini load data file will be removed after this time.
 CONF_Int64(load_data_reserve_hours, "4");
 

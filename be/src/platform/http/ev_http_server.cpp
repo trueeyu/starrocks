@@ -45,6 +45,7 @@
 #include "starrocks_macos_libevent_shims.h"
 #endif
 
+#include <fcntl.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -53,6 +54,7 @@
 #include <utility>
 
 #include "base/brpc/brpc.h"
+#include "base/concurrency/stopwatch.hpp"
 #include "base/system/errno.h"
 #include "common/config_ingest_fwd.h"
 #include "common/logging.h"
@@ -316,12 +318,45 @@ void EvHttpServer::join() {
         }
     }
 
+    std::vector<int> closed_fds{_server_fd};
+    closed_fds.insert(closed_fds.end(), _worker_fds.begin(), _worker_fds.end());
+
     // close the socket at last
     close(_server_fd);
     for (int fd : _worker_fds) {
         ::close(fd);
     }
     _worker_fds.clear();
+
+    // ---------------- DEBUG ONLY ----------------
+    // Every fd in closed_fds is closed again by evhttp_free() below (LEV_OPT_CLOSE_ON_FREE). Wait until
+    // another thread reuses one of these numbers, so that evhttp_free() deterministically closes a foreign fd.
+    if (config::debug_http_join_wait_fd_reuse_ms > 0) {
+        MonotonicStopWatch watch;
+        watch.start();
+        const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
+        auto any_reused = [&closed_fds]() {
+            for (int fd : closed_fds) {
+                if (::fcntl(fd, F_GETFD) != -1) return true;
+            }
+            return false;
+        };
+        while (!any_reused() && watch.elapsed_time() < timeout_ns) {
+            usleep(100);
+        }
+        LOG(WARNING) << "[DEBUG] http server reuseport=" << _reuseport_enabled << ", workers=" << _https.size()
+                     << ", closed fds=" << closed_fds.size() << ", waited " << watch.elapsed_time() / 1000
+                     << "us, evhttp_free will close them again now";
+        for (int fd : closed_fds) {
+            char target[256] = {0};
+            std::string link = "/proc/self/fd/" + std::to_string(fd);
+            ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+            if (n > 0) {
+                LOG(WARNING) << "[DEBUG] http server fd " << fd << " reused by: " << target;
+            }
+        }
+    }
+    // --------------------------------------------
 
     // free the evhttp and event_base
     for (auto http : _https) {
