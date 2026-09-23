@@ -54,6 +54,7 @@
 #include "common/runtime_profile.h"
 #include "common/system/cpu_info.h"
 #include "exec/analytor.h"
+#include "exprs/agg/window.h" // TEMP INSTRUMENTATION: LeadScanStat
 #include "runtime/descriptor_helper.h"
 #include "runtime/descriptors.h"
 #include "runtime/mem_pool.h"
@@ -119,6 +120,7 @@ static ColumnPtr make_value_chunk_column(Pattern pattern, int64_t begin, int64_t
 static void BM_LeadLagIgnoreNulls(benchmark::State& bstate, Fn fn, Pattern pattern, bool streaming) {
     for (auto _ : bstate) {
         bstate.PauseTiming();
+        LeadScanStat::reset(); // TEMP INSTRUMENTATION
         config::pipeline_analytic_enable_ignore_nulls_streaming = streaming;
         // Fine-grained eviction so PeakBufferedRows reflects the algorithmic bound rather than the
         // eviction batch size (default 128 chunks would otherwise set a ~128-chunk floor).
@@ -179,6 +181,11 @@ static void BM_LeadLagIgnoreNulls(benchmark::State& bstate, Fn fn, Pattern patte
         // nullable int32 ~ 4 bytes data + 1 byte null flag per row
         bstate.counters["PeakMiB"] = peak_rows * 5.0 / (1024.0 * 1024.0);
         bstate.counters["Evictions"] = evicted ? static_cast<double>(evicted->value()) : 0;
+        // TEMP INSTRUMENTATION: forward-scan accounting, split by issuing code path.
+        bstate.counters["ScanRdyCalls"] = static_cast<double>(LeadScanStat::readiness_calls.load());
+        bstate.counters["ScanUpdCalls"] = static_cast<double>(LeadScanStat::update_calls.load());
+        bstate.counters["ScanRdyRows"] = static_cast<double>(LeadScanStat::readiness_rows.load());
+        bstate.counters["ScanUpdRows"] = static_cast<double>(LeadScanStat::update_rows.load());
 
         analytor->close(state);
         bstate.ResumeTiming();

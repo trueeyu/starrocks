@@ -13,6 +13,12 @@
 // limitations under the License.
 
 #pragma once
+
+// TEMP INSTRUMENTATION
+#include <atomic>
+#include <sstream>
+#include <string>
+
 #include "column/array_column.h"
 #include "column/binary_column.h"
 #include "column/column_helper.h"
@@ -22,6 +28,35 @@
 #include "exprs/agg/aggregate_traits.h"
 
 namespace starrocks {
+
+// ===== TEMP INSTRUMENTATION: lead ignore-nulls forward-scan accounting =====
+// Counts ColumnHelper::find_nonnull() calls and the rows they advanced, split by
+// which code path issued them. Remove before merging.
+struct LeadScanStat {
+    static inline std::atomic<int64_t> readiness_calls{0};   // is_window_result_ready()
+    static inline std::atomic<int64_t> readiness_rows{0};
+    static inline std::atomic<int64_t> update_calls{0};      // update_batch_single_state_with_frame()
+    static inline std::atomic<int64_t> update_rows{0};
+    static void reset() {
+        readiness_calls = 0; readiness_rows = 0; update_calls = 0; update_rows = 0;
+    }
+    static std::string report() {
+        const int64_t rc = readiness_calls.load(), uc = update_calls.load();
+        const int64_t rr = readiness_rows.load(), ur = update_rows.load();
+        std::stringstream ss;
+        ss << "[LeadScanStat] readiness: calls=" << rc << " rows=" << rr
+           << " | update: calls=" << uc << " rows=" << ur
+           << " | call_ratio=" << (uc ? double(rc + uc) / double(uc) : 0.0)
+           << " row_ratio=" << (ur ? double(rr + ur) / double(ur) : 0.0);
+        return ss.str();
+    }
+};
+#define LEAD_STAT_ADD(which, advanced)                                              \
+    do {                                                                            \
+        LeadScanStat::which##_calls.fetch_add(1, std::memory_order_relaxed);        \
+        LeadScanStat::which##_rows.fetch_add((advanced), std::memory_order_relaxed);\
+    } while (0)
+// ===== END TEMP INSTRUMENTATION =====
 
 template <typename State>
 class WindowFunction : public AggregateFunctionStateHelper<State> {
@@ -614,6 +649,7 @@ class LeadLagWindowFunction final : public ValueWindowFunction<LT, LeadLagState<
                 if (this->data(state).target_not_null_index == INT64_MIN) {
                     while (value_index < peer_group_end && cnt > 0) {
                         int64_t next_index = ColumnHelper::find_nonnull(columns[0], value_index + 1, peer_group_end);
+                        LEAD_STAT_ADD(update, next_index - value_index);
                         if (next_index == peer_group_end) {
                             value_index = next_index;
                             break;
@@ -633,6 +669,7 @@ class LeadLagWindowFunction final : public ValueWindowFunction<LT, LeadLagState<
                     } else {
                         value_index = this->data(state).target_not_null_index;
                         int64_t next_index = ColumnHelper::find_nonnull(columns[0], value_index + 1, peer_group_end);
+                        LEAD_STAT_ADD(update, next_index - value_index);
                         value_index = next_index;
                     }
                     found_target = (value_index < peer_group_end);
@@ -827,6 +864,7 @@ class LeadLagWindowFunction final : public ValueWindowFunction<LT, LeadLagState<
             while (lead_state.lead_ready_non_null_count < offset && lead_state.lead_ready_scan_end < search_end) {
                 const int64_t next = static_cast<int64_t>(
                         ColumnHelper::find_nonnull(col, lead_state.lead_ready_scan_end, search_end));
+                LEAD_STAT_ADD(readiness, next - lead_state.lead_ready_scan_end);
                 if (next >= search_end) {
                     lead_state.lead_ready_scan_end = search_end;
                     break;
