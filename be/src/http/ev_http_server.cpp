@@ -40,11 +40,14 @@
 #include <event2/http.h>
 #include <event2/http_struct.h>
 #include <event2/keyvalq_struct.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #include <memory>
 #include <sstream>
 #include <utility>
 
+#include "common/config.h"
 #include "common/logging.h"
 #include "http/http_channel.h"
 #include "http/http_handler.h"
@@ -54,6 +57,7 @@
 #include "service/brpc.h"
 #include "util/debug_util.h"
 #include "util/errno.h"
+#include "util/stopwatch.hpp"
 #include "util/thread.h"
 
 namespace starrocks {
@@ -168,8 +172,26 @@ void EvHttpServer::join() {
         }
     }
 
+    int old_fd = _server_fd;
     // close the socket at last
     close(_server_fd);
+
+    // ---------------- DEBUG ONLY ----------------
+    if (config::debug_http_join_wait_fd_reuse_ms > 0) {
+        MonotonicStopWatch watch;
+        watch.start();
+        const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
+        // Wait until another thread gets old_fd again (fcntl succeeds once the number is reused).
+        while (::fcntl(old_fd, F_GETFD) == -1 && watch.elapsed_time() < timeout_ns) {
+            usleep(100);
+        }
+        char target[256] = {0};
+        std::string link = "/proc/self/fd/" + std::to_string(old_fd);
+        ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+        LOG(WARNING) << "[DEBUG] http server fd " << old_fd << " reused by: " << (n > 0 ? target : "<none>")
+                     << ", waited " << watch.elapsed_time() / 1000 << "us, evhttp_free will close it now";
+    }
+    // --------------------------------------------
 
     // free the evhttp and event_base
     for (auto http : _https) {
