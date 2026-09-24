@@ -207,21 +207,26 @@ void EvHttpServer::join() {
     std::string debug_reused_by;
     if (config::debug_http_join_wait_fd_reuse_ms > 0) {
         // socket()/open() always return the lowest free fd. Occupy every free fd lower than debug_old_fd, so that
-        // the next socket() in the process lands on debug_old_fd.
-        while (true) {
-            int fd = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
-            if (fd < 0) {
-                PLOG(WARNING) << "[DEBUG] failed to open filler fd";
-                break;
+        // the next socket() in the process lands on debug_old_fd. Other threads keep releasing lower fds while we
+        // wait (e.g. brpc closes its previous health check socket right before creating the next one), so this is
+        // repeated on every poll below.
+        auto occupy_lower_free_fds = [&debug_filler_fds, debug_old_fd]() {
+            while (true) {
+                int fd = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
+                if (fd < 0) {
+                    PLOG(WARNING) << "[DEBUG] failed to open filler fd";
+                    return;
+                }
+                if (fd < debug_old_fd) {
+                    debug_filler_fds.push_back(fd);
+                    continue;
+                }
+                // No free fd below debug_old_fd any more, give this one back.
+                ::close(fd);
+                return;
             }
-            if (fd < debug_old_fd) {
-                debug_filler_fds.push_back(fd);
-                continue;
-            }
-            // No free fd below debug_old_fd any more, give this one back.
-            ::close(fd);
-            break;
-        }
+        };
+        occupy_lower_free_fds();
         LOG(WARNING) << "[DEBUG] http server (fixed) closed fd " << debug_old_fd << ", workers=" << _https.size()
                      << ", occupied " << debug_filler_fds.size() << " lower free fds, waiting for reuse";
 
@@ -239,6 +244,7 @@ void EvHttpServer::join() {
             if (n > 0 && strncmp(target, "socket:", 7) == 0) {
                 break;
             }
+            occupy_lower_free_fds();
             usleep(1000);
         }
         if (n > 0) {
@@ -246,7 +252,8 @@ void EvHttpServer::join() {
         }
         LOG(WARNING) << "[DEBUG] http server fd " << debug_old_fd << " reused by: "
                      << (n > 0 ? debug_reused_by : std::string("<none>")) << ", waited "
-                     << watch.elapsed_time() / 1000 << "us, calling evhttp_free now";
+                     << watch.elapsed_time() / 1000 << "us, occupied " << debug_filler_fds.size()
+                     << " lower free fds in total, calling evhttp_free now";
     }
     // --------------------------------------------
 
