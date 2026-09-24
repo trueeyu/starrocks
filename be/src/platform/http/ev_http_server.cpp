@@ -49,6 +49,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <memory>
 #include <sstream>
 #include <utility>
@@ -331,7 +332,30 @@ void EvHttpServer::join() {
     // ---------------- DEBUG ONLY ----------------
     // Every fd in closed_fds is closed again by evhttp_free() below (LEV_OPT_CLOSE_ON_FREE). Wait until
     // another thread reuses one of these numbers, so that evhttp_free() deterministically closes a foreign fd.
+    std::vector<int> debug_filler_fds;
     if (config::debug_http_join_wait_fd_reuse_ms > 0) {
+        std::sort(closed_fds.begin(), closed_fds.end());
+        const int min_closed_fd = closed_fds.front();
+        // socket()/open() always return the lowest free fd. Occupy every free fd lower than min_closed_fd,
+        // so that the next socket() in the process (e.g. a brpc health check) lands on one of closed_fds.
+        while (true) {
+            int fd = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
+            if (fd < 0) {
+                PLOG(WARNING) << "[DEBUG] failed to open filler fd";
+                break;
+            }
+            if (fd < min_closed_fd) {
+                debug_filler_fds.push_back(fd);
+                continue;
+            }
+            // No free fd below min_closed_fd any more, give this one back.
+            ::close(fd);
+            break;
+        }
+        LOG(WARNING) << "[DEBUG] http server closed fds=[" << closed_fds.front() << ".." << closed_fds.back()
+                     << "] count=" << closed_fds.size() << ", occupied " << debug_filler_fds.size()
+                     << " lower free fds, waiting for reuse";
+
         MonotonicStopWatch watch;
         watch.start();
         const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
@@ -361,6 +385,11 @@ void EvHttpServer::join() {
     // free the evhttp and event_base
     for (auto http : _https) {
         evhttp_free(http);
+    }
+
+    // DEBUG ONLY
+    for (int fd : debug_filler_fds) {
+        ::close(fd);
     }
 
     for (auto base : _event_bases) {
