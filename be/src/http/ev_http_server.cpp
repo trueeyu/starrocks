@@ -177,7 +177,27 @@ void EvHttpServer::join() {
     close(_server_fd);
 
     // ---------------- DEBUG ONLY ----------------
+    std::vector<int> debug_filler_fds;
     if (config::debug_http_join_wait_fd_reuse_ms > 0) {
+        // socket()/open() always return the lowest free fd. Occupy every free fd lower than old_fd, so that
+        // the next socket() in the process (e.g. a brpc health check) lands on old_fd.
+        while (true) {
+            int fd = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
+            if (fd < 0) {
+                PLOG(WARNING) << "[DEBUG] failed to open filler fd";
+                break;
+            }
+            if (fd < old_fd) {
+                debug_filler_fds.push_back(fd);
+                continue;
+            }
+            // No free fd below old_fd any more, give this one back.
+            ::close(fd);
+            break;
+        }
+        LOG(WARNING) << "[DEBUG] http server closed fd " << old_fd << ", occupied " << debug_filler_fds.size()
+                     << " lower free fds, waiting for reuse";
+
         MonotonicStopWatch watch;
         watch.start();
         const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
@@ -196,6 +216,11 @@ void EvHttpServer::join() {
     // free the evhttp and event_base
     for (auto http : _https) {
         evhttp_free(http);
+    }
+
+    // DEBUG ONLY
+    for (int fd : debug_filler_fds) {
+        ::close(fd);
     }
 
     for (auto base : _event_bases) {
