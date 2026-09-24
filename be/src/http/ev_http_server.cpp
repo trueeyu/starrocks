@@ -179,6 +179,7 @@ void EvHttpServer::join() {
 
     // ---------------- DEBUG ONLY ----------------
     std::vector<int> debug_filler_fds;
+    std::string debug_reused_by;
     if (config::debug_http_join_wait_fd_reuse_ms > 0) {
         // socket()/open() always return the lowest free fd. Occupy every free fd lower than old_fd, so that
         // the next socket() in the process (e.g. a brpc health check) lands on old_fd.
@@ -215,6 +216,9 @@ void EvHttpServer::join() {
             }
             usleep(1000);
         }
+        if (n > 0) {
+            debug_reused_by = target;
+        }
         LOG(WARNING) << "[DEBUG] http server fd " << old_fd << " reused by: " << (n > 0 ? target : "<none>")
                      << ", waited " << watch.elapsed_time() / 1000 << "us, evhttp_free will close it now";
     }
@@ -225,7 +229,15 @@ void EvHttpServer::join() {
         evhttp_free(http);
     }
 
-    // DEBUG ONLY
+    // DEBUG ONLY: check whether evhttp_free() closed the fd that another thread had reused.
+    if (!debug_reused_by.empty()) {
+        char target[256] = {0};
+        std::string link = "/proc/self/fd/" + std::to_string(old_fd);
+        ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+        const std::string after = n > 0 ? target : "<closed>";
+        LOG(WARNING) << "[DEBUG] after evhttp_free: fd " << old_fd << " " << debug_reused_by << " -> " << after
+                     << (after == debug_reused_by ? " (still open)" : " (CLOSED BY evhttp_free)");
+    }
     for (int fd : debug_filler_fds) {
         ::close(fd);
     }
