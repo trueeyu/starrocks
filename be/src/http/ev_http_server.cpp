@@ -43,6 +43,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <cstring>
 #include <memory>
 #include <sstream>
 #include <utility>
@@ -201,13 +202,19 @@ void EvHttpServer::join() {
         MonotonicStopWatch watch;
         watch.start();
         const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
-        // Wait until another thread gets old_fd again (fcntl succeeds once the number is reused).
-        while (::fcntl(old_fd, F_GETFD) == -1 && watch.elapsed_time() < timeout_ns) {
-            usleep(100);
-        }
+        // Only stop waiting once old_fd is reused by a socket (e.g. a brpc health check). A number taken by a
+        // regular file (e.g. a periodic /proc reader) is released again soon, so keep waiting.
         char target[256] = {0};
         std::string link = "/proc/self/fd/" + std::to_string(old_fd);
-        ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+        ssize_t n = -1;
+        while (watch.elapsed_time() < timeout_ns) {
+            memset(target, 0, sizeof(target));
+            n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+            if (n > 0 && strncmp(target, "socket:", 7) == 0) {
+                break;
+            }
+            usleep(1000);
+        }
         LOG(WARNING) << "[DEBUG] http server fd " << old_fd << " reused by: " << (n > 0 ? target : "<none>")
                      << ", waited " << watch.elapsed_time() / 1000 << "us, evhttp_free will close it now";
     }
