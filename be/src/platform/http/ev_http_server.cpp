@@ -334,6 +334,7 @@ void EvHttpServer::join() {
     // Every fd in closed_fds is closed again by evhttp_free() below (LEV_OPT_CLOSE_ON_FREE). Wait until
     // another thread reuses one of these numbers, so that evhttp_free() deterministically closes a foreign fd.
     std::vector<int> debug_filler_fds;
+    std::vector<std::pair<int, std::string>> debug_reused_fds;
     if (config::debug_http_join_wait_fd_reuse_ms > 0) {
         std::sort(closed_fds.begin(), closed_fds.end());
         const int min_closed_fd = closed_fds.front();
@@ -384,6 +385,7 @@ void EvHttpServer::join() {
             ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
             if (n > 0) {
                 LOG(WARNING) << "[DEBUG] http server fd " << fd << " reused by: " << target;
+                debug_reused_fds.emplace_back(fd, target);
             }
         }
     }
@@ -394,7 +396,15 @@ void EvHttpServer::join() {
         evhttp_free(http);
     }
 
-    // DEBUG ONLY
+    // DEBUG ONLY: check whether evhttp_free() closed the fds that other threads had reused.
+    for (const auto& [fd, before] : debug_reused_fds) {
+        char target[256] = {0};
+        std::string link = "/proc/self/fd/" + std::to_string(fd);
+        ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+        const std::string after = n > 0 ? target : "<closed>";
+        LOG(WARNING) << "[DEBUG] after evhttp_free: fd " << fd << " " << before << " -> " << after
+                     << (after == before ? " (still open)" : " (CLOSED BY evhttp_free)");
+    }
     for (int fd : debug_filler_fds) {
         ::close(fd);
     }
