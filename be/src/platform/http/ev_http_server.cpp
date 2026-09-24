@@ -49,11 +49,13 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <cstring>
 #include <memory>
 #include <sstream>
 #include <utility>
 
 #include "base/brpc/brpc.h"
+#include "base/concurrency/stopwatch.hpp"
 #include "base/system/errno.h"
 #include "base/testutil/sync_point.h"
 #include "common/config_ingest_fwd.h"
@@ -343,14 +345,79 @@ void EvHttpServer::join() {
     // close the socket at last. Only _server_fd itself is owned here: the fds
     // passed to evhttp_accept_socket() (dups of _server_fd and the per-worker
     // SO_REUSEPORT fds in _worker_fds) are closed by evhttp_free() below.
+    const int debug_old_fd = _server_fd;
     close(_server_fd);
     _server_fd = -1;
     _worker_fds.clear();
     TEST_SYNC_POINT("EvHttpServer::join:before_evhttp_free");
 
+    // ---------------- DEBUG ONLY ----------------
+    // With the fix, _server_fd is the only fd closed before evhttp_free(). Make another thread (e.g. a brpc health
+    // check) reuse its number, then check that evhttp_free() leaves that foreign fd alone.
+    std::vector<int> debug_filler_fds;
+    std::string debug_reused_by;
+    if (config::debug_http_join_wait_fd_reuse_ms > 0) {
+        // socket()/open() always return the lowest free fd. Occupy every free fd lower than debug_old_fd, so that
+        // the next socket() in the process lands on debug_old_fd.
+        while (true) {
+            int fd = ::open("/dev/null", O_RDONLY | O_CLOEXEC);
+            if (fd < 0) {
+                PLOG(WARNING) << "[DEBUG] failed to open filler fd";
+                break;
+            }
+            if (fd < debug_old_fd) {
+                debug_filler_fds.push_back(fd);
+                continue;
+            }
+            // No free fd below debug_old_fd any more, give this one back.
+            ::close(fd);
+            break;
+        }
+        LOG(WARNING) << "[DEBUG] http server (fixed) closed fd " << debug_old_fd << ", reuseport=" << _reuseport_enabled
+                     << ", workers=" << _https.size() << ", occupied " << debug_filler_fds.size()
+                     << " lower free fds, waiting for reuse";
+
+        MonotonicStopWatch watch;
+        watch.start();
+        const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
+        // Only stop waiting once debug_old_fd is reused by a socket. A number taken by a regular file (e.g. a
+        // periodic /proc reader) is released again soon, so keep waiting.
+        char target[256] = {0};
+        std::string link = "/proc/self/fd/" + std::to_string(debug_old_fd);
+        ssize_t n = -1;
+        while (watch.elapsed_time() < timeout_ns) {
+            memset(target, 0, sizeof(target));
+            n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+            if (n > 0 && strncmp(target, "socket:", 7) == 0) {
+                break;
+            }
+            usleep(1000);
+        }
+        if (n > 0) {
+            debug_reused_by = target;
+        }
+        LOG(WARNING) << "[DEBUG] http server fd " << debug_old_fd << " reused by: "
+                     << (n > 0 ? debug_reused_by : std::string("<none>")) << ", waited "
+                     << watch.elapsed_time() / 1000 << "us, calling evhttp_free now";
+    }
+    // --------------------------------------------
+
     // free the evhttp and event_base
     for (auto http : _https) {
         evhttp_free(http);
+    }
+
+    // DEBUG ONLY: check whether evhttp_free() closed the fd that another thread had reused.
+    if (!debug_reused_by.empty()) {
+        char target[256] = {0};
+        std::string link = "/proc/self/fd/" + std::to_string(debug_old_fd);
+        ssize_t n = ::readlink(link.c_str(), target, sizeof(target) - 1);
+        const std::string after = n > 0 ? target : "<closed>";
+        LOG(WARNING) << "[DEBUG] after evhttp_free: fd " << debug_old_fd << " " << debug_reused_by << " -> " << after
+                     << (after == debug_reused_by ? " (still open)" : " (CLOSED BY evhttp_free)");
+    }
+    for (int fd : debug_filler_fds) {
+        ::close(fd);
     }
 
     for (auto base : _event_bases) {
