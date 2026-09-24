@@ -50,6 +50,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstring>
 #include <memory>
 #include <sstream>
 #include <utility>
@@ -359,14 +360,20 @@ void EvHttpServer::join() {
         MonotonicStopWatch watch;
         watch.start();
         const uint64_t timeout_ns = static_cast<uint64_t>(config::debug_http_join_wait_fd_reuse_ms) * 1000000UL;
-        auto any_reused = [&closed_fds]() {
+        // Only stop waiting once one of closed_fds is reused by a socket (e.g. a brpc health check). A number
+        // taken by a regular file (e.g. a periodic /proc reader) is released again soon, so keep waiting.
+        auto any_reused_by_socket = [&closed_fds]() {
             for (int fd : closed_fds) {
-                if (::fcntl(fd, F_GETFD) != -1) return true;
+                char target[256] = {0};
+                std::string link = "/proc/self/fd/" + std::to_string(fd);
+                if (::readlink(link.c_str(), target, sizeof(target) - 1) > 0 && strncmp(target, "socket:", 7) == 0) {
+                    return true;
+                }
             }
             return false;
         };
-        while (!any_reused() && watch.elapsed_time() < timeout_ns) {
-            usleep(100);
+        while (!any_reused_by_socket() && watch.elapsed_time() < timeout_ns) {
+            usleep(1000);
         }
         LOG(WARNING) << "[DEBUG] http server reuseport=" << _reuseport_enabled << ", workers=" << _https.size()
                      << ", closed fds=" << closed_fds.size() << ", waited " << watch.elapsed_time() / 1000
