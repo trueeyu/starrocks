@@ -319,3 +319,27 @@ select id, k from t_gin_del_prune_${uuid0} where v like '%red%' order by id;
 select count(*) from t_gin_del_prune_${uuid0};
 
 DROP TABLE t_gin_del_prune_${uuid0};
+
+-- name: test_create_mv_with_match @native
+ADMIN SET FRONTEND CONFIG("enable_experimental_gin" = "true");
+CREATE TABLE `t_create_mv_with_match` (
+  `id` bigint(20) NOT NULL COMMENT "",
+  `v1` varchar(255) NULL COMMENT "",
+  `v2` varchar(255) NULL COMMENT "",
+  INDEX gin_none (`v1`) USING GIN ("parser" = "english")
+) ENGINE=OLAP
+DUPLICATE KEY(`id`)
+DISTRIBUTED BY HASH(`id`) BUCKETS 1
+PROPERTIES (
+"replication_num" = "1",
+"enable_persistent_index" = "true",
+"replicated_storage" = "false",
+"compression" = "LZ4"
+);
+
+INSERT INTO t_create_mv_with_match VALUES (1, "abc", "bcd");
+CREATE MATERIALIZED VIEW mv AS SELECT id, v1, v2 FROM t_create_mv_with_match WHERE v1 MATCH "abc";
+function: wait_materialized_view_cancel()
+CREATE MATERIALIZED VIEW mv1 AS SELECT id, v1, v2 FROM t_create_mv_with_match WHERE v1 MATCH_ANY "abc bdc";
+function: wait_materialized_view_cancel()
+DROP TABLE t_create_mv_with_match;
