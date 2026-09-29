@@ -37,6 +37,8 @@ struct AggStatistics {
 
         chunk_buffer_peak_memory = ADD_PEAK_COUNTER(runtime_profile, "ChunkBufferPeakMem", TUnit::BYTES);
         chunk_buffer_peak_size = ADD_PEAK_COUNTER(runtime_profile, "ChunkBufferPeakSize", TUnit::UNIT);
+        output_chunk_split_by_bytes = ADD_COUNTER(runtime_profile, "OutputChunkSplitByBytes", TUnit::UNIT);
+        output_chunk_peak_bytes = ADD_PEAK_COUNTER(runtime_profile, "OutputChunkPeakBytes", TUnit::BYTES);
 
         udaf_load_timer = ADD_TIMER(runtime_profile, "UdafLoadTime");
         udaf_cache_hit_count = ADD_COUNTER(runtime_profile, "UdafCacheHitCount", TUnit::UNIT);
@@ -74,6 +76,10 @@ struct AggStatistics {
 
     RuntimeProfile::HighWaterMarkCounter* chunk_buffer_peak_memory{};
     RuntimeProfile::HighWaterMarkCounter* chunk_buffer_peak_size{};
+    // hash table outputs that stopped before chunk_size because agg_output_chunk_max_bytes was reached
+    RuntimeProfile::Counter* output_chunk_split_by_bytes{};
+    // largest aggregate result bytes of one chunk emitted from the hash table (only tracked with the bound on)
+    RuntimeProfile::HighWaterMarkCounter* output_chunk_peak_bytes{};
 
     RuntimeProfile::Counter* udaf_load_timer{};
     RuntimeProfile::Counter* udaf_cache_hit_count{};

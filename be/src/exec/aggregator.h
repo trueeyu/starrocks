@@ -569,6 +569,12 @@ protected:
 
     void _build_hash_map_with_shared_limit(size_t chunk_size, std::atomic<int64_t>& shared_limit_countdown);
 
+    // Rows of the first batch convert_hash_map_to_chunk serializes under a byte budget, sized from the average
+    // memory one group holds in this aggregator. Memory held by a state is normally no less than its serialized
+    // size, so the estimate errs towards a small batch; the batches that follow are sized from the bytes actually
+    // written.
+    size_t _estimate_output_batch_rows(size_t max_rows, int64_t budget) const;
+
     bool _use_intermediate_as_input() {
         if (is_pending_reset_state()) {
             DCHECK(_aggr_mode == AM_BLOCKING_PRE_CACHE || _aggr_mode == AM_STREAMING_PRE_CACHE);

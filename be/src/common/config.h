@@ -2091,6 +2091,12 @@ CONF_Int64(local_exchange_buffer_mem_limit_per_driver, "134217728"); // 128MB
 CONF_mBool(local_exchange_buffer_mem_limit_by_consumer_dop, "true");
 // only used for test. default: 128M
 CONF_mInt64(streaming_agg_limited_memory_size, "134217728");
+// Soft upper bound, in bytes, on the aggregate result columns of one chunk that a hash aggregation
+// emits from its hash table. A group whose serialized state is large (for example a count distinct
+// set holding millions of values) makes a full chunk_size chunk hundreds of MB, so the output stops
+// adding groups once this many bytes are written and resumes in the next chunk. A single group larger
+// than the bound is still emitted, alone. 0 or below disables the bound.
+CONF_mInt64(agg_output_chunk_max_bytes, "67108864");
 // mem limit for partition hash join probe side buffer
 CONF_mInt64(partition_hash_join_probe_limit_size, "134217728");
 // pipeline streaming aggregate chunk buffer size

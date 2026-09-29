@@ -183,6 +183,7 @@
         "local_exchange_buffer_mem_limit_per_driver",
         "local_exchange_buffer_mem_limit_by_consumer_dop",
         "streaming_agg_limited_memory_size",
+        "agg_output_chunk_max_bytes",
         "partition_hash_join_probe_limit_size",
         "streaming_agg_chunk_buffer_size",
         "agg_hash_map_prefetch_dist",

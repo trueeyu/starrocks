@@ -1759,54 +1759,91 @@ Status Aggregator::convert_hash_map_to_chunk(int32_t chunk_size, ChunkPtr* chunk
         MutableColumns group_by_columns = _create_group_by_columns(num_rows);
         MutableColumns agg_result_columns = _create_agg_result_columns(num_rows, use_intermediate);
 
-        int32_t read_index = 0;
-        {
-            SCOPED_TIMER(_agg_stat->iter_timer);
-            hash_map_with_key.results.resize(chunk_size);
-            // get key/value from hashtable
-            while ((it != end) & (read_index < chunk_size)) {
-                auto* value = it.value();
-                hash_map_with_key.results[read_index] = *reinterpret_cast<typename HashMapWithKey::KeyType*>(value);
-                _tmp_agg_states[read_index] = value;
-                ++read_index;
-                it.next();
-            }
-        }
+        // Groups are read and their states written in batches. Without a byte budget there is a single batch of up
+        // to chunk_size rows, as before. With one, the first batch is sized from the memory a group holds, each later
+        // batch from the bytes the chunk has taken so far (at most doubling), and the chunk stops taking groups once
+        // the budget is reached, the rest going to the next call. A batch never exceeds _tmp_agg_states.
+        const int64_t budget = config::agg_output_chunk_max_bytes;
+        const size_t max_batch_rows = std::min<size_t>(chunk_size, _tmp_agg_states.size());
+        size_t batch_rows = budget > 0 ? _estimate_output_batch_rows(max_batch_rows, budget) : max_batch_rows;
+        size_t written_bytes = 0;
+        bool stopped_by_bytes = false;
 
-        if (read_index > 0) {
+        int32_t read_index = 0;
+        hash_map_with_key.results.resize(chunk_size);
+        while ((it != end) & (read_index < chunk_size)) {
+            const int32_t batch_begin = read_index;
+            const auto batch_end =
+                    static_cast<int32_t>(std::min<int64_t>(chunk_size, int64_t(batch_begin) + int64_t(batch_rows)));
             {
-                SCOPED_TIMER(_agg_stat->group_by_append_timer);
-                // Pass MutableColumns directly to hashtable interface
-                hash_map_with_key.insert_keys_to_columns(hash_map_with_key.results, group_by_columns, read_index);
+                SCOPED_TIMER(_agg_stat->iter_timer);
+                // get key/value from hashtable
+                while ((it != end) & (read_index < batch_end)) {
+                    auto* value = it.value();
+                    hash_map_with_key.results[read_index] =
+                            *reinterpret_cast<typename HashMapWithKey::KeyType*>(value);
+                    _tmp_agg_states[read_index - batch_begin] = value;
+                    ++read_index;
+                    it.next();
+                }
             }
+            const size_t batch_size = read_index - batch_begin;
 
             {
                 SCOPED_TIMER(_agg_stat->agg_append_timer);
                 SCOPED_THREAD_LOCAL_STATE_ALLOCATOR_SETTER(_allocator.get());
                 if (!use_intermediate) {
                     for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
-                        TRY_CATCH_BAD_ALLOC(_agg_functions[i]->batch_finalize(_agg_fn_ctxs[i], read_index,
+                        TRY_CATCH_BAD_ALLOC(_agg_functions[i]->batch_finalize(_agg_fn_ctxs[i], batch_size,
                                                                               _tmp_agg_states, _agg_states_offsets[i],
                                                                               agg_result_columns[i].get()));
                     }
                 } else {
                     for (size_t i = 0; i < _agg_fn_ctxs.size(); i++) {
-                        TRY_CATCH_BAD_ALLOC(_agg_functions[i]->batch_serialize(_agg_fn_ctxs[i], read_index,
+                        TRY_CATCH_BAD_ALLOC(_agg_functions[i]->batch_serialize(_agg_fn_ctxs[i], batch_size,
                                                                                _tmp_agg_states, _agg_states_offsets[i],
                                                                                agg_result_columns[i].get()));
                     }
                 }
             }
+
+            if (budget <= 0) {
+                continue;
+            }
+            // Only the rows this batch appended are measured, so a column whose byte_size walks its rows
+            // (ObjectColumn) is still walked once per output in total.
+            for (auto& column : agg_result_columns) {
+                written_bytes += column->byte_size(batch_begin, batch_size);
+            }
+            if (written_bytes >= static_cast<size_t>(budget)) {
+                stopped_by_bytes = read_index < chunk_size;
+                break;
+            }
+            const size_t avg_row_bytes = std::max<size_t>(1, written_bytes / read_index);
+            const size_t rows_left = std::min<size_t>(max_batch_rows, chunk_size - read_index);
+            batch_rows = std::clamp<size_t>((budget - written_bytes) / avg_row_bytes, 1,
+                                            std::max<size_t>(1, std::min(batch_size * 2, rows_left)));
+        }
+
+        if (read_index > 0) {
+            SCOPED_TIMER(_agg_stat->group_by_append_timer);
+            // Pass MutableColumns directly to hashtable interface
+            hash_map_with_key.insert_keys_to_columns(hash_map_with_key.results, group_by_columns, read_index);
         }
 
         RETURN_IF_ERROR(check_has_error());
         _is_ht_eos = (it == end);
+        const bool reached_byte_budget = budget > 0 && written_bytes >= static_cast<size_t>(budget);
+        if (budget > 0) {
+            COUNTER_SET(_agg_stat->output_chunk_peak_bytes, static_cast<int64_t>(written_bytes));
+        }
 
         // If there is null key, output it last
         if constexpr (HashMapWithKey::has_single_null_key) {
             if (_is_ht_eos && hash_map_with_key.null_key_data != nullptr) {
-                // The output chunk size couldn't larger than _state->chunk_size()
-                if (read_index < _state->chunk_size()) {
+                // The output chunk size couldn't larger than _state->chunk_size(), nor take the null key's state
+                // on top of a chunk that already reached the byte budget
+                if (read_index < _state->chunk_size() && !reached_byte_budget) {
                     // For multi group by key, we don't need to special handle null key
                     DCHECK(group_by_columns.size() == 1);
                     DCHECK(group_by_columns[0]->is_nullable());
@@ -1826,6 +1863,10 @@ Status Aggregator::convert_hash_map_to_chunk(int32_t chunk_size, ChunkPtr* chunk
             }
         }
 
+        if (stopped_by_bytes && !_is_ht_eos) {
+            COUNTER_UPDATE(_agg_stat->output_chunk_split_by_bytes, 1);
+        }
+
         _it_hash = it;
         auto result_chunk =
                 _build_output_chunk(std::move(group_by_columns), std::move(agg_result_columns), use_intermediate);
@@ -1837,6 +1878,15 @@ Status Aggregator::convert_hash_map_to_chunk(int32_t chunk_size, ChunkPtr* chunk
     }));
 
     return Status::OK();
+}
+
+size_t Aggregator::_estimate_output_batch_rows(size_t max_rows, int64_t budget) const {
+    const size_t num_groups = _hash_map_variant.size();
+    if (num_groups == 0 || max_rows == 0) {
+        return std::max<size_t>(1, max_rows);
+    }
+    const int64_t avg_group_bytes = std::max<int64_t>(1, memory_usage() / static_cast<int64_t>(num_groups));
+    return std::clamp<size_t>(static_cast<size_t>(budget / avg_group_bytes), 1, max_rows);
 }
 
 void Aggregator::build_hash_set(size_t chunk_size) {

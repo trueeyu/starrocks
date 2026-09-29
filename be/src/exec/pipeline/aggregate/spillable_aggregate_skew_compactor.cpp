@@ -72,21 +72,30 @@ spill::SpillSkewChunkCompactor make_spill_aggregate_skew_compactor(AggregatorPar
             }
         }
 
-        auto chunk_merged = std::make_shared<Chunk>();
+        auto append_merged = [&](ChunkPtr& chunk_merged) {
+            if (chunk_merged != nullptr && !chunk_merged->is_empty()) {
+                auto hash_column = UInt32Column::create(chunk_merged->num_rows(), context.target_hash_value);
+                chunk_merged->append_column(hash_column, Chunk::HASH_AGG_SPILL_HASH_SLOT_ID);
+                new_chunks.emplace_back(std::move(chunk_merged));
+            }
+        };
         if (merger->only_group_by_exprs()) {
+            auto chunk_merged = std::make_shared<Chunk>();
             merger->hash_set_variant().visit(
                     [&](auto& hash_set_with_key) { merger->it_hash() = hash_set_with_key->hash_set.begin(); });
             auto hash_set_sz = merger->hash_set_variant().size();
             merger->convert_hash_set_to_chunk(hash_set_sz, &chunk_merged);
+            append_merged(chunk_merged);
         } else {
             merger->it_hash() = merger->state_allocator().begin();
             auto hash_map_sz = merger->hash_map_variant().size();
-            RETURN_IF_ERROR(merger->convert_hash_map_to_chunk(hash_map_sz, &chunk_merged, true));
-        }
-        if (chunk_merged != nullptr && !chunk_merged->is_empty()) {
-            auto hash_column = UInt32Column::create(chunk_merged->num_rows(), context.target_hash_value);
-            chunk_merged->append_column(hash_column, Chunk::HASH_AGG_SPILL_HASH_SLOT_ID);
-            new_chunks.emplace_back(std::move(chunk_merged));
+            // convert_hash_map_to_chunk may stop short of hash_map_sz rows once agg_output_chunk_max_bytes is
+            // reached, so keep draining until the hash table is exhausted.
+            do {
+                auto chunk_merged = std::make_shared<Chunk>();
+                RETURN_IF_ERROR(merger->convert_hash_map_to_chunk(hash_map_sz, &chunk_merged, true));
+                append_merged(chunk_merged);
+            } while (!merger->is_ht_eos());
         }
         chunks = std::move(new_chunks);
         return Status::OK();
