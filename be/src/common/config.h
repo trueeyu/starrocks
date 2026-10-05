@@ -1259,6 +1259,8 @@ CONF_mInt64(pipeline_datastream_timeout_guard_ms, "-1");
 
 // whether to enable large column detection in the pipeline execution framework.
 CONF_mBool(pipeline_enable_large_column_checker, "true");
+// [Debug] true: OrderedMemTable upgrades a mem table over 4GB to LargeBinaryColumn as before the fix.
+CONF_mBool(lxh_debug_ordered_mem_table_upgrade, "false");
 
 // The number of scan threads pipeline engine.
 CONF_Int64(pipeline_scan_thread_pool_thread_num, "0");

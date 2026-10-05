@@ -18,6 +18,7 @@
 
 #include "base/container/raw_container.h"
 #include "base/utility/alignment.h"
+#include "column/column_helper.h"
 #include "column/serde/column_array_serde.h"
 #include "common/config_exec_flow_fwd.h"
 #include "common/statusor.h"
@@ -153,6 +154,10 @@ Status ColumnarSerde::serialize(RuntimeState* state, SerdeContext& ctx, const Ch
         for (size_t i = 0; i < columns.size(); i++) {
             uint8_t* begin = buf;
             ASSIGN_OR_RETURN(buf, serde::ColumnArraySerde::serialize(*columns[i], buf, false, encode_levels[i]));
+            const Column* debug_data = ColumnHelper::get_data_column(columns[i].get());
+            LOG(ERROR) << "LXH: spill serialize column " << i << " type=" << debug_data->get_name()
+                       << " large_binary=" << debug_data->is_large_binary() << " rows=" << columns[i]->size()
+                       << " written=" << (buf - begin);
             column_stats.emplace_back(columns[i]->byte_size(), buf - begin);
             if (serde::EncodeContext::enable_encode_integer(encode_levels[i])) {
                 padding_size = serde::EncodeContext::STREAMVBYTE_PADDING_SIZE;
@@ -203,10 +208,15 @@ StatusOr<ChunkUniquePtr> ColumnarSerde::deserialize(SerdeContext& ctx, BlockRead
     read_cursor += columns.size() * sizeof(uint32_t);
     SCOPED_TIMER(_parent->metrics().deserialize_timer);
     for (size_t i = 0; i < columns.size(); i++) {
-        ASSIGN_OR_RETURN(read_cursor,
-                         serde::ColumnArraySerde::deserialize(read_cursor, end, columns[i]->as_mutable_raw_ptr(), false,
-                                                              encode_levels[i]));
+        const Column* debug_data = ColumnHelper::get_data_column(columns[i].get());
+        auto debug_res = serde::ColumnArraySerde::deserialize(read_cursor, end, columns[i]->as_mutable_raw_ptr(), false,
+                                                              encode_levels[i]);
+        LOG(ERROR) << "LXH: spill deserialize column " << i << " type=" << debug_data->get_name()
+                   << " large_binary=" << debug_data->is_large_binary() << " status=" << debug_res.status()
+                   << " rows=" << columns[i]->size();
+        ASSIGN_OR_RETURN(read_cursor, std::move(debug_res));
     }
+    LOG(ERROR) << "LXH: spill deserialize chunk, rows=" << chunk->num_rows() << " bytes=" << chunk->bytes_usage();
 
     TRACE_SPILL_LOG << "deserialize chunk from block: " << reader->debug_string()
                     << ", encoded size: " << attachment_size << ", original size: " << chunk->bytes_usage();
