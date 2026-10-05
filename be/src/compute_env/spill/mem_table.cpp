@@ -188,6 +188,12 @@ Status OrderedMemTable::finalize(workgroup::YieldContext& yield_ctx, const Spill
         ChunkPtr chunk = _chunk_slice.cutoff(_runtime_state->chunk_size());
         LOG(ERROR) << "LXH: ordered mem table finalize slice, rows=" << chunk->num_rows()
                    << " bytes=" << chunk->bytes_usage() << " has_large_column=" << chunk->has_large_column();
+        // _do_sort() upgrades a mem table over 4GB to LargeBinaryColumn, so every slice cut from it is a
+        // LargeBinaryColumn too and would be serialized in the 64-bit format. The restore side builds its chunks
+        // from the spill schema, which holds BinaryColumn, and reads the 32-bit format, so downgrade the slice back.
+        RETURN_IF_ERROR(chunk->downgrade());
+        LOG(ERROR) << "LXH: ordered mem table finalize slice after downgrade, has_large_column="
+                   << chunk->has_large_column();
         bool need_aligned = _runtime_state->spill_enable_direct_io();
 
         RETURN_IF_ERROR(serde->serialize(_runtime_state, serde_ctx, chunk, output, need_aligned));

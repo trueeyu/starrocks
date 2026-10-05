@@ -681,6 +681,93 @@ TEST_F(SpillTest, order_by_process) {
     }
 }
 
+// OrderedMemTable::_do_sort() upgrades a mem table over 4GB to LargeBinaryColumn, so the slices it spills used to be
+// written in the 64-bit serde format, while the restore side builds its chunks from the spill schema (BinaryColumn)
+// and reads the 32-bit format: restoring failed with an invalid payload. Reproduce that without 4GB of data: the
+// schema is set from a first chunk with a BinaryColumn, and a second mem table is fed a LargeBinaryColumn, which is
+// what an upgraded mem table holds. Every restored row must come back in order with its value.
+TEST_F(SpillTest, order_by_restore_large_binary_mem_table) {
+    ObjectPool pool;
+    TExprBuilder order_by_slots_builder;
+    order_by_slots_builder << TYPE_INT;
+    auto order_by_slots = order_by_slots_builder.get_res();
+    TExprBuilder tuple_slots_builder;
+    tuple_slots_builder << TYPE_INT << TYPE_VARCHAR;
+    auto tuple_slots = tuple_slots_builder.get_res();
+
+    auto ctx_st = no_partition_context(&pool, &dummy_rt_st, order_by_slots, tuple_slots);
+    ASSERT_OK(ctx_st.status());
+    auto ctx = ctx_st.value();
+    auto& tuple = ctx->sort_exprs.sort_tuple_slot_expr_ctxs();
+    const SlotId key_slot = find_first_column_ref(tuple[0]->root())->slot_id();
+    const SlotId value_slot = find_first_column_ref(tuple[1]->root())->slot_id();
+
+    // Keys start + 2 * i, each with the value "v<key>", stored in a BinaryColumn or a LargeBinaryColumn.
+    auto make_chunk = [&](int32_t start, size_t num_rows, bool large) {
+        auto keys = Int32Column::create();
+        MutableColumnPtr values =
+                large ? MutableColumnPtr(LargeBinaryColumn::create()) : MutableColumnPtr(BinaryColumn::create());
+        for (size_t i = 0; i < num_rows; i++) {
+            const int32_t key = start + 2 * static_cast<int32_t>(i);
+            const std::string value = "v" + std::to_string(key);
+            keys->append(key);
+            values->append_datum(Datum(Slice(value)));
+        }
+        auto chunk = std::make_shared<Chunk>();
+        chunk->append_column(std::move(keys), key_slot);
+        chunk->append_column(std::move(values), value_slot);
+        return chunk;
+    };
+
+    auto factory = spill::make_spilled_factory();
+    SpilledOptions spill_options(&ctx->sort_exprs, &ctx->sort_descs);
+    spill_options.mem_table_pool_size = 2;
+    // Every chunk fills a mem table, so the two chunks are flushed by two mem tables.
+    spill_options.spill_mem_table_bytes_size = 1;
+    spill_options.spill_type = spill::SpillFormaterType::SPILL_BY_COLUMN;
+    spill_options.block_manager = dummy_block_mgr.get();
+
+    auto spiller = factory->create(spill_options);
+    spiller->set_metrics(metrics);
+    SpillerCaller<spill::RawSpillerWriter*, spill::SpillerReader*> caller(spiller.get());
+    ASSERT_OK(spiller->prepare(&dummy_rt_st));
+
+    constexpr size_t kRowsPerChunk = 100;
+    // The first chunk sets the spill schema, so the restore side reads BinaryColumn.
+    ASSERT_OK(caller.spill<SyncExecutor>(&dummy_rt_st, make_chunk(0, kRowsPerChunk, false), EmptyMemGuard{}));
+    ASSERT_OK(caller.spill<SyncExecutor>(&dummy_rt_st, make_chunk(1, kRowsPerChunk, true), EmptyMemGuard{}));
+    ASSERT_OK(caller.flush<SyncExecutor>(&dummy_rt_st, EmptyMemGuard{}));
+    ASSERT_OK(spiller->_spilled_task_status);
+
+    std::vector<int32_t> keys;
+    std::vector<std::string> values;
+    ASSERT_OK(caller.trigger_restore<SyncExecutor>(&dummy_rt_st, EmptyMemGuard{}));
+    while (true) {
+        auto chunk_st = caller.restore<SyncExecutor>(&dummy_rt_st, EmptyMemGuard{});
+        if (chunk_st.status().is_end_of_file()) {
+            break;
+        }
+        ASSERT_OK(chunk_st.status());
+        ASSERT_OK(spiller->_spilled_task_status);
+        const auto& chunk = chunk_st.value();
+        if (chunk == nullptr) {
+            continue;
+        }
+        const auto& key_column = chunk->get_column_by_slot_id(key_slot);
+        const auto& value_column = chunk->get_column_by_slot_id(value_slot);
+        for (size_t i = 0; i < chunk->num_rows(); i++) {
+            keys.push_back(key_column->get(i).get_int32());
+            values.push_back(value_column->get(i).get_slice().to_string());
+        }
+    }
+
+    ASSERT_EQ(2 * kRowsPerChunk, keys.size());
+    for (size_t i = 0; i < keys.size(); i++) {
+        ASSERT_EQ(static_cast<int32_t>(i), keys[i]);
+        ASSERT_EQ("v" + std::to_string(i), values[i]);
+    }
+}
+
 TEST_F(SpillTest, partition_process) {
     ObjectPool pool;
 
