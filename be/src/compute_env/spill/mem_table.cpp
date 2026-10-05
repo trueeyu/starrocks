@@ -135,6 +135,9 @@ Status OrderedMemTable::append(ChunkPtr chunk) {
     }
     int64_t old_mem_usage = _chunk->memory_usage();
     _chunk->append(*chunk);
+    LOG(ERROR) << "LXH: ordered mem table append, input_rows=" << chunk->num_rows()
+               << " input_bytes=" << chunk->bytes_usage() << " total_rows=" << _chunk->num_rows()
+               << " total_bytes=" << _chunk->bytes_usage();
     _num_rows += chunk->num_rows();
     int64_t new_mem_usage = _chunk->memory_usage();
     _tracker->set(_chunk->memory_usage());
@@ -150,6 +153,8 @@ Status OrderedMemTable::append_selective(const Chunk& src, const uint32_t* index
     Chunk* current = _chunk.get();
     size_t mem_usage = current->memory_usage();
     _chunk->append_selective(src, indexes, from, size);
+    LOG(ERROR) << "LXH: ordered mem table append_selective, input_rows=" << size << " total_rows=" << _chunk->num_rows()
+               << " total_bytes=" << _chunk->bytes_usage();
     _num_rows += size;
     mem_usage = current->memory_usage() - mem_usage;
 
@@ -181,6 +186,8 @@ Status OrderedMemTable::finalize(workgroup::YieldContext& yield_ctx, const Spill
         }
         SCOPED_RAW_TIMER(&yield_ctx.time_spent_ns);
         ChunkPtr chunk = _chunk_slice.cutoff(_runtime_state->chunk_size());
+        LOG(ERROR) << "LXH: ordered mem table finalize slice, rows=" << chunk->num_rows()
+                   << " bytes=" << chunk->bytes_usage() << " has_large_column=" << chunk->has_large_column();
         bool need_aligned = _runtime_state->spill_enable_direct_io();
 
         RETURN_IF_ERROR(serde->serialize(_runtime_state, serde_ctx, chunk, output, need_aligned));
@@ -206,6 +213,8 @@ void OrderedMemTable::reset() {
 
 StatusOr<ChunkPtr> OrderedMemTable::_do_sort(const ChunkPtr& chunk) {
     RETURN_IF_ERROR(chunk->upgrade_if_overflow());
+    LOG(ERROR) << "LXH: ordered mem table sort, rows=" << chunk->num_rows() << " bytes=" << chunk->bytes_usage()
+               << " has_large_column=" << chunk->has_large_column();
     DataSegment segment(_sort_exprs, chunk);
     _permutation.resize(0);
 
