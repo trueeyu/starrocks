@@ -14,6 +14,7 @@
 
 #include "storage/update_compaction_state.h"
 
+#include "column/binary_column.h"
 #include "column/chunk_factory.h"
 #include "common/config_exec_fwd.h"
 #include "common/stack_util.h"
@@ -128,6 +129,14 @@ Status CompactionState::_load_segments(Rowset* rowset, uint32_t segment_id) {
     dest = std::move(col);
     _memory_usage += dest->memory_usage();
     tracker->consume(dest->memory_usage());
+    // TEMP(verify): print the column type of each loaded compaction output segment. Do not merge.
+    {
+        bool large_offsets = dest->is_binary() && down_cast<const BinaryColumn*>(dest.get())->get_offset().is_large();
+        LOG(INFO) << "[verify_compaction_state] tablet=" << rowset->rowset_meta()->tablet_id()
+                  << " rowset=" << rowset->rowset_id().to_string() << " seg=" << segment_id << "/"
+                  << rowset->num_segments() << " type=" << dest->get_name() << " rows=" << dest->size()
+                  << " bytes=" << dest->byte_size() << " large_offsets=" << large_offsets;
+    }
 
     if (tracker->any_limit_exceeded()) {
         // currently we can only log error here, and allow memory over usage
