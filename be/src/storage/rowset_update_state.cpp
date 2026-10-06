@@ -149,6 +149,14 @@ Status RowsetUpdateState::_load_upserts(uint32_t idx, Column* pk_column) {
     }
     dest = std::move(col);
     _memory_usage += dest != nullptr ? dest->memory_usage() : 0;
+    // TEMP(verify): print the column type of each loaded upsert segment. Do not merge.
+    if (dest != nullptr) {
+        bool large_offsets = dest->is_binary() && down_cast<BinaryColumn*>(dest.get())->get_offset().is_large();
+        LOG(INFO) << "[verify_upserts] tablet=" << (_tablet != nullptr ? _tablet->tablet_id() : -1)
+                  << " rowset=" << _rowset->rowset_id().to_string() << " seg=" << idx << "/"
+                  << _rowset->num_segments() << " type=" << dest->get_name() << " rows=" << dest->size()
+                  << " bytes=" << dest->byte_size() << " large_offsets=" << large_offsets;
+    }
 
     return Status::OK();
 }
