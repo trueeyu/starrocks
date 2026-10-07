@@ -15,6 +15,7 @@
 #include "storage/lake/update_compaction_state.h"
 
 #include "base/debug/trace.h"
+#include "column/binary_column.h"
 #include "column/chunk_factory.h"
 #include "common/config_exec_fwd.h"
 #include "common/config_lake_fwd.h"
@@ -111,6 +112,18 @@ Status CompactionState::_load_segments(Rowset* rowset, const TabletSchemaCSPtr& 
     dest = std::move(col);
     _memory_usage += dest->memory_usage();
     _update_manager->compaction_state_mem_tracker()->consume(dest->memory_usage());
+    // TEMP(verify): print the column type of each loaded compaction output segment. Do not merge.
+    {
+        bool large_offsets = false;
+        if (dest->is_binary()) {
+            large_offsets = down_cast<const BinaryColumn*>(dest.get())->get_offset().is_large();
+        } else if (dest->is_large_binary()) {
+            large_offsets = down_cast<const LargeBinaryColumn*>(dest.get())->get_offset().is_large();
+        }
+        LOG(INFO) << "[verify_lake_compaction_state] tablet=" << rowset->tablet_id() << " seg=" << segment_id << "/"
+                  << rowset->num_segments() << " type=" << dest->get_name() << " rows=" << dest->size()
+                  << " bytes=" << dest->byte_size() << " large_offsets=" << large_offsets;
+    }
     return Status::OK();
 }
 
