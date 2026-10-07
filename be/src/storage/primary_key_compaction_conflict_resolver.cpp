@@ -19,6 +19,7 @@
 #include "base/debug/trace.h"
 #include "base/time/time.h"
 #include "base/utility/defer_op.h"
+#include "column/binary_column.h"
 #include "column/chunk_factory.h"
 #include "common/config_exec_fwd.h"
 #include "common/config_lake_fwd.h"
@@ -78,6 +79,22 @@ Status PrimaryKeyCompactionConflictResolver::execute() {
                     auto flush_replace_batch = [&]() -> Status {
                         if (batch_acc_rows == 0) {
                             return Status::OK();
+                        }
+                        // TEMP(verify): print the column type of each replace batch. Do not merge.
+                        {
+                            bool large_offsets = false;
+                            if (batch_col->is_binary()) {
+                                large_offsets = down_cast<const BinaryColumn*>(batch_col.get())->get_offset().is_large();
+                            } else if (batch_col->is_large_binary()) {
+                                large_offsets =
+                                        down_cast<const LargeBinaryColumn*>(batch_col.get())->get_offset().is_large();
+                            }
+                            LOG(INFO) << "[verify_resolver] tablet=" << params.tablet_id
+                                      << " rssid=" << (params.rowset_id + segment_id) << " seg=" << segment_id << "/"
+                                      << segment_iters.size() << " batch_start=" << batch_start_rowid
+                                      << " type=" << batch_col->get_name() << " rows=" << batch_col->size()
+                                      << " bytes=" << batch_col->byte_size() << " large_offsets=" << large_offsets
+                                      << " replace=" << batch_replace_indexes.size();
                         }
                         if (!batch_replace_indexes.empty()) {
                             TRACE_COUNTER_SCOPE_LATENCY_US("compaction_replace_index_latency_us");
