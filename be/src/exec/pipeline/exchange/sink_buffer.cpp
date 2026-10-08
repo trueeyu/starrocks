@@ -329,8 +329,13 @@ Status SinkBuffer::_try_to_send_rpc(const TUniqueId& instance_id, const std::fun
     DeferOp decrease_defer([this]() { --_num_sending_rpc; });
     ++_num_sending_rpc;
     TEST_SYNC_POINT("SinkBuffer::_try_to_send_rpc:after_incr_sending");
-    FAIL_POINT_TRIGGER_EXECUTE(sink_buffer_sleep_after_incr_sending,
-                               { std::this_thread::sleep_for(std::chrono::milliseconds(100)); });
+    // Only driver threads sleep. RPC callbacks run on bthreads and notify after they leave, which would
+    // wake a PENDING_FINISH driver and hide the lost wakeup.
+    FAIL_POINT_TRIGGER_EXECUTE(sink_buffer_sleep_after_incr_sending, {
+        if (bthread_self() == 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    });
 
     // When the driver worker thread sends request and creates the protobuf request,
     // also use process_mem_tracker to record the memory of the protobuf request.
