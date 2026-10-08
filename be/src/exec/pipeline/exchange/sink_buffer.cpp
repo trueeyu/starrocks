@@ -21,7 +21,9 @@
 #include <cstddef>
 #include <mutex>
 #include <string_view>
+#include <thread>
 
+#include "base/failpoint/fail_point.h"
 #include "base/time/time.h"
 #include "base/uid_util.h"
 #include "base/utility/defer_op.h"
@@ -35,6 +37,9 @@
 #include "fmt/core.h"
 
 namespace starrocks::pipeline {
+
+// Repro only: widens the window in which a sender holds _num_sending_rpc.
+DEFINE_FAIL_POINT(sink_buffer_sleep_after_incr_sending);
 
 SinkBuffer::SinkBuffer(FragmentContext* fragment_ctx, const std::vector<TPlanFragmentDestination>& destinations,
                        bool is_dest_merge)
@@ -311,6 +316,8 @@ Status SinkBuffer::_try_to_send_rpc(const TUniqueId& instance_id, const std::fun
 
     DeferOp decrease_defer([this]() { --_num_sending_rpc; });
     ++_num_sending_rpc;
+    FAIL_POINT_TRIGGER_EXECUTE(sink_buffer_sleep_after_incr_sending,
+                               { std::this_thread::sleep_for(std::chrono::milliseconds(100)); });
 
     // When the driver worker thread sends request and creates the protobuf request,
     // also use process_mem_tracker to record the memory of the protobuf request.
