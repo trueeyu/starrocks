@@ -68,9 +68,11 @@ public abstract class StatisticsCollectJob {
     // Backend conditions that say nothing about the statement that ran into them and stop being true on
     // their own, so a statistics job waits them out instead of failing. Matched as text because that is
     // all the backend sends back; the strings are stable and come from:
-    //   - "Too many versions": the storage engine rejecting writes until compaction catches up.
+    //   - "too many versions": the storage engine rejecting writes until compaction catches up, from
+    //     DeltaWriter in be/src/storage/delta_writer.cpp and TabletUpdates in be/src/storage/tablet_updates.cpp.
+    //     Matched ignoring case, since the backend capitalizes it differently depending on where it fires.
     //   - SHARED_MEMORY_EXHAUSTED_MARKERS: see isSharedMemoryExhausted.
-    protected static final String TOO_MANY_VERSIONS_MARKER = "Too many versions";
+    protected static final String TOO_MANY_VERSIONS_MARKER = "too many versions";
 
     // MemTracker::err_msg in be/src/runtime/mem_tracker.cpp ends every memory-limit error with a sentence
     // fixed by the type of the tracker that was exceeded. These are the trackers whose budget is shared with
@@ -380,7 +382,7 @@ public abstract class StatisticsCollectJob {
             if (context.getState().getStateType() == QueryState.MysqlStateType.ERR) {
                 LOG.warn("Statistics collect fail | Error Message [{}] | {} | SQL [{}]",
                         context.getState().getErrorMessage(), DebugUtil.printId(context.getQueryId()), sql);
-                if (StringUtils.contains(context.getState().getErrorMessage(), TOO_MANY_VERSIONS_MARKER)) {
+                if (StringUtils.containsIgnoreCase(context.getState().getErrorMessage(), TOO_MANY_VERSIONS_MARKER)) {
                     Thread.sleep(Config.statistic_collect_too_many_version_sleep);
                     count++;
                 } else {
