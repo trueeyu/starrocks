@@ -48,7 +48,14 @@ import ast
 import time
 import unittest
 import uuid
+from decimal import Decimal
 from typing import List, Dict
+from urllib.parse import urlparse
+
+import pyarrow.dataset as pa_dataset
+import pyarrow.fs as pa_fs
+import pyarrow.orc as pa_orc
+import pyarrow.parquet as pa_parquet
 
 from fuzzywuzzy import fuzz
 import pymysql as _mysql
@@ -2699,6 +2706,102 @@ class StarrocksSQLApiLib(object):
         # assert equal result
         for i in range(1, len(res_list)):
             tools.assert_equal(res_list[0], res_list[i])
+
+    def _oss_filesystem(self):
+        endpoint = urlparse(self.oss_endpoint if "://" in self.oss_endpoint else "https://" + self.oss_endpoint)
+        # OSS only serves virtual-hosted-style requests (bucket.endpoint), not path-style.
+        return pa_fs.S3FileSystem(
+            access_key=self.oss_ak,
+            secret_key=self.oss_sk,
+            region=self.oss_region,
+            endpoint_override=endpoint.netloc,
+            scheme=endpoint.scheme,
+            force_virtual_addressing=True,
+        )
+
+    @staticmethod
+    def _canonical_arrow_value(value):
+        """
+        Make a value read by pyarrow comparable across writers: a map is compared as a set of
+        entries rather than in entry order, struct field names ignore case (the Hive metastore
+        lowercases them), and a number compares by value rather than by the width it was stored
+        with.
+        """
+        if isinstance(value, dict):
+            return {k.lower(): StarrocksSQLApiLib._canonical_arrow_value(v) for k, v in value.items()}
+        if isinstance(value, list):
+            items = [StarrocksSQLApiLib._canonical_arrow_value(v) for v in value]
+            # pyarrow returns a map as a list of (key, value) tuples, and nothing else as a tuple.
+            if value and all(isinstance(v, tuple) for v in value):
+                return sorted(items, key=lambda kv: json.dumps(kv, sort_keys=True, default=str))
+            return items
+        if isinstance(value, tuple):
+            return [StarrocksSQLApiLib._canonical_arrow_value(v) for v in value]
+        if isinstance(value, bool) or value is None:
+            return value
+        if isinstance(value, Decimal):
+            return int(value) if value == value.to_integral_value() else float(value)
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        return value
+
+    def check_sink_files(self, location, source_file, file_format="parquet"):
+        """
+        Verify the files a sink wrote, with pyarrow as a reader independent of StarRocks.
+
+        Every data file under `location` is read; files whose name starts with "." or "_"
+        (staging directories, _SUCCESS) are skipped. A sink may split its output into any number
+        of files, so:
+          - data: all files are read as one dataset and compared with `source_file` as a multiset
+            of rows (row order and file boundaries do not matter, but missing or duplicated rows
+            do), with column names compared case-insensitively;
+          - schema: every file must carry the same schema, which is returned so the R file pins
+            it. For parquet this is the parquet schema itself (repetition, physical and logical
+            types, group names), not the Arrow schema derived from it.
+        """
+        tools.assert_in(file_format, ("parquet", "orc"), "unsupported file format: %s" % file_format)
+        url = urlparse(location)
+        tools.assert_equal("oss", url.scheme, "location must be an oss:// path: %s" % location)
+        fs = self._oss_filesystem()
+
+        dataset = pa_dataset.dataset(url.netloc + url.path, filesystem=fs, format=file_format)
+        files = sorted(dataset.files)
+        tools.assert_true(len(files) > 0, "no data file under %s" % location)
+
+        schemas = {}
+        for path in files:
+            with fs.open_input_file(path) as f:
+                if file_format == "parquet":
+                    # The first line names the Python object and its address.
+                    schema = "\n".join(str(pa_parquet.ParquetFile(f).schema).splitlines()[1:])
+                else:
+                    schema = pa_orc.ORCFile(f).schema.to_string(show_schema_metadata=False)
+            schemas.setdefault(schema, []).append(path)
+        tools.assert_equal(
+            1, len(schemas), "files under %s carry different schemas:\n%s" % (location, json.dumps(schemas, indent=2))
+        )
+
+        actual = dataset.to_table()
+        expect = pa_parquet.read_table(source_file)
+        tools.assert_equal(
+            [name.lower() for name in expect.column_names],
+            [name.lower() for name in actual.column_names],
+            "column names differ",
+        )
+
+        def rows(table):
+            canonical = [json.dumps(self._canonical_arrow_value(list(r.values())), sort_keys=True, default=str)
+                         for r in table.to_pylist()]
+            return sorted(canonical)
+
+        expect_rows, actual_rows = rows(expect), rows(actual)
+        tools.assert_equal(
+            expect_rows,
+            actual_rows,
+            "data under %s (%d files) differs from %s:\n- [exp]: %s\n- [act]: %s"
+            % (location, len(files), source_file, expect_rows, actual_rows),
+        )
+        return next(iter(schemas))
 
     def check_no_hit_materialized_view(self, query, *expects):
         """
