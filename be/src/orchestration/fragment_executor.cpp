@@ -14,7 +14,10 @@
 
 #include "orchestration/fragment_executor.h"
 
+#include <chrono>
+#include <fstream>
 #include <optional>
+#include <thread>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -900,6 +903,24 @@ Status FragmentExecutor::prepare(ExecEnv* exec_env, const TExecPlanFragmentParam
     DCHECK(common_request.__isset.fragment);
 
     UnifiedExecPlanFragmentParams request(common_request, unique_request);
+
+    // TEMP repro hook (do not merge): delay the prepare of sender fragments (output sink is a
+    // DATA_STREAM_SINK) on this BE by the number of milliseconds written in
+    // /tmp/sr_debug_sender_prepare_delay_ms, so that a local receiver can finish before the
+    // local sender instance is prepared. Delete the file to disable it.
+    if (request.isset_output_sink() && request.output_sink().type == TDataSinkType::DATA_STREAM_SINK) {
+        std::ifstream delay_file("/tmp/sr_debug_sender_prepare_delay_ms");
+        int64_t delay_ms = 0;
+        if (delay_file >> delay_ms && delay_ms > 0) {
+            LOG(WARNING) << "[pt-repro] delay sender fragment prepare " << delay_ms
+                         << "ms, query_id=" << print_id(request.common().params.query_id)
+                         << " fragment_instance_id=" << print_id(request.fragment_instance_id());
+            std::this_thread::sleep_for(std::chrono::milliseconds(delay_ms));
+            LOG(WARNING) << "[pt-repro] resume sender fragment prepare, query_id="
+                         << print_id(request.common().params.query_id)
+                         << " fragment_instance_id=" << print_id(request.fragment_instance_id());
+        }
+    }
 
     bool prepare_success = false;
     struct {

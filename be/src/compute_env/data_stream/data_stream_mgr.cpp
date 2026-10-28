@@ -156,6 +156,13 @@ Status DataStreamMgr::transmit_chunk(const PTransmitChunkParams& request, ::goog
         // errors from receiver-initiated teardowns.
         VLOG_QUERY << request.sender_id() << " sender transmits chunks to a non-existing receiver fragment "
                    << print_id(request.finst_id());
+        if (request.use_pass_through()) {
+            // TEMP repro hook (do not merge).
+            LOG_EVERY_N(WARNING, 200) << "[pt-repro] pass-through request to a non-existing receiver, finst_id="
+                                      << print_id(request.finst_id()) << " node_id=" << request.node_id()
+                                      << " sender_id=" << request.sender_id() << " be_number=" << request.be_number()
+                                      << " count=" << google::COUNTER;
+        }
         return Status::OK();
     }
 
