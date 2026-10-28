@@ -14,7 +14,6 @@
 
 #pragma once
 #include <map>
-#include <memory>
 
 #include "base/hash/hash.h"
 #include "base/hash/hash_std.hpp"
@@ -29,12 +28,6 @@ namespace starrocks {
 // To manage pass through chunks between sink/sources in the same process.
 using ChunkUniquePtrVector = std::vector<std::pair<ChunkUniquePtr, int32_t>>;
 class PassThroughChannel;
-
-// A channel is shared by the local sink and the local receiver of one
-// [fragment_instance_id, dest_node_id] pair, and both of them keep using it while they are being
-// torn down. Ownership is therefore shared: the PassThroughChunkBuffer publishes the channel, but
-// it does not outlive every user of it. See PassThroughContext below.
-using PassThroughChannelPtr = std::shared_ptr<PassThroughChannel>;
 
 class PassThroughChunkBuffer {
 public:
@@ -51,7 +44,7 @@ public:
     };
     PassThroughChunkBuffer(const TUniqueId& query_id);
     ~PassThroughChunkBuffer();
-    PassThroughChannelPtr get_or_create_channel(const Key& key);
+    PassThroughChannel* get_or_create_channel(const Key& key);
     int ref() { return ++_ref_count; }
     int unref() {
         _ref_count -= 1;
@@ -61,7 +54,7 @@ public:
 private:
     std::mutex _mutex;
     const TUniqueId _query_id;
-    std::unordered_map<Key, PassThroughChannelPtr, KeyHash> _key_to_channel;
+    std::unordered_map<Key, PassThroughChannel*, KeyHash> _key_to_channel;
     int _ref_count{1};
 };
 
@@ -78,16 +71,11 @@ public:
     bool is_cancelled() const;
 
 private:
-    // Only used by init(), which runs while the owning fragment still holds its
-    // PassThroughChunkBufferGuard. Never dereferenced afterwards.
+    // hold this chunk buffer to avoid early deallocation.
     PassThroughChunkBuffer* _chunk_buffer;
     TUniqueId _fragment_instance_id;
     PlanNodeId _node_id;
-    // Owning reference. The PassThroughChunkBuffer is released per fragment
-    // (FragmentContext::destroy_pass_through_chunk_buffer), which can happen before the pipelines
-    // that hold this context are torn down; keeping a strong reference here is what makes the
-    // channel outlive both the sink and the receiver instead of only the buffer.
-    PassThroughChannelPtr _channel;
+    PassThroughChannel* _channel = nullptr;
 };
 
 class PassThroughChunkBufferManager {
