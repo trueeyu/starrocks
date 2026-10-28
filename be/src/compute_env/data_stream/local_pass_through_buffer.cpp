@@ -14,6 +14,8 @@
 
 #include "compute_env/data_stream/local_pass_through_buffer.h"
 
+#include <unistd.h>
+
 #include "column/chunk.h"
 #include "common/logging.h"
 #include "runtime/current_thread.h"
@@ -152,6 +154,13 @@ public:
     // that the peer is gone and it should stop buffering chunks. It also drops whatever is
     // already buffered, since the cancelled receiver will never pull it.
     void set_cancelled() {
+        // TEMP repro hook (do not merge): while /tmp/sr_debug_passthrough_ignore_receiver_cancel exists,
+        // ignore the receiver's cancellation as 4.0.x does (no #76603), so the sink keeps buffering
+        // chunks nobody will pull. Used to check that the query limit now stops such a query.
+        if (access("/tmp/sr_debug_passthrough_ignore_receiver_cancel", F_OK) == 0) {
+            LOG_EVERY_N(WARNING, 100) << "[pt-repro] ignore pass-through receiver cancellation";
+            return;
+        }
         _cancelled.store(true, std::memory_order_release);
         std::unique_lock lock(_mutex);
         for (auto& [_, sender_channel] : _sender_id_to_channel) {
