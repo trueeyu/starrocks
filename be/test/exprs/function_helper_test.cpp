@@ -512,6 +512,32 @@ TEST_F(FunctionHelperTest, ArrayV2ColumnCopyControls) {
         }
     }
 }
+// Aggregator::evaluate_agg_input_column unpacks a constant first argument, so a NULL literal reaches
+// convert_to_serialize_format as a non-constant NullableColumn whose data column is the literal's Int8Column,
+// whatever the argument type is (array_agg(CAST(NULL AS VARCHAR)) in a streaming pre-aggregation).
+TEST_F(FunctionHelperTest, ArrayV2ConvertUnpackedNullLiteral) {
+    MemPool pool;
+    ArrayAggAggregateFunctionV2<ArrayAggAggregateStateV2> current;
+    for (const auto& arg : {TypeDescriptor(TYPE_INT), TypeDescriptor(TYPE_VARCHAR),
+                            TypeDescriptor::create_array_type(TypeDescriptor(TYPE_INT))}) {
+        SCOPED_TRACE(::testing::Message() << arg.type);
+        ColumnPtr source = ColumnHelper::unpack_and_duplicate_const_column(3, ColumnHelper::create_const_null_column(3));
+        ASSERT_FALSE(source->is_constant());
+        ASSERT_FALSE(source->only_null());
+        auto array_type = TypeDescriptor::create_array_type(arg);
+        auto intermediate =
+                ColumnHelper::create_column(TypeDescriptor::create_struct_type({"v"}, {array_type}), false);
+        auto array_ctx =
+                std::unique_ptr<FunctionContext>(FunctionContext::create_context(nullptr, &pool, array_type, {arg}));
+        current.convert_to_serialize_format(array_ctx.get(), {source}, source->size(), intermediate);
+        const auto* array = down_cast<const ArrayColumn*>(ColumnHelper::get_data_column(
+                down_cast<const StructColumn*>(intermediate.get())->field_column_raw_ptr(0)));
+        ASSERT_EQ(3, array->size());
+        for (size_t i = 0; i < 3; ++i) EXPECT_TRUE(array->elements().is_null(i));
+        intermediate->check_or_die();
+    }
+}
+
 INSTANTIATE_TEST_SUITE_P(FunctionHelper, GeoFunctionHelperTest, ::testing::Values(TYPE_GEOGRAPHY, TYPE_GEOMETRY));
 
 } // namespace starrocks
