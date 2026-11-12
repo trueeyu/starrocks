@@ -467,7 +467,8 @@ public class ExpressionAnalyzer {
         }
 
         private void checkNestedGeoType(Type type, Expr expression) {
-            if (type.hasNestedGeoType()) {
+            // VERIFY ONLY: nested geo guard (7.0a) disabled for cluster validation of #82795. Do not merge.
+            if (false && type.hasNestedGeoType()) {
                 throw new SemanticException("Nested GEOGRAPHY/GEOMETRY types are not supported in ARRAY, MAP or STRUCT: "
                         + type.toSql() + " in " + ExprToSql.toSql(expression), expression.getPos());
             }
