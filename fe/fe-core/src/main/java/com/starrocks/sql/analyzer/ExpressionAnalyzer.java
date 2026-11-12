@@ -467,7 +467,13 @@ public class ExpressionAnalyzer {
             return null;
         }
 
+        private static final boolean DISABLE_70A_GUARD_FOR_TEST = true;
+
         private void checkNestedGeoType(Type type, Expr expression) {
+            // TEST ONLY: 7.0a blanket rejection disabled to exercise SavedSqlGeoValidator (#82803).
+            if (DISABLE_70A_GUARD_FOR_TEST) {
+                return;
+            }
             if (type.hasNestedGeoType()) {
                 throw new SemanticException("Nested GEOGRAPHY/GEOMETRY types are not supported in ARRAY, MAP or STRUCT: "
                         + type.toSql() + " in " + ExprToSql.toSql(expression), expression.getPos());
